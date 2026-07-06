@@ -1,0 +1,300 @@
+/* ── Page shell ───────────────────────────────────────────────────────────── */
+
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+
+/* ── Stats bar ────────────────────────────────────────────────────────────── */
+
+.statsBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+  padding: 13px 24px;
+  border-bottom: 1px solid var(--ns-line);
+  background: var(--ns-surface-header);
+}
+
+.statsStar {
+  font-size: 12px;
+  color: var(--ns-gold);
+  text-shadow: 0 0 8px rgba(var(--ns-gold-rgb), .6);
+}
+
+.statsText {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-mono);
+  color: var(--ns-text-lo);
+}
+
+.statsSpacer {
+  flex: 1;
+}
+
+.addRootBtn {
+  padding: 5px 13px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px dashed rgba(var(--ns-gold-rgb), .45);
+  background: rgba(var(--ns-gold-rgb), .06);
+  color: var(--ns-gold);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-mono);
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+.addRootBtn:hover {
+  background: rgba(var(--ns-gold-rgb), .14);
+  border-color: rgba(var(--ns-gold-rgb), .7);
+}
+
+/* ── Scrollable canvas ────────────────────────────────────────────────────── */
+
+.canvas {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  min-height: 0;
+}
+
+/* ── Stage (the absolute coordinate space for connectors) ─────────────────── */
+
+.stage {
+  position: relative;
+  min-width: max-content;
+  min-height: 100%;
+  padding: 70px 120px 120px 74px;
+}
+
+/* ── Nodes container ──────────────────────────────────────────────────────── */
+
+.nodes {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-tree-roots-gap);
+  width: max-content;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ns-space-3);
+  padding: var(--ns-space-4);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: var(--ns-font-display);
+  font-size: 28px;
+  color: var(--ns-text-mid);
+}
+
+.emptyHint {
+  margin: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-mono);
+  color: var(--ns-text-lo);
+  max-width: 300px;
+  line-height: 1.6;
+}
+
+.emptyBtn {
+  margin-top: var(--ns-space-2);
+  padding: 8px 18px;
+  border-radius: var(--ns-radius-md);
+  border: 1px dashed rgba(var(--ns-gold-rgb), .5);
+  background: rgba(var(--ns-gold-rgb), .07);
+  color: var(--ns-gold);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.emptyBtn:hover { background: rgba(var(--ns-gold-rgb), .14); }
+
+/* ── Legend panel (bottom-left) ───────────────────────────────────────────── */
+
+.legend {
+  position: fixed;
+  bottom: calc(var(--ns-nav-height) + 56px);
+  left: calc(var(--ns-nav-width) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-3);
+  padding: 12px 16px;
+  border-radius: var(--ns-radius-md);
+  background: rgba(11, 13, 21, .72);
+  border: 1px solid var(--ns-border-faint);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10;
+  pointer-events: none;
+}
+
+@media (max-width: 767px) {
+  .legend {
+    left: 16px;
+    bottom: calc(var(--ns-nav-height) + 50px);
+  }
+}
+
+.legendSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legendHeading {
+  font-family: var(--ns-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ns-text-lo);
+  margin-bottom: 2px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legendLabel {
+  font-family: var(--ns-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--ns-text-mid);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--leg-accent);
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+.legendStateIdle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, .3);
+  flex: 0 0 auto;
+}
+
+.legendStateActive {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ns-gold);
+  flex: 0 0 auto;
+  box-shadow: 0 0 6px rgba(var(--ns-gold-rgb), .7);
+}
+
+.legendStateDone {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--ns-ok);
+  color: var(--ns-ok);
+  font-size: 7px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+/* ── Legend toggle button ─────────────────────────────────────────────────── */
+
+.legendToggle {
+  position: fixed;
+  bottom: calc(var(--ns-nav-height) + 18px);
+  left: calc(var(--ns-nav-width) + 20px);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--ns-border-mid);
+  background: rgba(11, 13, 21, .72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: 13px;
+  font-weight: var(--ns-fw-semibold);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.legendToggle:hover {
+  color: var(--ns-text-hi);
+  border-color: var(--ns-border-soft);
+  background: rgba(11, 13, 21, .9);
+}
+
+@media (max-width: 767px) {
+  .legendToggle {
+    left: 16px;
+    bottom: calc(var(--ns-nav-height) + 12px);
+  }
+}
+
+/* ── Scroll hint ──────────────────────────────────────────────────────────── */
+
+.scrollHint {
+  position: fixed;
+  bottom: calc(var(--ns-nav-height) + 18px);
+  right: 28px;
+  font-family: var(--ns-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 2px;
+  color: var(--ns-text-lo);
+  pointer-events: none;
+  z-index: 10;
+}
+
+@media (max-width: 767px) {
+  .scrollHint { display: none; }
+}
+
+/* ── Error state ──────────────────────────────────────────────────────────── */
+
+.errorState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ns-space-2);
+}
+
+.errorText {
+  margin: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-sm);
+  color: var(--ns-danger);
+}
+
+.errorHint {
+  margin: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  color: var(--ns-text-lo);
+}

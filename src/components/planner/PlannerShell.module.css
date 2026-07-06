@@ -1,0 +1,131 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Top bar ────────────────────────────────────────────────────────────────── */
+
+.topBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--ns-border-faint);
+  background: var(--ns-surface-base);
+  flex-wrap: wrap;
+}
+
+/* ── Tab switcher ───────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,.04);
+  border-radius: var(--ns-radius-md);
+  padding: 3px;
+  border: 1px solid var(--ns-border-faint);
+}
+
+.tab {
+  padding: 5px 12px;
+  border-radius: calc(var(--ns-radius-md) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-caps);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.tab:hover:not(.tabActive) {
+  color: var(--ns-text-mid);
+  background: rgba(255,255,255,.04);
+}
+.tabActive {
+  background: rgba(var(--ns-gold-rgb), .12);
+  color: var(--ns-gold);
+  box-shadow: 0 0 0 1px rgba(var(--ns-gold-rgb), .2);
+}
+
+/* ── Date navigation ────────────────────────────────────────────────────────── */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.navBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-soft);
+  background: transparent;
+  color: var(--ns-text-mid);
+  font-size: 16px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color .12s, color .12s, background .12s;
+  padding-bottom: 1px;
+}
+.navBtn:hover {
+  border-color: rgba(var(--ns-gold-rgb), .4);
+  color: var(--ns-text-hi);
+  background: rgba(var(--ns-gold-rgb), .05);
+}
+
+.heading {
+  font-family: var(--ns-font-mono);
+  font-size: 11px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-caps);
+  color: var(--ns-text-mid);
+  text-align: center;
+  min-width: 160px;
+}
+
+/* ── Today button ───────────────────────────────────────────────────────────── */
+
+.todayBtn {
+  padding: 5px 11px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-soft);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: 9px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-caps);
+  cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+.todayBtn:hover:not(:disabled) {
+  border-color: rgba(var(--ns-gold-rgb), .4);
+  color: var(--ns-gold);
+}
+.todayBtn:disabled {
+  opacity: .35;
+  cursor: default;
+}
+.todayBtnActive {
+  opacity: .35;
+}
+
+/* ── View area ──────────────────────────────────────────────────────────────── */
+
+.viewArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}

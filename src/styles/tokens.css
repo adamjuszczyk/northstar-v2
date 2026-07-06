@@ -1,0 +1,301 @@
+/*
+ * Northstar v2 — Design Tokens
+ * Single source of truth for every visual value.
+ * All components use var(--ns-*) only — no hardcoded values.
+ * Extracted from design-handoff/project/Tree.dc.html + DaySchedule.dc.html
+ */
+
+:root {
+  /* ── Backgrounds ─────────────────────────────────────────────── */
+  --ns-bg-base:    #080A11;   /* deepest layer — body */
+  --ns-bg-surface: #0C0F19;   /* raised panels, cards */
+
+  /* ── Brand accent palette ────────────────────────────────────── */
+  --ns-gold:      #F6C87A;    /* Vision · primary accent */
+  --ns-gold-soft: #DEC28C;    /* Goal accent */
+  --ns-steel:     #8FA6CB;    /* Project accent */
+  --ns-grey:      #7E8AA2;    /* Task accent */
+  --ns-ok:        #84D2A6;    /* Complete / success */
+
+  /* ── Text hierarchy ──────────────────────────────────────────── */
+  --ns-text-hi:  #ECEFF7;
+  --ns-text-mid: #A9B0C2;
+  --ns-text-lo:  #666D80;
+  --ns-line:     #222736;
+
+  /* ── Node type: Vision ───────────────────────────────────────── */
+  --ns-vision-accent:  #F6C87A;
+  --ns-vision-text:    #F8EAD0;
+  --ns-vision-bg:      linear-gradient(158deg, rgba(60,45,20,.58), rgba(15,16,24,.74));
+  --ns-vision-shadow:  0 26px 74px -26px rgba(246,200,122,.5),
+                       0 0 0 1px rgba(246,200,122,.06),
+                       inset 0 1px 0 rgba(255,255,255,.06);
+  --ns-vision-radius:    20px;
+  --ns-vision-fs:        38px;
+  --ns-vision-padding:   23px 27px;
+  --ns-vision-min-w:     290px;
+  --ns-vision-max-w:     392px;
+
+  /* ── Node type: Goal ─────────────────────────────────────────── */
+  --ns-goal-accent:  #DEC28C;
+  --ns-goal-text:    #ECE4D3;
+  --ns-goal-bg:      linear-gradient(158deg, rgba(42,37,25,.5), rgba(13,15,22,.68));
+  --ns-goal-shadow:  0 18px 46px -26px rgba(0,0,0,.7),
+                     inset 0 1px 0 rgba(255,255,255,.04);
+  --ns-goal-radius:  16px;
+  --ns-goal-fs:      20px;
+  --ns-goal-padding: 16px 20px;
+  --ns-goal-min-w:   222px;
+  --ns-goal-max-w:   300px;
+
+  /* ── Node type: Project ──────────────────────────────────────── */
+  --ns-project-accent:  #8FA6CB;
+  --ns-project-text:    #D2DAE8;
+  --ns-project-bg:      linear-gradient(158deg, rgba(23,28,41,.62), rgba(12,14,21,.72));
+  --ns-project-shadow:  0 14px 34px -24px rgba(0,0,0,.78),
+                        inset 0 1px 0 rgba(255,255,255,.03);
+  --ns-project-radius:  13px;
+  --ns-project-fs:      15.5px;
+  --ns-project-padding: 13px 16px;
+  --ns-project-min-w:   196px;
+  --ns-project-max-w:   252px;
+
+  /* ── Node type: Task ─────────────────────────────────────────── */
+  --ns-task-accent:  #7E8AA2;
+  --ns-task-text:    #B4BCCE;
+  --ns-task-bg:      rgba(17,20,29,.58);
+  --ns-task-radius:  11px;
+  --ns-task-fs:      14.5px;
+  --ns-task-padding: 8px 15px 8px 9px;
+  --ns-task-min-w:   150px;
+  --ns-task-max-w:   280px;
+
+  /* ── Typography ──────────────────────────────────────────────── */
+  --ns-font-ui:      'Space Grotesk', sans-serif;
+  --ns-font-display: 'Instrument Serif', serif;
+  --ns-font-mono:    'JetBrains Mono', monospace;
+
+  /* ── Font sizes ──────────────────────────────────────────────── */
+  --ns-text-2xs:   8.5px;
+  --ns-text-xs:    9px;
+  --ns-text-sm:    10.5px;
+  --ns-text-base:  13px;
+  --ns-text-md:    14.5px;
+  --ns-text-lg:    16px;
+  --ns-text-xl:    20px;
+  --ns-text-2xl:   34px;   /* day view date */
+  --ns-text-display: 38px; /* Vision card title */
+
+  /* ── Font weights ────────────────────────────────────────────── */
+  --ns-fw-normal:   400;
+  --ns-fw-medium:   500;
+  --ns-fw-semibold: 600;
+  --ns-fw-bold:     700;
+
+  /* ── Letter spacing ──────────────────────────────────────────── */
+  --ns-ls-tight:  -0.5px;
+  --ns-ls-none:   -0.1px;
+  --ns-ls-sm:     0.3px;
+  --ns-ls-mono:   0.5px;
+  --ns-ls-label:  1.5px;
+  --ns-ls-tag:    2px;
+  --ns-ls-caps:   2.5px;
+  --ns-ls-brand:  3px;
+
+  /* ── Spacing ─────────────────────────────────────────────────── */
+  --ns-space-1: 4px;
+  --ns-space-2: 8px;
+  --ns-space-3: 12px;
+  --ns-space-4: 16px;
+  --ns-space-5: 20px;
+  --ns-space-6: 24px;
+  --ns-space-7: 26px;
+  --ns-space-8: 32px;
+
+  /* ── Border radius ───────────────────────────────────────────── */
+  --ns-radius-xs:   4px;
+  --ns-radius-sm:   7px;
+  --ns-radius-md:   9px;
+  --ns-radius-lg:   11px;
+  --ns-radius-xl:   13px;
+  --ns-radius-2xl:  16px;
+  --ns-radius-3xl:  20px;
+  --ns-radius-full: 9999px;
+
+  /* ── Borders ─────────────────────────────────────────────────── */
+  --ns-border-subtle: rgba(255,255,255,.05);
+  --ns-border-faint:  rgba(255,255,255,.07);
+  --ns-border-soft:   rgba(255,255,255,.09);
+  --ns-border-mid:    rgba(255,255,255,.11);
+
+  /* ── Surfaces ────────────────────────────────────────────────── */
+  --ns-surface-header:   linear-gradient(180deg, rgba(10,12,20,.6), rgba(10,12,20,0));
+  --ns-surface-timeline: linear-gradient(180deg, rgba(13,16,24,.7), rgba(10,12,19,.55));
+  --ns-surface-floating: linear-gradient(180deg, rgba(16,19,29,.72), rgba(11,13,20,.55));
+  --ns-surface-nav:      rgba(11,13,21,.78);
+  --ns-surface-card:     rgba(18,21,30,.62);
+  --ns-surface-input:    rgba(0,0,0,.28);
+  --ns-surface-overlay:  rgba(13,16,24,.4);
+
+  /* ── Panel shadow ────────────────────────────────────────────── */
+  --ns-shadow-panel: 0 26px 60px -30px rgba(0,0,0,.8);
+  --ns-shadow-nav:   0 22px 50px -24px rgba(0,0,0,.9);
+  --ns-shadow-card:  0 14px 34px -22px rgba(0,0,0,.7);
+
+  /* ── Ambient background layers ───────────────────────────────── */
+  --ns-ambient-gradient:
+    radial-gradient(62% 46% at 26% -4%, rgba(var(--ns-accent-rgb), .11), transparent 60%),
+    radial-gradient(48% 42% at 88% 6%,  rgba(143,166,203,.09),           transparent 62%);
+  --ns-dot-grid-size:  27px;
+  --ns-dot-grid-color: rgba(255,255,255,.032);
+  --ns-vignette:       inset 0 0 240px 40px rgba(0,0,0,.65);
+
+  /* ── Timeline (Day view) ─────────────────────────────────────── */
+  --ns-timeline-px-per-hour: 64px;
+  --ns-timeline-rail:        linear-gradient(180deg, rgba(var(--ns-accent-rgb), .35), rgba(143,166,203,.18));
+  --ns-timeline-now-color:   var(--ns-accent);
+  --ns-timeline-past-overlay: linear-gradient(180deg, rgba(8,10,17,.55), rgba(8,10,17,.38));
+
+  /* ── Nav layout ──────────────────────────────────────────────── */
+  --ns-nav-width:  200px;   /* desktop sidebar width */
+  --ns-nav-height: 60px;    /* mobile bottom bar height */
+
+  /* ── Header ──────────────────────────────────────────────────── */
+  --ns-header-height: 53px;
+
+  /* ── User-configurable accent ───────────────────────────────── */
+  /* JS writes these via applySettings() on load + settings change */
+  --ns-accent:     #F6C87A;
+  --ns-accent-rgb: 246, 200, 122;
+
+  /* ── Active nav accent ───────────────────────────────────────── */
+  --ns-nav-active-bg:     rgba(var(--ns-accent-rgb), .1);
+  --ns-nav-active-shadow: inset 0 -2px 0 var(--ns-accent);
+
+  /* ── Mode toggle (day view) ──────────────────────────────────── */
+  --ns-mode-active-bg:    var(--ns-accent);
+  --ns-mode-active-color: #20160A;
+  --ns-mode-active-shadow: 0 4px 14px -4px rgba(var(--ns-accent-rgb), .7);
+
+  /* ── Scrollbar ───────────────────────────────────────────────── */
+  --ns-scrollbar-thumb:       rgba(255,255,255,.08);
+  --ns-scrollbar-thumb-hover: rgba(255,255,255,.16);
+
+  /* ── RGB component variants ──────────────────────────────────── */
+  /* Enables rgba(var(--ns-*-rgb), alpha) in CSS modules           */
+  --ns-vision-accent-rgb:  246, 200, 122;
+  --ns-goal-accent-rgb:    222, 194, 140;
+  --ns-project-accent-rgb: 143, 166, 203;
+  --ns-task-accent-rgb:    126, 138, 162;
+  --ns-ok-rgb:             132, 210, 166;
+  --ns-gold-rgb:           246, 200, 122;
+
+  /* ── Node card internal gaps ─────────────────────────────────── */
+  --ns-vision-gap:  12px;
+  --ns-goal-gap:    8px;
+  --ns-project-gap: 7px;
+
+  /* ── Node border opacities ───────────────────────────────────── */
+  --ns-vision-border-op:  0.42;
+  --ns-goal-border-op:    0.3;
+  --ns-project-border-op: 0.26;
+  --ns-task-border-op:    0.26;
+
+  /* ── Task card (border-only, no drop shadow) ─────────────────── */
+  --ns-task-shadow: none;
+
+  /* ── Danger / error ─────────────────────────────────────────────────────── */
+  --ns-danger:     #F08080;
+  --ns-danger-rgb: 240, 128, 128;
+
+  /* ── Inbox state colours ────────────────────────────────────────────────── */
+  --ns-inbox-unassigned: var(--ns-text-lo);
+  --ns-inbox-scheduled:  var(--ns-project-accent);
+  --ns-inbox-promoted:   var(--ns-gold);
+
+  /* ── Tree canvas layout ──────────────────────────────────────── */
+  --ns-tree-roots-gap:      88px;
+  --ns-tree-child-indent:   94px;
+  --ns-tree-child-gap:      24px;
+  --ns-tree-child-gap-task: 13px;
+
+  /* ── Space Grotesk variable weight 450 (task title) ─────────── */
+  --ns-fw-book: 450;
+}
+
+/* ── Light mode ──────────────────────────────────────────────────────────────
+   Warm parchment / celestial manuscript feel.
+   Applied when JS sets data-theme="light" on <html>.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+[data-theme="light"] {
+  /* Backgrounds — warm vellum */
+  --ns-bg-base:    #FAF8F2;
+  --ns-bg-surface: #F2EFE5;
+
+  /* Text hierarchy — ink on parchment */
+  --ns-text-hi:  #1C1810;
+  --ns-text-mid: #48402E;
+  --ns-text-lo:  #8C7E6A;
+  --ns-line:     #DCD5C4;
+
+  /* Borders — warm grey */
+  --ns-border-subtle: rgba(120,100,70,.07);
+  --ns-border-faint:  rgba(120,100,70,.10);
+  --ns-border-soft:   rgba(120,100,70,.13);
+  --ns-border-mid:    rgba(120,100,70,.17);
+
+  /* Surfaces */
+  --ns-surface-header:   linear-gradient(180deg, rgba(250,248,242,.95), rgba(250,248,242,0));
+  --ns-surface-timeline: linear-gradient(180deg, rgba(242,239,231,.92), rgba(236,233,225,.75));
+  --ns-surface-floating: linear-gradient(180deg, rgba(240,237,229,.96), rgba(235,232,224,.88));
+  --ns-surface-nav:      rgba(244,241,234,.94);
+  --ns-surface-card:     rgba(236,232,220,.72);
+  --ns-surface-input:    rgba(120,100,70,.06);
+  --ns-surface-overlay:  rgba(240,236,226,.6);
+
+  /* Shadows — warm, soft */
+  --ns-shadow-panel: 0 8px 30px -10px rgba(80,60,30,.18);
+  --ns-shadow-nav:   0 8px 20px -8px  rgba(80,60,30,.14);
+  --ns-shadow-card:  0 4px 16px -8px  rgba(80,60,30,.14);
+
+  /* Ambient — keep star-glow, lighter */
+  --ns-ambient-gradient:
+    radial-gradient(62% 46% at 26% -4%, rgba(var(--ns-accent-rgb), .10), transparent 60%),
+    radial-gradient(48% 42% at 88% 6%,  rgba(143,166,203,.07),           transparent 62%);
+  --ns-dot-grid-color: rgba(120,100,70,.05);
+  --ns-vignette:       inset 0 0 240px 40px rgba(200,190,170,.12);
+
+  /* Scrollbar */
+  --ns-scrollbar-thumb:       rgba(120,100,70,.12);
+  --ns-scrollbar-thumb-hover: rgba(120,100,70,.22);
+
+  /* Node type: Vision — warm illuminated */
+  --ns-vision-bg:     linear-gradient(158deg, rgba(255,248,226,.9), rgba(244,238,220,.95));
+  --ns-vision-text:   #3A2A08;
+  --ns-vision-shadow: 0 6px 24px -12px rgba(180,150,80,.32),
+                      0 0 0 1px rgba(180,150,80,.14),
+                      inset 0 1px 0 rgba(255,255,255,.7);
+
+  /* Node type: Goal */
+  --ns-goal-bg:     linear-gradient(158deg, rgba(248,243,230,.85), rgba(242,238,226,.9));
+  --ns-goal-text:   #2E2612;
+  --ns-goal-shadow: 0 4px 16px -12px rgba(100,80,40,.2),
+                    inset 0 1px 0 rgba(255,255,255,.65);
+
+  /* Node type: Project */
+  --ns-project-bg:     linear-gradient(158deg, rgba(226,234,248,.85), rgba(230,238,250,.9));
+  --ns-project-text:   #1E2840;
+  --ns-project-shadow: 0 4px 14px -10px rgba(60,80,130,.18),
+                       inset 0 1px 0 rgba(255,255,255,.65);
+
+  /* Node type: Task */
+  --ns-task-bg:   rgba(228,225,215,.62);
+  --ns-task-text: #38352C;
+
+  /* Timeline */
+  --ns-timeline-past-overlay: linear-gradient(180deg, rgba(250,248,242,.52), rgba(250,248,242,.32));
+
+  /* Nav active — slightly stronger on light bg */
+  --ns-nav-active-bg: rgba(var(--ns-accent-rgb), .13);
+}

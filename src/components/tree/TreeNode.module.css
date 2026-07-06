@@ -1,0 +1,415 @@
+/* ── Row wrapper (card + children side-by-side) ──────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  position: relative;
+}
+
+/* ── Container card (vision / goal / project) ────────────────────────────── */
+
+.card {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-node-gap);
+  padding: var(--ns-node-padding);
+  min-width: var(--ns-node-min-w);
+  max-width: var(--ns-node-max-w);
+  border-radius: var(--ns-node-radius);
+  background: var(--ns-node-bg);
+  border: 1px solid rgba(var(--ns-node-accent-rgb), var(--ns-node-border-op));
+  box-shadow: var(--ns-node-shadow);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  z-index: 2;
+  cursor: grab;
+  animation: ns-rise 0.55s ease both;
+  user-select: none;
+  transition: opacity 0.25s, filter 0.25s;
+}
+.card:active { cursor: grabbing; }
+
+.cardDone {
+  opacity: 0.5;
+  filter: saturate(0.5);
+}
+
+/* ── Vision halo glow ─────────────────────────────────────────────────────── */
+
+.halo {
+  position: absolute;
+  inset: -45% -28%;
+  background: radial-gradient(58% 55% at 32% 42%, rgba(var(--ns-node-accent-rgb), .3), transparent 70%);
+  filter: blur(28px);
+  border-radius: 44px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ── Card head row ────────────────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.headSpacer {
+  flex: 1;
+}
+
+/* ── Status dot ───────────────────────────────────────────────────────────── */
+
+.dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  font-size: 9px;
+  font-family: var(--ns-font-mono);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: box-shadow 0.2s;
+  position: relative;
+}
+
+/* Expand touch target to 44×44 without affecting layout */
+.dot::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.dotIdle {
+  background: transparent;
+  border: 1.5px solid rgba(var(--ns-node-accent-rgb), .5);
+}
+.dotIdle:hover {
+  border-color: rgba(var(--ns-node-accent-rgb), .8);
+}
+
+.dotActive {
+  background: rgba(var(--ns-node-accent-rgb), .92);
+  border: none;
+  box-shadow: 0 0 10px rgba(var(--ns-node-accent-rgb), .7);
+  animation: ns-pulse 2.6s ease-in-out infinite;
+}
+
+.dotDone {
+  background: rgba(var(--ns-ok-rgb), .16);
+  border: 1px solid var(--ns-ok);
+  color: var(--ns-ok);
+}
+
+/* ── Type label ───────────────────────────────────────────────────────────── */
+
+.typeLabel {
+  font-family: var(--ns-font-mono);
+  font-size: 10px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(var(--ns-node-accent-rgb), .92);
+}
+.cardDone .typeLabel {
+  color: rgba(var(--ns-node-accent-rgb), .5);
+}
+
+/* ── Head buttons (add / collapse) ───────────────────────────────────────── */
+
+.headBtn {
+  width: 23px;
+  height: 23px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  font-family: var(--ns-font-mono);
+  line-height: 1;
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.25s;
+}
+
+.addBtn {
+  border: 1px dashed rgba(var(--ns-node-accent-rgb), .32);
+  background: transparent;
+  color: rgba(var(--ns-node-accent-rgb), .65);
+  font-size: 15px;
+}
+.addBtn:hover, .addBtnOpen {
+  border-color: rgba(var(--ns-node-accent-rgb), .6);
+  background: rgba(var(--ns-node-accent-rgb), .12);
+  color: var(--ns-node-accent);
+}
+
+.chevBtn {
+  border: 1px solid rgba(var(--ns-node-accent-rgb), .28);
+  background: rgba(var(--ns-node-accent-rgb), .06);
+  color: rgba(var(--ns-node-accent-rgb), .9);
+}
+.chevBtn:hover {
+  background: rgba(var(--ns-node-accent-rgb), .12);
+}
+
+/* ── Title ────────────────────────────────────────────────────────────────── */
+
+.title {
+  font-family: var(--ns-node-font);
+  font-weight: var(--ns-node-fw);
+  font-size: var(--ns-node-fs);
+  line-height: 1.12;
+  letter-spacing: -0.2px;
+  color: var(--ns-node-text);
+  text-wrap: balance;
+}
+.cardDone .title {
+  color: rgba(var(--ns-node-accent-rgb), .6);
+  text-decoration: line-through;
+  text-decoration-color: rgba(var(--ns-node-accent-rgb), .3);
+}
+
+/* Vision title specifics */
+[data-type="vision"] .title {
+  letter-spacing: -0.5px;
+  line-height: 1.04;
+}
+
+/* ── Progress bar (vision) ────────────────────────────────────────────────── */
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 2px;
+}
+
+.progressTrack {
+  position: relative;
+  flex: 0 0 132px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  overflow: hidden;
+}
+
+.progressFill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ns-node-accent), rgba(var(--ns-node-accent-rgb), .5));
+  box-shadow: 0 0 10px rgba(var(--ns-node-accent-rgb), .6);
+  transition: width 0.4s ease;
+}
+
+.progressLabel {
+  font-family: var(--ns-font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(var(--ns-node-accent-rgb), .55);
+}
+
+/* ── Collapse message ─────────────────────────────────────────────────────── */
+
+.collapseMsg {
+  font-family: var(--ns-font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: rgba(var(--ns-node-accent-rgb), .62);
+  margin-top: 2px;
+}
+
+/* ── Children column ──────────────────────────────────────────────────────── */
+
+.children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-tree-child-gap);
+  margin-left: var(--ns-tree-child-indent);
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.childrenTask {
+  gap: var(--ns-tree-child-gap-task);
+}
+
+/* ── Task row / card ──────────────────────────────────────────────────────── */
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  position: relative;
+}
+
+.taskCard {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--ns-task-padding);
+  border-radius: var(--ns-task-radius);
+  background: var(--ns-task-bg);
+  border: 1px solid rgba(var(--ns-node-accent-rgb), var(--ns-task-border-op));
+  min-width: var(--ns-task-min-w);
+  max-width: var(--ns-task-max-w);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 2;
+  cursor: grab;
+  animation: ns-rise 0.5s ease both;
+  user-select: none;
+  transition: opacity 0.25s, filter 0.25s;
+}
+.taskCard:active { cursor: grabbing; }
+
+.taskCard.cardDone {
+  background: var(--ns-surface-overlay);
+  opacity: 0.58;
+  filter: saturate(0.5);
+}
+
+/* ── Task checkbox ────────────────────────────────────────────────────────── */
+
+.taskCheck {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  border: 1.5px solid rgba(var(--ns-node-accent-rgb), .55);
+  background: transparent;
+  color: var(--ns-ok);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+
+.taskCheck::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+}
+.taskCheck:hover {
+  border-color: rgba(var(--ns-node-accent-rgb), .8);
+}
+
+.taskCheckDone {
+  border-color: var(--ns-ok);
+  background: rgba(var(--ns-ok-rgb), .16);
+}
+
+/* ── Task title ───────────────────────────────────────────────────────────── */
+
+.taskTitle {
+  font-family: var(--ns-font-ui);
+  font-weight: var(--ns-fw-book);
+  font-size: var(--ns-task-fs);
+  letter-spacing: -0.1px;
+  color: var(--ns-task-text);
+}
+
+.taskTitleDone {
+  color: rgba(var(--ns-task-accent-rgb), .55);
+  text-decoration: line-through;
+  text-decoration-color: rgba(var(--ns-task-accent-rgb), .3);
+}
+
+/* ── Inline add card (dashed) ─────────────────────────────────────────────── */
+
+.addCard {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 15px 16px;
+  min-width: 234px;
+  max-width: 260px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(var(--ns-gold-rgb), .55);
+  background: linear-gradient(158deg, rgba(44, 34, 16, .5), rgba(13, 15, 22, .62));
+  box-shadow: 0 20px 42px -26px rgba(var(--ns-gold-rgb), .55);
+  z-index: 2;
+  animation: ns-rise 0.4s ease both;
+}
+
+.addLabel {
+  font-family: var(--ns-font-mono);
+  font-size: 10px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: 2.5px;
+  color: var(--ns-gold);
+}
+
+.addChips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.addChip {
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(255, 255, 255, .1);
+  color: rgba(210, 216, 230, .65);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.addChip:hover {
+  background: rgba(var(--chip-rgb), .1);
+  border-color: rgba(var(--chip-rgb), .5);
+  color: var(--chip-accent);
+}
+.addChipActive {
+  background: rgba(var(--chip-rgb), .2);
+  border-color: rgba(var(--chip-rgb), .7);
+  color: var(--chip-accent);
+}
+
+.addInput {
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid rgba(255, 255, 255, .11);
+  border-radius: 9px;
+  padding: 9px 11px;
+  color: var(--ns-text-hi);
+  font-family: var(--ns-font-ui);
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.addInput::placeholder { color: var(--ns-text-lo); }
+.addInput:focus { border-color: rgba(var(--ns-gold-rgb), .4); }
+
+.addHint {
+  font-family: var(--ns-font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, .32);
+}

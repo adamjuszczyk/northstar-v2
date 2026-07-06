@@ -1,0 +1,170 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-2);
+  padding: var(--ns-space-3) var(--ns-space-4);
+  background: var(--ns-bg-surface);
+  border-top: 1px solid var(--ns-border-faint);
+  animation: ns-rise 0.18s ease both;
+}
+
+/* ── Promote row ──────────────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+  padding: 7px 13px;
+  min-height: 44px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--btn-accent-rgb), .28);
+  background: rgba(var(--btn-accent-rgb), .07);
+  color: var(--btn-accent);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.actionBtn:hover:not(:disabled) {
+  background: rgba(var(--btn-accent-rgb), .14);
+  border-color: rgba(var(--btn-accent-rgb), .5);
+}
+.actionBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btnIcon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ── Schedule section ─────────────────────────────────────────────────────── */
+
+.scheduleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-3);
+}
+
+.scheduleLabel {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-caps);
+  color: var(--ns-text-lo);
+  flex-shrink: 0;
+}
+
+.scheduleBtns {
+  display: flex;
+  gap: var(--ns-space-1);
+}
+
+.scheduleChip {
+  padding: 4px 10px;
+  min-height: 44px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-mid);
+  background: rgba(255, 255, 255, .03);
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.scheduleChip:hover:not(:disabled) {
+  border-color: rgba(var(--ns-project-accent-rgb), .45);
+  color: var(--ns-project-accent);
+}
+.scheduleChipActive {
+  background: rgba(var(--ns-project-accent-rgb), .12);
+  border-color: rgba(var(--ns-project-accent-rgb), .5);
+  color: var(--ns-project-accent);
+}
+.scheduleChip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Date picker row ──────────────────────────────────────────────────────── */
+
+.pickerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+  animation: ns-rise 0.15s ease both;
+}
+
+.datePicker {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-input);
+  color: var(--ns-text-hi);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  outline: none;
+  transition: border-color 0.15s;
+  color-scheme: dark;
+}
+.datePicker:focus {
+  border-color: rgba(var(--ns-project-accent-rgb), .5);
+}
+
+.confirmBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-project-accent-rgb), .35);
+  background: rgba(var(--ns-project-accent-rgb), .1);
+  color: var(--ns-project-accent);
+  font-family: var(--ns-font-mono);
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.confirmBtn:hover:not(:disabled) {
+  background: rgba(var(--ns-project-accent-rgb), .2);
+}
+.confirmBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Error ────────────────────────────────────────────────────────────────── */
+
+.error {
+  margin: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  color: var(--ns-danger);
+}
+
+/* ── Delete row ───────────────────────────────────────────────────────────── */
+
+.deleteRow {
+  display: flex;
+  padding-top: var(--ns-space-1);
+  border-top: 1px solid var(--ns-border-subtle);
+  margin-top: var(--ns-space-1);
+}
+
+.deleteBtn {
+  padding: 5px 12px;
+  min-height: 44px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-danger-rgb), .25);
+  background: rgba(var(--ns-danger-rgb), .05);
+  color: rgba(var(--ns-danger-rgb), .7);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.deleteBtn:hover:not(:disabled) { opacity: 0.85; }
+.deleteBtn:disabled { opacity: 0.35; cursor: not-allowed; }

@@ -1,0 +1,98 @@
+.root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ns-bg-base);
+  color: var(--ns-text-hi);
+  font-family: var(--ns-font-ui);
+  overflow: hidden;
+}
+
+/* Celestial ambient background */
+.ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--ns-ambient-gradient);
+  z-index: 0;
+}
+
+.dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--ns-dot-grid-color) 1px, transparent 1px);
+  background-size: var(--ns-dot-grid-size) var(--ns-dot-grid-size);
+  -webkit-mask-image: radial-gradient(80% 80% at 40% 30%, #000 30%, transparent 90%);
+  mask-image: radial-gradient(80% 80% at 40% 30%, #000 30%, transparent 90%);
+  z-index: 0;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: var(--ns-vignette);
+  z-index: 0;
+}
+
+/* Authed layout */
+.shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Mobile: pad bottom for tab bar */
+  padding-bottom: var(--ns-nav-height);
+}
+
+/* Desktop: side nav layout */
+@media (min-width: 768px) {
+  .shell {
+    flex-direction: row;
+  }
+
+  .main {
+    padding-bottom: 0;
+    padding-left: var(--ns-nav-width);
+  }
+}
+
+/* Auth wrapper — fills the root flex column so AuthPage can centre itself */
+.authWrapper {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+/* Loading spinner */
+.loading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.loadingStar {
+  font-size: var(--ns-text-lg);
+  color: var(--ns-gold);
+  text-shadow: 0 0 12px rgba(246,200,122,.6);
+  animation: ns-pulse-gold 2.2s ease-in-out infinite;
+}

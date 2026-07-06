@@ -165,27 +165,57 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
 // ── Draggable row inside an expanded cluster ───────────────────────────────────
 
 interface ClusterItemRowProps {
-  item:   DayItem
-  onEdit: (item: DayItem) => void
+  item:      DayItem
+  isPending: boolean
+  onEdit:    (item: DayItem) => void
+  onToggle:  (item: DayItem) => void
+  onDelete:  (item: DayItem) => void
 }
 
-function ClusterItemRow({ item, onEdit }: ClusterItemRowProps) {
+function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: ClusterItemRowProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
 
   return (
     <div
       ref={setNodeRef}
       className={styles.clusterExpandedRow}
-      style={{ opacity: isDragging ? 0 : undefined }}
+      style={{ opacity: isDragging ? 0 : item.isComplete ? 0.6 : undefined }}
       onClick={e => { e.stopPropagation(); onEdit(item) }}
       {...attributes}
       {...listeners}
     >
       <span className={styles.clusterExpandedTime}>{item.startTime}</span>
-      <span className={styles.clusterExpandedTitle}>{item.displayTitle}</span>
+      <span className={[styles.clusterExpandedTitle, item.isComplete ? styles.clusterExpandedTitleDone : ''].filter(Boolean).join(' ')}>
+        {item.displayTitle}
+      </span>
       {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
       {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
-      <span className={styles.clusterExpandedArrow}>›</span>
+      {item.isComplete && <span className={styles.doneBadge}>✓</span>}
+      {!item.isComplete && (
+        <button
+          className={styles.clusterCompleteBtn}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onToggle(item) }}
+          disabled={isPending}
+          aria-label="Mark complete"
+        >✓</button>
+      )}
+      {item.isComplete && (
+        <button
+          className={styles.clusterUndoBtn}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onToggle(item) }}
+          disabled={isPending}
+          aria-label="Undo complete"
+        >↩</button>
+      )}
+      <button
+        className={styles.clusterDeleteBtn}
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); onDelete(item) }}
+        disabled={isPending}
+        aria-label="Delete"
+      >✕</button>
     </div>
   )
 }
@@ -193,12 +223,15 @@ function ClusterItemRow({ item, onEdit }: ClusterItemRowProps) {
 // ── Cluster block ──────────────────────────────────────────────────────────────
 
 interface ClusterProps {
-  items:  DayItem[]
-  now:    number
-  onEdit: (item: DayItem) => void
+  items:      DayItem[]
+  now:        number
+  isPending:  boolean
+  onEdit:     (item: DayItem) => void
+  onToggle:   (item: DayItem) => void
+  onDelete:   (item: DayItem) => void
 }
 
-function ClusterBlock({ items, now, onEdit }: ClusterProps) {
+function ClusterBlock({ items, now, isPending, onEdit, onToggle, onDelete }: ClusterProps) {
   const [expanded, setExpanded] = useState(false)
 
   const sorted = [...items].sort((a, b) =>
@@ -262,7 +295,14 @@ function ClusterBlock({ items, now, onEdit }: ClusterProps) {
         {expanded && (
           <div className={styles.clusterExpanded}>
             {sorted.map(item => (
-              <ClusterItemRow key={item.id} item={item} onEdit={onEdit} />
+              <ClusterItemRow
+                key={item.id}
+                item={item}
+                isPending={isPending}
+                onEdit={onEdit}
+                onToggle={onToggle}
+                onDelete={onDelete}
+              />
             ))}
           </div>
         )}
@@ -383,7 +423,10 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
                 key={`cluster-${gi}-${group[0].id}`}
                 items={group}
                 now={now}
+                isPending={isPending}
                 onEdit={onEdit}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
               />
             )
           )}

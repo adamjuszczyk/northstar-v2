@@ -47,9 +47,9 @@
   background: rgba(255,255,255,.04);
 }
 .tabActive {
-  background: rgba(var(--ns-gold-rgb), .12);
-  color: var(--ns-gold);
-  box-shadow: 0 0 0 1px rgba(var(--ns-gold-rgb), .2);
+  background: rgba(var(--ns-accent-rgb), .12);
+  color: var(--ns-accent);
+  box-shadow: 0 0 0 1px rgba(var(--ns-accent-rgb), .2);
 }
 
 /* ── Date navigation ────────────────────────────────────────────────────────── */
@@ -78,9 +78,9 @@
   padding-bottom: 1px;
 }
 .navBtn:hover {
-  border-color: rgba(var(--ns-gold-rgb), .4);
+  border-color: rgba(var(--ns-accent-rgb), .4);
   color: var(--ns-text-hi);
-  background: rgba(var(--ns-gold-rgb), .05);
+  background: rgba(var(--ns-accent-rgb), .05);
 }
 
 .heading {
@@ -109,8 +109,8 @@
   transition: border-color .12s, color .12s;
 }
 .todayBtn:hover:not(:disabled) {
-  border-color: rgba(var(--ns-gold-rgb), .4);
-  color: var(--ns-gold);
+  border-color: rgba(var(--ns-accent-rgb), .4);
+  color: var(--ns-accent);
 }
 .todayBtn:disabled {
   opacity: .35;

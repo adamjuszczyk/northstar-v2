@@ -23,8 +23,8 @@
 
 .statsStar {
   font-size: 12px;
-  color: var(--ns-gold);
-  text-shadow: 0 0 8px rgba(var(--ns-gold-rgb), .6);
+  color: var(--ns-accent);
+  text-shadow: 0 0 8px rgba(var(--ns-accent-rgb), .6);
 }
 
 .statsText {
@@ -41,9 +41,9 @@
 .addRootBtn {
   padding: 5px 13px;
   border-radius: var(--ns-radius-sm);
-  border: 1px dashed rgba(var(--ns-gold-rgb), .45);
-  background: rgba(var(--ns-gold-rgb), .06);
-  color: var(--ns-gold);
+  border: 1px dashed rgba(var(--ns-accent-rgb), .45);
+  background: rgba(var(--ns-accent-rgb), .06);
+  color: var(--ns-accent);
   font-family: var(--ns-font-mono);
   font-size: var(--ns-text-xs);
   font-weight: var(--ns-fw-semibold);
@@ -52,8 +52,8 @@
   transition: background 0.18s, border-color 0.18s;
 }
 .addRootBtn:hover {
-  background: rgba(var(--ns-gold-rgb), .14);
-  border-color: rgba(var(--ns-gold-rgb), .7);
+  background: rgba(var(--ns-accent-rgb), .14);
+  border-color: rgba(var(--ns-accent-rgb), .7);
 }
 
 /* ── Scrollable canvas ────────────────────────────────────────────────────── */
@@ -116,9 +116,9 @@
   margin-top: var(--ns-space-2);
   padding: 8px 18px;
   border-radius: var(--ns-radius-md);
-  border: 1px dashed rgba(var(--ns-gold-rgb), .5);
-  background: rgba(var(--ns-gold-rgb), .07);
-  color: var(--ns-gold);
+  border: 1px dashed rgba(var(--ns-accent-rgb), .5);
+  background: rgba(var(--ns-accent-rgb), .07);
+  color: var(--ns-accent);
   font-family: var(--ns-font-mono);
   font-size: var(--ns-text-xs);
   font-weight: var(--ns-fw-semibold);
@@ -126,7 +126,7 @@
   cursor: pointer;
   transition: background 0.18s;
 }
-.emptyBtn:hover { background: rgba(var(--ns-gold-rgb), .14); }
+.emptyBtn:hover { background: rgba(var(--ns-accent-rgb), .14); }
 
 /* ── Legend panel (bottom-left) ───────────────────────────────────────────── */
 

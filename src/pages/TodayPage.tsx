@@ -1,7 +1,7 @@
-import { format } from 'date-fns'
+import { useTodayISO } from '../hooks/useTodayISO'
 import DayView from '../components/day/DayView'
 
 export default function TodayPage() {
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const today = useTodayISO()
   return <DayView date={today} />
 }

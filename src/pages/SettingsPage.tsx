@@ -1,8 +1,19 @@
+import { useState } from 'react'
 import { useSettings, ACCENT_SWATCHES } from '../hooks/useSettings'
+import { useSignOut } from '../hooks/useSignOut'
 import styles from './SettingsPage.module.css'
 
 export default function SettingsPage() {
   const { settings, update } = useSettings()
+  const signOut = useSignOut()
+  const [signingOut, setSigningOut] = useState(false)
+
+  async function handleSignOut() {
+    if (signingOut) return
+    if (!window.confirm('Sign out of Northstar?')) return
+    setSigningOut(true)
+    await signOut()
+  }
 
   return (
     <div className={styles.page}>
@@ -63,6 +74,14 @@ export default function SettingsPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* ── Account ─────────────────────────────────────────────────────────── */}
+      <section className={styles.section}>
+        <span className={styles.sectionLabel}>ACCOUNT</span>
+        <button className={styles.signOutBtn} onClick={handleSignOut} disabled={signingOut}>
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </button>
       </section>
 
       <p className={styles.hint}>

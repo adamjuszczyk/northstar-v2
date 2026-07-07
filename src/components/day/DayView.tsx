@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core'
 import {
   useDayItems, useUpdateDayItem,
-  PXH, TOPPAD, decimalToTimeStr,
+  PXH, TOPPAD, decimalToTimeStr, timeToDecimal,
 } from '../../hooks/useDayItems'
 import type { DayItem } from '../../hooks/useDayItems'
 import { useTreeNodes }  from '../../hooks/useTreeNodes'
@@ -135,9 +135,16 @@ export default function DayView({ date, onDateChange }: Props) {
         updateItem({ id, startTime: null, endTime: null })
       }
     } else if (over.id === 'timeline-area' && dropTime !== null) {
-      // Floating or anchored → anchor at new time
+      // Floating or anchored → anchor at new time. Preserve the item's
+      // original duration so re-anchoring can't produce end < start.
       if (item.startTime !== dropTime) {
-        updateItem({ id, startTime: dropTime })
+        if (item.startTime !== null && item.endTime !== null) {
+          const duration = timeToDecimal(item.endTime) - timeToDecimal(item.startTime)
+          const newEnd   = Math.min(23.983333, timeToDecimal(dropTime) + duration)
+          updateItem({ id, startTime: dropTime, endTime: decimalToTimeStr(newEnd) })
+        } else {
+          updateItem({ id, startTime: dropTime })
+        }
       }
     }
 

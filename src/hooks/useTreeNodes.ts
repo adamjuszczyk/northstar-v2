@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { db } from '../lib/db'
 import { useAuth } from './useAuth'
 import type { TreeNode, NodeType, NodeStatus } from '../types'
 
@@ -41,7 +42,22 @@ export function useTreeNodes() {
   const { user } = useAuth()
   return useQuery({
     queryKey: user ? QK(user.id) : ['ns_tree_nodes', 'none'],
-    queryFn: async () => {
+    queryFn: async (): Promise<TreeNode[]> => {
+      if (!navigator.onLine) {
+        const cached = await db.treeNodes.where('userId').equals(user!.id).toArray()
+        return cached.map(r => ({
+          id:        r.id,
+          userId:    r.userId,
+          parentId:  r.parentId,
+          type:      r.type as NodeType,
+          title:     r.title,
+          notes:     null,
+          status:    r.status as NodeStatus,
+          position:  r.position,
+          createdAt: r.updatedAt,
+          updatedAt: r.updatedAt,
+        }))
+      }
       const { data, error } = await supabase
         .from('ns_tree_nodes')
         .select('*')
@@ -50,6 +66,7 @@ export function useTreeNodes() {
       if (error) throw error
       return (data as TreeNodeRow[]).map(fromRow)
     },
+    networkMode: 'always',
     enabled: !!user,
   })
 }

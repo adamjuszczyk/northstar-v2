@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useCreateDayItem, useAddInboxToDay } from '../../hooks/useDayItems'
+import { useCreateDayItem, useAddInboxToDay, timeToDecimal } from '../../hooks/useDayItems'
 import type { DayItemPriority } from '../../hooks/useDayItems'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
@@ -9,6 +9,24 @@ import styles from './DayItemForm.module.css'
 type Source = 'standalone' | 'tree' | 'inbox'
 
 const NODE_TYPE_ORDER: NodeType[] = ['vision', 'goal', 'project', 'task']
+
+/**
+ * Shared time-anchor validation for DayItemForm and DayItemEditForm.
+ * Enforces: an end time can only be set alongside a start time, and end
+ * must come strictly after start. Returns an error message, or null if valid.
+ */
+export function validateTimeRange(
+  hasTime:   boolean,
+  startTime: string,
+  endTime:   string,
+): string | null {
+  if (!hasTime) return null
+  if (endTime && !startTime) return 'Add a start time before setting an end time.'
+  if (startTime && endTime && timeToDecimal(endTime) <= timeToDecimal(startTime)) {
+    return 'End time must be after start time.'
+  }
+  return null
+}
 
 interface Props {
   date:    string
@@ -61,6 +79,7 @@ export default function DayItemForm({ date, onClose }: Props) {
   }, [onClose])
 
   function isValid(): boolean {
+    if (validateTimeRange(hasTime, startTime, endTime)) return false
     if (source === 'standalone') return title.trim().length > 0
     if (source === 'tree')       return treeNodeId !== null
     if (source === 'inbox')      return inboxId !== null
@@ -68,7 +87,10 @@ export default function DayItemForm({ date, onClose }: Props) {
   }
 
   function handleSubmit() {
-    if (!isValid() || isPending) return
+    if (isPending) return
+    const timeError = validateTimeRange(hasTime, startTime, endTime)
+    if (timeError) { setError(timeError); return }
+    if (!isValid()) return
     setError(null)
 
     if (source === 'standalone') {

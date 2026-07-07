@@ -1,13 +1,15 @@
 import { useState, type CSSProperties } from 'react'
-import { format, parseISO, addDays, startOfMonth, endOfMonth, getDay, isToday } from 'date-fns'
+import { format, parseISO, addDays, endOfMonth, getDay, isToday } from 'date-fns'
 import { useMonthFocus, useCreateMonthFocus, useToggleMonthFocus, useDeleteMonthFocus } from '../../hooks/useMonthFocus'
 import type { MonthFocusItem } from '../../hooks/useMonthFocus'
 import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
+import { useSettings } from '../../hooks/useSettings'
 import FocusItemForm from '../planner/FocusItemForm'
 import styles from './MonthView.module.css'
 
-const DAY_NAMES = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+const DAY_NAMES_MON_FIRST = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+const DAY_NAMES_SUN_FIRST = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
 // ── Priority accent helpers ────────────────────────────────────────────────────
 
@@ -18,13 +20,12 @@ function priorityRgbVar(p: 'high' | 'medium' | 'low' | null): string {
   return ''
 }
 
-// Build the grid: always Mon–Sun rows, pad with null for out-of-month days
-function buildCalendarGrid(monthStartISO: string): (Date | null)[] {
-  const first  = parseISO(monthStartISO)
-  const last   = endOfMonth(first)
-  // getDay: 0=Sun…6=Sat → convert to Mon-based: Mon=0
-  const startPad = (getDay(first) + 6) % 7
-  const endPad   = (7 - ((getDay(last) + 6) % 7 + 1)) % 7
+// Build the grid: rows respect weekStartsOn, pad with null for out-of-month days
+function buildCalendarGrid(monthStartISO: string, weekStartsOn: 0 | 1): (Date | null)[] {
+  const first = parseISO(monthStartISO)
+  const last  = endOfMonth(first)
+  // getDay: 0=Sun…6=Sat. Mon-first: shift so Mon=0. Sun-first: already 0-based.
+  const startPad = weekStartsOn === 1 ? (getDay(first) + 6) % 7 : getDay(first)
 
   const cells: (Date | null)[] = []
   for (let i = 0; i < startPad; i++) cells.push(null)
@@ -34,6 +35,7 @@ function buildCalendarGrid(monthStartISO: string): (Date | null)[] {
     cells.push(cur)
     cur = addDays(cur, 1)
   }
+  const endPad = (7 - (cells.length % 7)) % 7
   for (let i = 0; i < endPad; i++) cells.push(null)
   return cells
 }
@@ -135,6 +137,9 @@ interface Props {
 export default function MonthView({ monthStart, onDaySelect }: Props) {
   const [formOpen, setFormOpen] = useState(false)
 
+  const { settings } = useSettings()
+  const dayNames = settings.weekStartsOn === 0 ? DAY_NAMES_SUN_FIRST : DAY_NAMES_MON_FIRST
+
   const monthEnd = format(endOfMonth(parseISO(monthStart)), 'yyyy-MM-dd')
 
   const { data: rawItems   = [], isLoading: loadingItems } = useRangeDayItems(monthStart, monthEnd)
@@ -148,7 +153,7 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
 
   const nodeMap = new Map(treeNodes.map(n => [n.id, n]))
   const byDate  = groupByDate(rawItems)
-  const cells   = buildCalendarGrid(monthStart)
+  const cells   = buildCalendarGrid(monthStart, settings.weekStartsOn)
 
   const isLoading = loadingItems || loadingFocus
 
@@ -172,7 +177,7 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
       <div className={styles.calWrap}>
         {/* Day-of-week header */}
         <div className={styles.dayHeader}>
-          {DAY_NAMES.map(d => (
+          {dayNames.map(d => (
             <span key={d} className={styles.dayLabel}>{d}</span>
           ))}
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUpdateDayItem, useDeleteDayItem } from '../../hooks/useDayItems'
 import type { DayItem, DayItemPriority } from '../../hooks/useDayItems'
-import { TimeSection, PriorityPicker } from './DayItemForm'
+import { TimeSection, PriorityPicker, validateTimeRange } from './DayItemForm'
 import styles from './DayItemForm.module.css'
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function DayItemEditForm({ item, onClose }: Props) {
-  const [title,     setTitle]     = useState(item.title ?? item.displayTitle)
+  const [title,     setTitle]     = useState(item.title ?? '')
   const [hasTime,   setHasTime]   = useState(item.startTime !== null)
   const [startTime, setStartTime] = useState(item.startTime ?? '')
   const [endTime,   setEndTime]   = useState(item.endTime   ?? '')
@@ -29,6 +29,8 @@ export default function DayItemEditForm({ item, onClose }: Props) {
 
   function handleSave() {
     if (isPending) return
+    const timeError = validateTimeRange(hasTime, startTime, endTime)
+    if (timeError) { setError(timeError); return }
     setError(null)
     update({
       id:        item.id,
@@ -123,7 +125,11 @@ export default function DayItemEditForm({ item, onClose }: Props) {
           </button>
           <span className={styles.actionsSpacer} />
           <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>Cancel</button>
-          <button className={styles.saveBtn} onClick={handleSave} disabled={isPending}>
+          <button
+            className={styles.saveBtn}
+            onClick={handleSave}
+            disabled={isPending || !!validateTimeRange(hasTime, startTime, endTime)}
+          >
             {updating ? '…' : 'Save'}
           </button>
         </div>

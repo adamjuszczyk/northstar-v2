@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { db } from '../lib/db'
 import { useAuth } from './useAuth'
 
 export type FocusSource = 'standalone' | 'tree' | 'inbox'
@@ -32,7 +33,23 @@ export function useWeekFocus(weekStart: string) {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['ns_week_focus', weekStart],
-    queryFn: async () => {
+    queryFn: async (): Promise<WeekFocusItem[]> => {
+      if (!navigator.onLine) {
+        const cached = await db.weekFocus
+          .where('userId').equals(user!.id)
+          .filter(r => r.weekStart === weekStart)
+          .sortBy('position')
+        return cached.map(r => ({
+          id:          r.id,
+          weekStart:   r.weekStart,
+          source:      r.source as FocusSource,
+          title:       r.title,
+          treeNodeId:  r.treeNodeId,
+          inboxItemId: r.inboxItemId,
+          isComplete:  r.isComplete,
+          position:    r.position,
+        }))
+      }
       const { data, error } = await supabase
         .from('ns_week_focus')
         .select('*')
@@ -47,6 +64,7 @@ export function useWeekFocus(weekStart: string) {
       }
       return (data ?? []).map(r => fromRow(r as Record<string, unknown>))
     },
+    networkMode: 'always',
     enabled: !!user && !!weekStart,
   })
 }
@@ -99,11 +117,16 @@ export function useToggleWeekFocus() {
         .eq('id', params.id)
         .eq('user_id', user.id)
       if (error) throw error
-      // Two-table rule: completing a tree-linked item marks the node complete too
-      if (params.source === 'tree' && params.treeNodeId && params.isComplete) {
+      // Two-table rule: mirrors day-item toggle semantics — completing sets
+      // the node complete, un-completing reverts to in_progress (never
+      // not_started, which would erase the node's earlier progress).
+      if (params.source === 'tree' && params.treeNodeId) {
         const { error: te } = await supabase
           .from('ns_tree_nodes')
-          .update({ status: 'complete', updated_at: new Date().toISOString() })
+          .update({
+            status:     params.isComplete ? 'complete' : 'in_progress',
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', params.treeNodeId)
           .eq('user_id', user.id)
         if (te) throw te

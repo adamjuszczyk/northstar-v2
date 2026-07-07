@@ -5,6 +5,7 @@ import {
   parseISO,
   isToday,
   isSameDay,
+  subDays,
 } from 'date-fns'
 
 export function toISODate(d: Date): string {
@@ -15,10 +16,25 @@ export function todayISO(): string {
   return toISODate(new Date())
 }
 
-/** First day of the week containing d. weekStartsOn: 1=Monday (default), 0=Sunday */
-export function weekStart(d: Date | string, weekStartsOn: 0 | 1 = 1): string {
+/**
+ * Canonical week key (always the Monday of the week containing d).
+ * This is the value stored/queried as `week_start` — it must NOT depend on
+ * the user's "week starts on" display preference, or the same calendar week
+ * would be keyed differently depending on which device/setting wrote it.
+ */
+export function weekStart(d: Date | string): string {
   const date = typeof d === 'string' ? parseISO(d) : d
-  return toISODate(startOfWeek(date, { weekStartsOn }))
+  return toISODate(startOfWeek(date, { weekStartsOn: 1 }))
+}
+
+/**
+ * Display-only: shifts a canonical Monday week-start back one day when the
+ * user's setting is Sunday-first, so the rendered grid starts on Sunday
+ * while still showing the same underlying (Monday-keyed) week.
+ */
+export function weekDisplayStart(mondayISO: string, weekStartsOn: 0 | 1): string {
+  if (weekStartsOn === 0) return toISODate(subDays(parseISO(mondayISO), 1))
+  return mondayISO
 }
 
 /** First day of the month containing d */

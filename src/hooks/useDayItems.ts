@@ -213,13 +213,15 @@ export function useToggleDayItem() {
         await db.dayItems.where('id').equals(id).modify({ isComplete, updatedAt: now })
         await enqueue('ns_day_items', 'update', {
           id, is_complete: isComplete, updated_at: now,
-        })
+        }, user.id)
         if (treeNodeId) {
-          const status = isComplete ? 'complete' : 'not_started'
+          // Un-checking reverts to in_progress, not not_started — completing
+          // a day item shouldn't be able to erase a node's earlier progress.
+          const status = isComplete ? 'complete' : 'in_progress'
           await db.treeNodes.where('id').equals(treeNodeId).modify({ status, updatedAt: now })
           await enqueue('ns_tree_nodes', 'update', {
             id: treeNodeId, status, updated_at: now,
-          })
+          }, user.id)
         }
         return
       }
@@ -232,11 +234,12 @@ export function useToggleDayItem() {
       if (treeNodeId) {
         const { error: e2 } = await supabase
           .from('ns_tree_nodes')
-          .update({ status: isComplete ? 'complete' : 'not_started', updated_at: now })
+          .update({ status: isComplete ? 'complete' : 'in_progress', updated_at: now })
           .eq('id', treeNodeId).eq('user_id', user.id)
         if (e2) throw e2
       }
     },
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_tree_nodes'] })

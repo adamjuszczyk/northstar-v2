@@ -79,7 +79,7 @@ export function useCreateInboxItem() {
         await enqueue('ns_inbox_items', 'insert', {
           id, user_id: user.id, content, state: 'unassigned',
           promoted_node_id: null, created_at: now, updated_at: now,
-        })
+        }, user.id)
         return item
       }
 
@@ -91,6 +91,7 @@ export function useCreateInboxItem() {
       if (error) throw error
       return row2item(data)
     },
+    networkMode: 'always',
     onSuccess: () => qc.invalidateQueries({ queryKey: QK(user?.id ?? '') }),
   })
 }

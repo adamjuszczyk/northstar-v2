@@ -40,6 +40,30 @@ export interface CachedTreeNode {
   updatedAt: string
 }
 
+export interface CachedWeekFocus {
+  id:          string
+  userId:      string
+  weekStart:   string
+  source:      string
+  title:       string | null
+  treeNodeId:  string | null
+  inboxItemId: string | null
+  isComplete:  boolean
+  position:    number
+}
+
+export interface CachedMonthFocus {
+  id:          string
+  userId:      string
+  monthStart:  string
+  source:      string
+  title:       string | null
+  treeNodeId:  string | null
+  inboxItemId: string | null
+  isComplete:  boolean
+  position:    number
+}
+
 // ── Sync queue ───────────────────────────────────────────────────────────────
 
 export interface SyncEntry {
@@ -48,15 +72,18 @@ export interface SyncEntry {
   op:        'insert' | 'update'
   payload:   Record<string, unknown>
   createdAt: number          // Date.now()
+  userId:    string          // owner — replay only processes entries matching the current user
 }
 
 // ── Database ─────────────────────────────────────────────────────────────────
 
 class NorthstarDB extends Dexie {
-  dayItems!:   Table<CachedDayItem,   string>
-  inboxItems!: Table<CachedInboxItem, string>
-  treeNodes!:  Table<CachedTreeNode,  string>
-  syncQueue!:  Table<SyncEntry,       number>
+  dayItems!:    Table<CachedDayItem,    string>
+  inboxItems!:  Table<CachedInboxItem,  string>
+  treeNodes!:   Table<CachedTreeNode,   string>
+  weekFocus!:   Table<CachedWeekFocus,  string>
+  monthFocus!:  Table<CachedMonthFocus, string>
+  syncQueue!:   Table<SyncEntry,        number>
 
   constructor() {
     super('northstar_v2')
@@ -66,7 +93,36 @@ class NorthstarDB extends Dexie {
       treeNodes:  'id, userId',
       syncQueue:  '++id, table, createdAt',
     })
+    this.version(2).stores({
+      weekFocus:  'id, userId, weekStart',
+      monthFocus: 'id, userId, monthStart',
+    })
+    this.version(3).stores({
+      syncQueue: '++id, table, createdAt, userId',
+    })
+    this.version(4).stores({
+      // Compound index used by the offline "today's items" lookup —
+      // previously missing, which threw a SchemaError on every offline
+      // read and silently fell back to a full-table scan.
+      dayItems: 'id, userId, date, [userId+date]',
+    })
   }
 }
 
 export const db = new NorthstarDB()
+
+/** Wipes every local cache table. Used on sign-out and on auth-user change. */
+export async function clearAllCaches(): Promise<void> {
+  try {
+    await Promise.all([
+      db.dayItems.clear(),
+      db.inboxItems.clear(),
+      db.treeNodes.clear(),
+      db.weekFocus.clear(),
+      db.monthFocus.clear(),
+      db.syncQueue.clear(),
+    ])
+  } catch (e) {
+    console.warn('[db] failed to clear local caches:', e)
+  }
+}

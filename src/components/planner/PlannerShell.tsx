@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react'
 import { format, parseISO, addDays, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns'
-import { weekStart, monthStart, formatWeekRange, formatMonthYear, todayISO } from '../../lib/dates'
+import { weekStart, weekDisplayStart, monthStart, formatWeekRange, formatMonthYear } from '../../lib/dates'
 import { useSettings } from '../../hooks/useSettings'
+import { useTodayISO } from '../../hooks/useTodayISO'
 import DayView  from '../day/DayView'
 import WeekView from '../week/WeekView'
 import MonthView from '../month/MonthView'
@@ -14,30 +15,31 @@ interface Props {
 }
 
 export default function PlannerShell({ initialDate }: Props) {
-  const today = todayISO()
+  const today = useTodayISO()
   const { settings } = useSettings()
   const wso = settings.weekStartsOn
 
   const [tab,      setTab]      = useState<Tab>('day')
   const [dayDate,  setDayDate]  = useState(initialDate ?? today)
-  const [wkStart,  setWkStart]  = useState(weekStart(initialDate ?? today, wso))
+  // wkStart is always the canonical Monday key — never derived from wso.
+  const [wkStart,  setWkStart]  = useState(weekStart(initialDate ?? today))
   const [moStart,  setMoStart]  = useState(monthStart(initialDate ?? today))
 
   // ── Navigation ──────────────────────────────────────────────────────────────
 
   function navPrev() {
     if (tab === 'day')   setDayDate(d => format(addDays(parseISO(d), -1), 'yyyy-MM-dd'))
-    if (tab === 'week')  setWkStart(w => weekStart(subWeeks(parseISO(w), 1), wso))
+    if (tab === 'week')  setWkStart(w => weekStart(subWeeks(parseISO(w), 1)))
     if (tab === 'month') setMoStart(m => monthStart(subMonths(parseISO(m), 1)))
   }
   function navNext() {
     if (tab === 'day')   setDayDate(d => format(addDays(parseISO(d),  1), 'yyyy-MM-dd'))
-    if (tab === 'week')  setWkStart(w => weekStart(addWeeks(parseISO(w), 1), wso))
+    if (tab === 'week')  setWkStart(w => weekStart(addWeeks(parseISO(w), 1)))
     if (tab === 'month') setMoStart(m => monthStart(addMonths(parseISO(m), 1)))
   }
   function navToday() {
     if (tab === 'day')   setDayDate(today)
-    if (tab === 'week')  setWkStart(weekStart(today, wso))
+    if (tab === 'week')  setWkStart(weekStart(today))
     if (tab === 'month') setMoStart(monthStart(today))
   }
 
@@ -45,7 +47,7 @@ export default function PlannerShell({ initialDate }: Props) {
 
   function headingText(): string {
     if (tab === 'day')   return format(parseISO(dayDate), 'EEE d MMM yyyy').toUpperCase()
-    if (tab === 'week')  return formatWeekRange(wkStart)
+    if (tab === 'week')  return formatWeekRange(weekDisplayStart(wkStart, wso))
     return formatMonthYear(moStart)
   }
 
@@ -62,7 +64,7 @@ export default function PlannerShell({ initialDate }: Props) {
 
   const isToday_ =
     tab === 'day'   ? dayDate === today :
-    tab === 'week'  ? wkStart === weekStart(today, wso) :
+    tab === 'week'  ? wkStart === weekStart(today) :
     moStart === monthStart(today)
 
   return (

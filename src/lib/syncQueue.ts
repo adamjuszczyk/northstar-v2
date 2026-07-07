@@ -1,18 +1,26 @@
 import { db } from './db'
 import { supabase } from './supabase'
 
-/** Add an operation to the offline sync queue */
+/** Add an operation to the offline sync queue, scoped to the writing user. */
 export async function enqueue(
   table:   string,
   op:      'insert' | 'update',
   payload: Record<string, unknown>,
+  userId:  string,
 ) {
-  await db.syncQueue.add({ table, op, payload, createdAt: Date.now() })
+  await db.syncQueue.add({ table, op, payload, createdAt: Date.now(), userId })
 }
 
-/** Replay all queued operations against Supabase in order. */
+/**
+ * Replay queued operations against Supabase in order, for the given user
+ * only. Entries queued under a different user (e.g. someone else signed in
+ * on this device before their writes synced) are left untouched in the
+ * queue rather than being replayed under the wrong account.
+ */
 export async function replayQueue(userId: string): Promise<void> {
-  const entries = await db.syncQueue.orderBy('createdAt').toArray()
+  const entries = await db.syncQueue
+    .where('userId').equals(userId)
+    .sortBy('createdAt')
   if (entries.length === 0) return
 
   for (const entry of entries) {

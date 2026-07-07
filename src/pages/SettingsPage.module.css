@@ -123,6 +123,28 @@
   box-shadow: 0 2px 8px -2px rgba(0, 0, 0, .3);
 }
 
+/* ── Account ─────────────────────────────────────────────────────────────── */
+
+.signOutBtn {
+  padding: 9px 18px;
+  min-height: 44px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid rgba(var(--ns-danger-rgb), .3);
+  background: rgba(var(--ns-danger-rgb), .06);
+  color: var(--ns-danger);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.signOutBtn:hover:not(:disabled) {
+  background: rgba(var(--ns-danger-rgb), .12);
+  border-color: rgba(var(--ns-danger-rgb), .55);
+}
+.signOutBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ── Info hint ───────────────────────────────────────────────────────────── */
 
 .hint {

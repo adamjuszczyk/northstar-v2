@@ -1,13 +1,15 @@
 import { useEffect } from 'react'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
-import { weekStart } from '../lib/dates'
+import { weekStart, monthStart } from '../lib/dates'
 import { db } from '../lib/db'
+import { replayQueue } from '../lib/syncQueue'
 import { useAuth } from './useAuth'
 
 /**
- * Pre-populates IndexedDB with critical data while online.
- * Runs once on mount (after auth). Runs silently — failures don't affect UI.
+ * Pre-populates IndexedDB with critical data while online, and replays any
+ * queued offline writes. Runs once on mount (after auth). Runs silently —
+ * failures don't affect UI.
  */
 export function usePrefetch() {
   const { user } = useAuth()
@@ -17,14 +19,18 @@ export function usePrefetch() {
 
     const today   = format(new Date(), 'yyyy-MM-dd')
     const wkStart = weekStart(today)
+    const moStart = monthStart(today)
 
     async function populate() {
       try {
+        // Replay first so cached reads below reflect the latest local writes.
+        await replayQueue(user!.id)
         await Promise.allSettled([
           prefetchDayItems(user!.id, today),
           prefetchInboxItems(user!.id),
           prefetchTreeNodes(user!.id),
           prefetchWeekFocus(user!.id, wkStart),
+          prefetchMonthFocus(user!.id, moStart),
         ])
       } catch {
         // silent — offline functionality is best-effort
@@ -105,5 +111,36 @@ async function prefetchWeekFocus(userId: string, wkStart: string) {
     .eq('week_start', wkStart)
   // Table may not exist yet — ignore error
   if (error || !data) return
-  // Week focus items don't have a Dexie table yet; cache is handled by TanStack Query
+  await db.weekFocus.bulkPut(data.map(r => ({
+    id:          r.id,
+    userId:      r.user_id,
+    weekStart:   r.week_start,
+    source:      r.source,
+    title:       r.title,
+    treeNodeId:  r.tree_node_id,
+    inboxItemId: r.inbox_item_id,
+    isComplete:  r.is_complete,
+    position:    r.position,
+  })))
+}
+
+async function prefetchMonthFocus(userId: string, moStart: string) {
+  const { data, error } = await supabase
+    .from('ns_month_focus')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('month_start', moStart)
+  // Table may not exist yet — ignore error
+  if (error || !data) return
+  await db.monthFocus.bulkPut(data.map(r => ({
+    id:          r.id,
+    userId:      r.user_id,
+    monthStart:  r.month_start,
+    source:      r.source,
+    title:       r.title,
+    treeNodeId:  r.tree_node_id,
+    inboxItemId: r.inbox_item_id,
+    isComplete:  r.is_complete,
+    position:    r.position,
+  })))
 }

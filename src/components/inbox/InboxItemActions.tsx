@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, type CSSProperties } from 'react'
-import { format, startOfWeek, parseISO } from 'date-fns'
 import {
   useDeleteInboxItem,
   useScheduleInboxToDay,
   useScheduleInboxToWeek,
   useScheduleInboxToMonth,
 } from '../../hooks/useInboxItems'
+import { weekStart } from '../../lib/dates'
 import type { InboxItem } from '../../types'
 import styles from './InboxItemActions.module.css'
 
@@ -52,12 +52,9 @@ export default function InboxItemActions({ item, onPromote, onClose }: Props) {
         { onSuccess: onClose, onError: e => setError((e as Error).message) }
       )
     } else if (scheduleTarget === 'week') {
-      const monday = format(
-        startOfWeek(parseISO(dateValue), { weekStartsOn: 1 }),
-        'yyyy-MM-dd'
-      )
+      // Always the canonical Monday key — independent of the display setting.
       scheduleWeek(
-        { itemId: item.id, weekStart: monday },
+        { itemId: item.id, weekStart: weekStart(dateValue) },
         { onSuccess: onClose, onError: e => setError((e as Error).message) }
       )
     } else if (scheduleTarget === 'month') {

@@ -5,6 +5,9 @@ import type { WeekFocusItem } from '../../hooks/useWeekFocus'
 import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayItemsSummary'
 import type { DayItemSummaryRow } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
+import { useInboxItems } from '../../hooks/useInboxItems'
+import { useSettings } from '../../hooks/useSettings'
+import { weekDisplayStart } from '../../lib/dates'
 import FocusItemForm from '../planner/FocusItemForm'
 import styles from './WeekView.module.css'
 
@@ -20,15 +23,31 @@ function priorityBorderVar(p: 'high' | 'medium' | 'low' | null): string {
   return '--ns-border-faint'
 }
 
+// ── Title resolution ─────────────────────────────────────────────────────────
+
+/** Never falls back to a bare source glyph — resolves the real title. */
+function resolveEventTitle(
+  item:     DayItemSummaryRow,
+  nodeMap:  Map<string, { title: string }>,
+  inboxMap: Map<string, { content: string }>,
+): string {
+  if (item.title) return item.title
+  if (item.treeNodeId)  return nodeMap.get(item.treeNodeId)?.title ?? 'Untitled'
+  if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? 'Untitled'
+  return 'Untitled'
+}
+
 // ── Day column ─────────────────────────────────────────────────────────────────
 
 interface DayColProps {
   date:     Date
   items:    DayItemSummaryRow[]
+  nodeMap:  Map<string, { title: string }>
+  inboxMap: Map<string, { content: string }>
   onSelect: () => void
 }
 
-function DayCol({ date, items, onSelect }: DayColProps) {
+function DayCol({ date, items, nodeMap, inboxMap, onSelect }: DayColProps) {
   const dateStr  = format(date, 'yyyy-MM-dd')
   const dayNum   = format(date, 'd')
   const isNow    = isToday(date)
@@ -57,7 +76,7 @@ function DayCol({ date, items, onSelect }: DayColProps) {
           <div key={item.id} className={styles.dayEvent}>
             <span className={styles.dayEventTime}>{item.startTime!.slice(0, 5)}</span>
             <span className={styles.dayEventTitle}>
-              {item.title ?? (item.source === 'tree' ? '✦' : '⌵')}
+              {resolveEventTitle(item, nodeMap, inboxMap)}
             </span>
           </div>
         ))}
@@ -133,11 +152,17 @@ interface Props {
 export default function WeekView({ weekStart, onDaySelect }: Props) {
   const [formOpen, setFormOpen] = useState(false)
 
-  const weekEnd = format(addDays(parseISO(weekStart), 6), 'yyyy-MM-dd')
+  const { settings } = useSettings()
+  // weekStart is the canonical Monday key (used for focus queries/mutations).
+  // displayStart shifts it back a day for Sunday-first display only — the
+  // grid still represents the same underlying week.
+  const displayStart = weekDisplayStart(weekStart, settings.weekStartsOn)
+  const weekEnd = format(addDays(parseISO(displayStart), 6), 'yyyy-MM-dd')
 
-  const { data: rawItems   = [], isLoading: loadingItems } = useRangeDayItems(weekStart, weekEnd)
+  const { data: rawItems   = [], isLoading: loadingItems } = useRangeDayItems(displayStart, weekEnd)
   const { data: focusItems = [], isLoading: loadingFocus } = useWeekFocus(weekStart)
   const { data: treeNodes  = [] } = useTreeNodes()
+  const { data: inboxItems = [] } = useInboxItems()
 
   const { mutate: createFocus, isPending: creating } = useCreateWeekFocus()
   const { mutate: toggleFocus, isPending: toggling  } = useToggleWeekFocus()
@@ -145,9 +170,10 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
   const isPending = creating || toggling || deleting
 
   const nodeMap   = new Map(treeNodes.map(n => [n.id, n]))
+  const inboxMap  = new Map(inboxItems.map(i => [i.id, i]))
   const byDate    = groupByDate(rawItems)
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(parseISO(weekStart), i))
+  const days = Array.from({ length: 7 }, (_, i) => addDays(parseISO(displayStart), i))
 
   function displayTitle(item: WeekFocusItem): string {
     if (item.title) return item.title
@@ -180,6 +206,8 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
                   key={dateStr}
                   date={date}
                   items={byDate.get(dateStr) ?? []}
+                  nodeMap={nodeMap}
+                  inboxMap={inboxMap}
                   onSelect={() => onDaySelect(dateStr)}
                 />
               )

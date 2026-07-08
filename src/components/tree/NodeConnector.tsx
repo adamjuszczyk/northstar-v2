@@ -1,4 +1,4 @@
-import { useRef, useState, useLayoutEffect, useCallback, type CSSProperties } from 'react'
+import { useRef, useState, useLayoutEffect, useEffect, useCallback, type CSSProperties } from 'react'
 
 interface ConnectorPath {
   d: string
@@ -20,16 +20,19 @@ function resolveAccent(type: string): string {
 }
 
 interface Props {
-  stageRef:      React.RefObject<HTMLDivElement | null>
-  nodesRef:      React.RefObject<HTMLDivElement | null>
+  stageRef:         React.RefObject<HTMLDivElement | null>
+  nodesRef:         React.RefObject<HTMLDivElement | null>
+  /** Bumped by TreeView whenever any node's collapse state toggles — forces
+   *  an immediate recompute independent of the MutationObserver/RAF path. */
+  structureVersion?: number
 }
 
-export default function NodeConnector({ stageRef, nodesRef }: Props) {
+export default function NodeConnector({ stageRef, nodesRef, structureVersion }: Props) {
   const [paths, setPaths]   = useState<ConnectorPath[]>([])
   const [svgW,  setSvgW]   = useState(0)
   const [svgH,  setSvgH]   = useState(0)
   const sigRef              = useRef('')
-  const rafRef              = useRef<number | null>(null)
+  const scheduledRef        = useRef(false)
 
   const compute = useCallback(() => {
     const stage = stageRef.current
@@ -95,10 +98,16 @@ export default function NodeConnector({ stageRef, nodesRef }: Props) {
     setSvgH(H)
   }, [stageRef, nodesRef])
 
+  // Coalesced via queueMicrotask rather than requestAnimationFrame — rAF is
+  // throttled/paused entirely for backgrounded or hidden tabs, which could
+  // stall recomputation indefinitely after a mutation. Microtasks always run
+  // promptly regardless of tab visibility, and still execute after the
+  // triggering DOM mutation/layout is committed.
   const schedule = useCallback(() => {
-    if (rafRef.current) return
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null
+    if (scheduledRef.current) return
+    scheduledRef.current = true
+    queueMicrotask(() => {
+      scheduledRef.current = false
       compute()
     })
   }, [compute])
@@ -115,6 +124,7 @@ export default function NodeConnector({ stageRef, nodesRef }: Props) {
       mo.observe(nodesRef.current, {
         childList: true, subtree: true, attributes: true,
         attributeFilter: ['data-state', 'style'],
+        characterData: true,
       })
     }
 
@@ -130,12 +140,17 @@ export default function NodeConnector({ stageRef, nodesRef }: Props) {
       window.removeEventListener('resize', schedule)
       clearTimeout(t1)
       clearTimeout(t2)
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = null
-      }
+      scheduledRef.current = false
     }
   }, [schedule])
+
+  // Explicit collapse-state dependency: any collapse/expand toggle anywhere
+  // in the tree bumps structureVersion, forcing an immediate recompute here
+  // rather than relying solely on the MutationObserver noticing the DOM
+  // removal/insertion.
+  useEffect(() => {
+    schedule()
+  }, [structureVersion, schedule])
 
   if (!paths.length) return null
 

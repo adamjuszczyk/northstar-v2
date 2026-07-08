@@ -82,6 +82,8 @@ export default function TreeView() {
 
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [legendOpen,  setLegendOpen]  = useState(false)
+  const [structureVersion, setStructureVersion] = useState(0)
+  const bumpStructureVersion = useCallback(() => setStructureVersion(v => v + 1), [])
 
   const roots      = useMemo(() => buildTree(data ?? []), [data])
   const totalNodes = data?.length ?? 0
@@ -144,7 +146,7 @@ export default function TreeView() {
       <div className={styles.canvas}>
         <div ref={stageRef} className={styles.stage}>
           {/* SVG connector overlay */}
-          <NodeConnector stageRef={stageRef} nodesRef={nodesRef} />
+          <NodeConnector stageRef={stageRef} nodesRef={nodesRef} structureVersion={structureVersion} />
 
           {/* Node tree */}
           {errorMsg ? (
@@ -163,7 +165,14 @@ export default function TreeView() {
                     strategy={verticalListSortingStrategy}
                   >
                     {roots.map(r => (
-                      <TreeNode key={r.id} node={r} parentId={null} onEdit={handleEdit} onAddChild={handleAddChild} />
+                      <TreeNode
+                        key={r.id}
+                        node={r}
+                        parentId={null}
+                        onEdit={handleEdit}
+                        onAddChild={handleAddChild}
+                        onStructureChange={bumpStructureVersion}
+                      />
                     ))}
                   </SortableContext>
                 )}

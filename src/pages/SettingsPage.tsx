@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { useSettings, ACCENT_SWATCHES } from '../hooks/useSettings'
+import { useSettings } from '../hooks/useSettings'
+import { useAccentColour } from '../hooks/useAccentColour'
 import { useSignOut } from '../hooks/useSignOut'
 import styles from './SettingsPage.module.css'
 
 export default function SettingsPage() {
   const { settings, update } = useSettings()
+  const { accent, options: accentOptions, setAccent } = useAccentColour()
   const signOut = useSignOut()
   const [signingOut, setSigningOut] = useState(false)
 
@@ -23,14 +25,14 @@ export default function SettingsPage() {
       <section className={styles.section}>
         <span className={styles.sectionLabel}>ACCENT COLOUR</span>
         <div className={styles.swatches}>
-          {ACCENT_SWATCHES.map(sw => (
+          {accentOptions.map(opt => (
             <button
-              key={sw.hex}
-              className={`${styles.swatch}${settings.accent === sw.hex ? ' ' + styles.swatchActive : ''}`}
-              style={{ background: sw.hex }}
-              onClick={() => update({ accent: sw.hex, accentRgb: sw.rgb })}
-              title={sw.label}
-              aria-label={`${sw.label} accent${settings.accent === sw.hex ? ' (active)' : ''}`}
+              key={opt.hex}
+              className={`${styles.swatch}${accent === opt.hex ? ' ' + styles.swatchActive : ''}`}
+              style={{ background: opt.hex }}
+              onClick={() => setAccent(opt)}
+              title={opt.label}
+              aria-label={`${opt.label} accent${accent === opt.hex ? ' (active)' : ''}`}
             />
           ))}
         </div>

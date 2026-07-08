@@ -105,13 +105,15 @@ function ProgressBar({ node }: { node: TreeNodeWithChildren }) {
 // ── TreeNode ──────────────────────────────────────────────────────────────────
 
 interface Props {
-  node:       TreeNodeWithChildren
-  parentId:   string | null
-  onEdit:     (node: TreeNodeWithChildren) => void
-  onAddChild: (parentId: string, parentType: NodeType) => void
+  node:               TreeNodeWithChildren
+  parentId:           string | null
+  onEdit:             (node: TreeNodeWithChildren) => void
+  onAddChild:         (parentId: string, parentType: NodeType) => void
+  /** Notifies NodeConnector to recompute immediately when collapse toggles. */
+  onStructureChange:  () => void
 }
 
-export default function TreeNode({ node, parentId, onEdit, onAddChild }: Props) {
+export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructureChange }: Props) {
   const isTask   = node.type === 'task'
   const isVision = node.type === 'vision'
   const isDone   = node.status === 'complete'
@@ -219,7 +221,7 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild }: Props) 
             <button
               className={cx(styles.headBtn, styles.chevBtn)}
               style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-              onClick={e => { e.stopPropagation(); setCollapsed(c => !c) }}
+              onClick={e => { e.stopPropagation(); setCollapsed(c => !c); onStructureChange() }}
               onPointerDown={e => e.stopPropagation()}
               aria-label={collapsed ? 'Expand' : 'Collapse'}
             >
@@ -255,6 +257,7 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild }: Props) 
                 parentId={node.id}
                 onEdit={onEdit}
                 onAddChild={onAddChild}
+                onStructureChange={onStructureChange}
               />
             ))}
           </SortableContext>

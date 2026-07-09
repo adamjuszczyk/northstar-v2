@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { useAuth } from './hooks/useAuth'
 import { usePrefetch } from './hooks/usePrefetch'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
+import { useCarryOverSweep } from './hooks/useCarryOverSweep'
 import { supabase } from './lib/supabase'
 import { clearAllCaches } from './lib/db'
 import NavBar from './components/nav/NavBar'
@@ -58,6 +59,7 @@ function AuthCacheSync() {
 
 function AuthedApp() {
   usePrefetch()
+  useCarryOverSweep()
   const online = useOnlineStatus()
   return (
     <div className={styles.shell}>

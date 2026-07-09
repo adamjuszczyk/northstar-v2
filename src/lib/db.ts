@@ -14,6 +14,7 @@ export interface CachedDayItem {
   endTime:     string | null
   isComplete:  boolean
   priority:    string
+  colour:      string | null
   position:    number
   createdAt:   string
   updatedAt:   string
@@ -25,6 +26,7 @@ export interface CachedInboxItem {
   content:        string
   state:          string
   promotedNodeId: string | null
+  carriedOver:    boolean
   createdAt:      string
   updatedAt:      string
 }
@@ -64,6 +66,15 @@ export interface CachedMonthFocus {
   position:    number
 }
 
+export interface CachedJournalEntry {
+  id:        string
+  userId:    string
+  date:      string
+  content:   string
+  createdAt: string
+  updatedAt: string
+}
+
 // ── Sync queue ───────────────────────────────────────────────────────────────
 
 export interface SyncEntry {
@@ -83,6 +94,7 @@ class NorthstarDB extends Dexie {
   treeNodes!:   Table<CachedTreeNode,   string>
   weekFocus!:   Table<CachedWeekFocus,  string>
   monthFocus!:  Table<CachedMonthFocus, string>
+  journalEntries!: Table<CachedJournalEntry, string>
   syncQueue!:   Table<SyncEntry,        number>
 
   constructor() {
@@ -106,6 +118,9 @@ class NorthstarDB extends Dexie {
       // read and silently fell back to a full-table scan.
       dayItems: 'id, userId, date, [userId+date]',
     })
+    this.version(5).stores({
+      journalEntries: 'id, userId, date, [userId+date]',
+    })
   }
 }
 
@@ -120,6 +135,7 @@ export async function clearAllCaches(): Promise<void> {
       db.treeNodes.clear(),
       db.weekFocus.clear(),
       db.monthFocus.clear(),
+      db.journalEntries.clear(),
       db.syncQueue.clear(),
     ])
   } catch (e) {

@@ -203,6 +203,15 @@
   opacity: 0.5;
 }
 
+/* ── Custom block colour dot — cosmetic, independent of priority ─────────── */
+
+.colourDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .inProgressBadge {
   display: inline-flex;
   align-items: center;
@@ -226,6 +235,51 @@
   background: var(--ns-gold);
   box-shadow: 0 0 6px rgba(var(--ns-gold-rgb), .9);
   animation: ns-pulse-gold 2.2s ease-in-out infinite;
+}
+
+/* ── Mobile: tap-to-reveal edit affordance + collapsible pool ─────────────── */
+
+.mobileEditBtn {
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--fp-accent-rgb), .35);
+  background: rgba(var(--fp-accent-rgb), .1);
+  color: var(--fp-accent);
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+}
+
+.showAllBtn {
+  padding: 10px;
+  border-radius: var(--ns-radius-lg);
+  border: 1px dashed var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-mono);
+  font-size: 10.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  min-height: 44px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.showAllBtn:hover {
+  border-color: var(--ns-border-soft);
+  color: var(--ns-text-hi);
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .title {
+    font-size: 13.5px;
+  }
 }
 
 .metaRow {

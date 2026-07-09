@@ -1,8 +1,11 @@
-import { type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useToggleDayItem, useDeleteDayItem } from '../../hooks/useDayItems'
 import type { DayItem } from '../../hooks/useDayItems'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import styles from './FloatingPool.module.css'
+
+const MOBILE_COLLAPSE_THRESHOLD = 5
 
 // ── Source config ──────────────────────────────────────────────────────────────
 
@@ -39,6 +42,10 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
   const cfg = SOURCE_CFG[sourceKey(item)]
   const { accentVar, accentRgbVar } = accentVars(item)
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
+  // Desktop always shows full detail; mobile hides tag/origin/badges/delete until tapped.
+  const showDetails = !isMobile || open
 
   const cardStyle: CSSProperties = {
     '--fp-accent':     `var(${accentVar})`,
@@ -46,6 +53,11 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
     '--fp-border':     cfg.dashed ? 'dashed' : 'solid',
     opacity:           isDragging ? 0 : undefined,
   } as CSSProperties
+
+  function handleCardClick() {
+    if (isMobile) setOpen(o => !o)
+    else onEdit(item)
+  }
 
   return (
     <div
@@ -57,7 +69,7 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
         isDragging              ? styles.cardDragging  : '',
       ].filter(Boolean).join(' ')}
       style={cardStyle}
-      onClick={() => onEdit(item)}
+      onClick={handleCardClick}
       {...attributes}
       {...listeners}
     >
@@ -73,33 +85,47 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
 
       <div className={styles.content}>
         <div className={styles.topRow}>
+          {item.colour && <span className={styles.colourDot} style={{ background: item.colour }} />}
           <span className={`${styles.title}${item.isComplete ? ' ' + styles.titleDone : ''}`}>
             {item.displayTitle}
           </span>
-          {item.source === 'tree' && item.treeNodeId && !item.isComplete && (
+          {showDetails && item.source === 'tree' && item.treeNodeId && !item.isComplete && (
             <span className={styles.inProgressBadge}>
               <span className={styles.inProgressDot} />
               IN PROGRESS
             </span>
           )}
-          {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-          {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {showDetails && item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
+          {showDetails && item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
         </div>
-        <div className={styles.metaRow}>
-          <span className={styles.tag}>{cfg.tag}</span>
-          {(item.treeNodeTitle || item.inboxContent) && (
-            <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent}</span>
-          )}
-        </div>
+        {showDetails && (
+          <div className={styles.metaRow}>
+            <span className={styles.tag}>{cfg.tag}</span>
+            {(item.treeNodeTitle || item.inboxContent) && (
+              <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent}</span>
+            )}
+          </div>
+        )}
+        {isMobile && open && (
+          <button
+            className={styles.mobileEditBtn}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onEdit(item) }}
+          >
+            Edit details
+          </button>
+        )}
       </div>
 
-      <button
-        className={styles.deleteBtn}
-        onPointerDown={e => e.stopPropagation()}
-        onClick={e => { e.stopPropagation(); onDelete() }}
-        disabled={isPending}
-        aria-label="Remove from day"
-      >✕</button>
+      {showDetails && (
+        <button
+          className={styles.deleteBtn}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          disabled={isPending}
+          aria-label="Remove from day"
+        >✕</button>
+      )}
     </div>
   )
 }
@@ -113,6 +139,8 @@ interface Props {
 
 export default function FloatingPool({ items, onEdit }: Props) {
   const { setNodeRef: setPoolRef, isOver: poolOver } = useDroppable({ id: 'pool-drop' })
+  const isMobile = useIsMobile()
+  const [showAll, setShowAll] = useState(false)
 
   const { mutate: toggle, isPending: toggling } = useToggleDayItem()
   const { mutate: remove, isPending: removing  } = useDeleteDayItem()
@@ -125,6 +153,10 @@ export default function FloatingPool({ items, onEdit }: Props) {
     if (!window.confirm(`Remove "${item.displayTitle}" from today?`)) return
     remove(item.id)
   }
+
+  const isCollapsible = isMobile && items.length > MOBILE_COLLAPSE_THRESHOLD && !showAll
+  const visibleItems  = isCollapsible ? items.slice(0, MOBILE_COLLAPSE_THRESHOLD) : items
+  const hiddenCount   = items.length - visibleItems.length
 
   return (
     <div
@@ -169,7 +201,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
               : 'Nothing floating yet — add tasks or pull from your tree.'}
           </p>
         )}
-        {items.map(item => (
+        {visibleItems.map(item => (
           <FloatingCard
             key={item.id}
             item={item}
@@ -179,6 +211,11 @@ export default function FloatingPool({ items, onEdit }: Props) {
             onDelete={() => handleDelete(item)}
           />
         ))}
+        {isCollapsible && (
+          <button className={styles.showAllBtn} onClick={() => setShowAll(true)}>
+            Show all ({items.length})
+          </button>
+        )}
       </div>
     </div>
   )

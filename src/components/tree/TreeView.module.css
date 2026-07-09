@@ -38,6 +38,38 @@
   flex: 1;
 }
 
+/* ── Tree / List mode toggle ──────────────────────────────────────────────── */
+
+.modeToggle {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-faint);
+  background: rgba(255, 255, 255, .03);
+}
+
+.modeBtn {
+  padding: 5px 12px;
+  border-radius: calc(var(--ns-radius-md) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-mono);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  min-height: 26px;
+}
+.modeBtn:hover:not(.modeBtnActive) {
+  color: var(--ns-text-mid);
+}
+.modeBtnActive {
+  background: rgba(var(--ns-accent-rgb), .14);
+  color: var(--ns-accent);
+}
+
 .addRootBtn {
   padding: 5px 13px;
   border-radius: var(--ns-radius-sm);
@@ -74,6 +106,26 @@
   padding: 70px 120px 120px 74px;
 }
 
+@media (max-width: 767px) {
+  .stage {
+    min-width: 0;
+    padding: 20px 16px 60px;
+  }
+}
+
+/* ── Connector overlay wrapper — hidden on mobile (rail/elbow CSS in
+   TreeNode.module.css replaces it under the same breakpoint) ────────────── */
+
+.connectorWrap {
+  display: contents;
+}
+
+@media (max-width: 767px) {
+  .connectorWrap {
+    display: none;
+  }
+}
+
 /* ── Nodes container ──────────────────────────────────────────────────────── */
 
 .nodes {
@@ -83,6 +135,13 @@
   flex-direction: column;
   gap: var(--ns-tree-roots-gap);
   width: max-content;
+}
+
+@media (max-width: 767px) {
+  .nodes {
+    width: auto;
+    gap: 28px;
+  }
 }
 
 /* ── Empty state ──────────────────────────────────────────────────────────── */

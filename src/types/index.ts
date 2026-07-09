@@ -26,6 +26,7 @@ export interface InboxItem {
   content:         string         // single free-text field — no required structure
   state:           InboxState
   promotedNodeId:  string | null  // set when state = 'promoted'
+  carriedOver:     boolean        // true if auto-moved here from an unfinished standalone day item
   createdAt:       string
   updatedAt:       string
 }

@@ -75,7 +75,10 @@ interface RowProps {
 
 function ListRow({ item, isPending, onToggle, onDelete }: RowProps) {
   return (
-    <div className={`${styles.row}${item.isComplete ? ' ' + styles.rowDone : ''}`}>
+    <div
+      className={`${styles.row}${item.isComplete ? ' ' + styles.rowDone : ''}`}
+      style={item.colour ? { borderLeft: `3px solid ${item.colour}` } : undefined}
+    >
       <button
         className={`${styles.check}${item.isComplete ? ' ' + styles.checkDone : ''}`}
         onClick={onToggle}

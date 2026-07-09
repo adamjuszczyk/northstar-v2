@@ -8,8 +8,11 @@ import { useTreeNodes, useReorderNodes, buildTree, type TreeNodeWithChildren } f
 import type { NodeType } from '../../types'
 import TreeNode from './TreeNode'
 import NodeConnector from './NodeConnector'
+import TreeListView from './TreeListView'
 import NodeEditor, { type EditorState } from './NodeEditor'
 import styles from './TreeView.module.css'
+
+type ViewMode = 'tree' | 'list'
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +88,11 @@ export default function TreeView() {
   const [structureVersion, setStructureVersion] = useState(0)
   const bumpStructureVersion = useCallback(() => setStructureVersion(v => v + 1), [])
 
+  // Default: tree mode on desktop, list mode on mobile — user can toggle freely afterward.
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'tree'
+  ))
+
   const roots      = useMemo(() => buildTree(data ?? []), [data])
   const totalNodes = data?.length ?? 0
   const visionCount = data?.filter(n => n.type === 'vision' && !n.parentId).length ?? 0
@@ -134,6 +142,22 @@ export default function TreeView() {
             : `${visionCount} vision${visionCount !== 1 ? 's' : ''} · ${totalNodes} node${totalNodes !== 1 ? 's' : ''}`}
         </span>
         <span className={styles.statsSpacer} />
+        <div className={styles.modeToggle} role="group" aria-label="Tree display mode">
+          <button
+            className={`${styles.modeBtn}${viewMode === 'tree' ? ' ' + styles.modeBtnActive : ''}`}
+            onClick={() => setViewMode('tree')}
+            aria-pressed={viewMode === 'tree'}
+          >
+            TREE
+          </button>
+          <button
+            className={`${styles.modeBtn}${viewMode === 'list' ? ' ' + styles.modeBtnActive : ''}`}
+            onClick={() => setViewMode('list')}
+            aria-pressed={viewMode === 'list'}
+          >
+            LIST
+          </button>
+        </div>
         <button
           className={styles.addRootBtn}
           onClick={() => setEditorState({ mode: 'create', parentId: null })}
@@ -144,42 +168,43 @@ export default function TreeView() {
 
       {/* Scrollable canvas */}
       <div className={styles.canvas}>
-        <div ref={stageRef} className={styles.stage}>
-          {/* SVG connector overlay */}
-          <NodeConnector stageRef={stageRef} nodesRef={nodesRef} structureVersion={structureVersion} />
-
-          {/* Node tree */}
-          {errorMsg ? (
-            <div className={styles.errorState}>
-              <p className={styles.errorText}>Failed to load tree</p>
-              <p className={styles.errorHint}>{errorMsg}</p>
+        {errorMsg ? (
+          <div className={styles.errorState}>
+            <p className={styles.errorText}>Failed to load tree</p>
+            <p className={styles.errorHint}>{errorMsg}</p>
+          </div>
+        ) : !isLoading && roots.length === 0 ? (
+          <EmptyState onAdd={() => setEditorState({ mode: 'create', parentId: null })} />
+        ) : viewMode === 'list' ? (
+          <TreeListView roots={roots} onEdit={handleEdit} />
+        ) : (
+          <div ref={stageRef} className={styles.stage}>
+            {/* SVG connector overlay — horizontal-layout math only, hidden on mobile */}
+            <div className={styles.connectorWrap}>
+              <NodeConnector stageRef={stageRef} nodesRef={nodesRef} structureVersion={structureVersion} />
             </div>
-          ) : (
+
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div ref={nodesRef} className={styles.nodes}>
-                {!isLoading && roots.length === 0 ? (
-                  <EmptyState onAdd={() => setEditorState({ mode: 'create', parentId: null })} />
-                ) : (
-                  <SortableContext
-                    items={roots.map(r => r.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {roots.map(r => (
-                      <TreeNode
-                        key={r.id}
-                        node={r}
-                        parentId={null}
-                        onEdit={handleEdit}
-                        onAddChild={handleAddChild}
-                        onStructureChange={bumpStructureVersion}
-                      />
-                    ))}
-                  </SortableContext>
-                )}
+                <SortableContext
+                  items={roots.map(r => r.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {roots.map(r => (
+                    <TreeNode
+                      key={r.id}
+                      node={r}
+                      parentId={null}
+                      onEdit={handleEdit}
+                      onAddChild={handleAddChild}
+                      onStructureChange={bumpStructureVersion}
+                    />
+                  ))}
+                </SortableContext>
               </div>
             </DndContext>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Legend toggle + panel */}
@@ -193,7 +218,7 @@ export default function TreeView() {
       </button>
 
       {/* Scroll hint */}
-      {roots.length > 1 && (
+      {viewMode === 'tree' && roots.length > 1 && (
         <div className={styles.scrollHint}>SCROLL TO EXPLORE THE TREE →</div>
       )}
 

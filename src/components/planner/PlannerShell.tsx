@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { format, parseISO, addDays, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns'
 import { weekStart, weekDisplayStart, monthStart, formatWeekRange, formatMonthYear } from '../../lib/dates'
 import { useSettings } from '../../hooks/useSettings'
@@ -8,22 +8,38 @@ import WeekView from '../week/WeekView'
 import MonthView from '../month/MonthView'
 import styles from './PlannerShell.module.css'
 
-type Tab = 'day' | 'week' | 'month'
+export type Tab = 'day' | 'week' | 'month'
 
 interface Props {
   initialDate?: string
+  initialTab?:  Tab
 }
 
-export default function PlannerShell({ initialDate }: Props) {
+export default function PlannerShell({ initialDate, initialTab }: Props) {
   const today = useTodayISO()
   const { settings } = useSettings()
   const wso = settings.weekStartsOn
 
-  const [tab,      setTab]      = useState<Tab>('day')
+  const [tab,      setTab]      = useState<Tab>(initialTab ?? 'day')
   const [dayDate,  setDayDate]  = useState(initialDate ?? today)
   // wkStart is always the canonical Monday key — never derived from wso.
   const [wkStart,  setWkStart]  = useState(weekStart(initialDate ?? today))
   const [moStart,  setMoStart]  = useState(monthStart(initialDate ?? today))
+
+  // Re-sync when the shell is already mounted and a new date/tab arrives via
+  // the URL (e.g. the day view's focus reminder navigating to /planner?tab=week
+  // while /planner is already open) — plain useState only seeds the initial
+  // value, so without this the second navigation would be a no-op.
+  useEffect(() => {
+    if (!initialDate) return
+    setDayDate(initialDate)
+    setWkStart(weekStart(initialDate))
+    setMoStart(monthStart(initialDate))
+  }, [initialDate])
+
+  useEffect(() => {
+    if (initialTab) setTab(initialTab)
+  }, [initialTab])
 
   // ── Navigation ──────────────────────────────────────────────────────────────
 

@@ -11,6 +11,17 @@
 .cardOpen {
   border-color: rgba(var(--ns-project-accent-rgb), .3);
 }
+.cardCarried {
+  border-left: 3px dashed rgba(var(--ns-gold-rgb), .55);
+  background: rgba(var(--ns-gold-rgb), .04);
+}
+.cardCarried .stateDot {
+  background: var(--ns-gold);
+}
+.cardCarried .stateLabel {
+  color: var(--ns-gold);
+  opacity: 1;
+}
 
 /* ── Click row ───────────────────────────────────────────────────────────── */
 

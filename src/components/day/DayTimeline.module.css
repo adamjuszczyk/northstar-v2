@@ -261,6 +261,36 @@
   opacity: 0.45;
 }
 
+/* ── Mobile: tighter card spacing/type, tap-to-reveal edit affordance ────── */
+
+.mobileEditBtn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-accent-rgb), .35);
+  background: rgba(var(--ns-accent-rgb), .08);
+  color: var(--ns-accent);
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .card {
+    padding: 8px 11px;
+    gap: 3px;
+  }
+  .cardTitle {
+    font-size: 13.5px;
+  }
+  .cardTime {
+    font-size: 10px;
+  }
+}
+
 .cardOrigin {
   font-family: var(--ns-font-mono);
   font-size: 9px;
@@ -456,6 +486,15 @@
   flex-shrink: 0;
 }
 
+/* ── Custom block colour dot — cosmetic, independent of priority ─────────── */
+
+.colourDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .clusterExpandedTitle {
   font-family: var(--ns-font-ui);
   font-size: 14px;
@@ -564,4 +603,20 @@
   text-shadow: 0 0 10px rgba(var(--ns-gold-rgb), .6);
   z-index: 6;
   pointer-events: none;
+}
+
+/* ── Mobile: minimal NOW line — thin, no glow, no label ───────────────────── */
+
+@media (max-width: 767px) {
+  .nowLine {
+    box-shadow: none;
+  }
+  .nowDot {
+    width: 7px;
+    height: 7px;
+    box-shadow: none;
+  }
+  .nowLabel {
+    display: none;
+  }
 }

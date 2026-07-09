@@ -14,8 +14,10 @@ export default function InboxView() {
   const [promoteItem,  setPromoteItem]  = useState<InboxItem | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const unassigned = items.filter(i => i.state === 'unassigned')
-  const processed  = items.filter(i => i.state !== 'unassigned')
+  const carriedOver = items.filter(i => i.state === 'unassigned' && i.carriedOver)
+  const unassigned  = items.filter(i => i.state === 'unassigned' && !i.carriedOver)
+  const processed   = items.filter(i => i.state !== 'unassigned')
+  const unassignedCount = carriedOver.length + unassigned.length
 
   function handleCapture() {
     const trimmed = draft.trim()
@@ -59,8 +61,8 @@ export default function InboxView() {
       <div className={styles.header}>
         <span className={styles.star}>✦</span>
         <span className={styles.title}>Inbox</span>
-        {!isLoading && unassigned.length > 0 && (
-          <span className={styles.badge}>{unassigned.length}</span>
+        {!isLoading && unassignedCount > 0 && (
+          <span className={styles.badge}>{unassignedCount}</span>
         )}
       </div>
 
@@ -101,6 +103,15 @@ export default function InboxView() {
             <p className={styles.emptyTitle}>Nothing captured yet</p>
             <p className={styles.hint}>Use the field above to capture anything on your mind.</p>
           </div>
+        )}
+
+        {carriedOver.length > 0 && (
+          <section className={styles.section}>
+            <span className={`${styles.sectionLabel} ${styles.sectionLabelCarried}`}>↻ CARRIED OVER</span>
+            {carriedOver.map(item => (
+              <InboxItemComponent key={item.id} item={item} onPromote={handlePromote} />
+            ))}
+          </section>
         )}
 
         {unassigned.length > 0 && (

@@ -5,6 +5,7 @@ import {
   PXH, TOPPAD, timeToDecimal, timeToY, timeStrToY, nowDecimal,
 } from '../../hooks/useDayItems'
 import type { DayItem, DayItemPriority } from '../../hooks/useDayItems'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import styles from './DayTimeline.module.css'
 
 const HOURS_START = 0
@@ -79,6 +80,10 @@ interface CardProps {
 
 function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDelete }: CardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
+  // Desktop always shows full detail; mobile hides badges/actions until tapped.
+  const showDetails = !isMobile || open
 
   const top    = timeStrToY(item.startTime!)
   const minH   = itemDurationH(item) * PXH - 8
@@ -93,6 +98,11 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
                     : isPast && !item.isComplete ? 0.62
                     : item.isComplete            ? 0.6
                     : 1
+
+  function handleCardClick() {
+    if (isMobile) setOpen(o => !o)
+    else onEdit(item)
+  }
 
   return (
     <>
@@ -112,19 +122,22 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
           isDragging ? styles.cardDragging : '',
           priorityClass,
         ].filter(Boolean).join(' ')}
-        style={{ left: CARD_LEFT, right: CARD_RIGHT, top, minHeight: minH, opacity: cardOpacity } as CSSProperties}
-        onClick={() => onEdit(item)}
+        style={{
+          left: CARD_LEFT, right: CARD_RIGHT, top, minHeight: minH, opacity: cardOpacity,
+          ...(item.colour ? { borderLeft: `3px solid ${item.colour}` } : {}),
+        } as CSSProperties}
+        onClick={handleCardClick}
         {...attributes}
         {...listeners}
       >
         <div className={styles.cardRow}>
           <span className={styles.cardTime}>{item.startTime}</span>
-          {isUpNext && <span className={styles.nextBadge}>UP NEXT</span>}
-          {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-          {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {showDetails && isUpNext && <span className={styles.nextBadge}>UP NEXT</span>}
+          {showDetails && item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
+          {showDetails && item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
           <span className={styles.cardSpacer} />
-          {item.isComplete && <span className={styles.doneBadge}>✓ DONE</span>}
-          {!item.isComplete && (
+          {showDetails && item.isComplete && <span className={styles.doneBadge}>✓ DONE</span>}
+          {showDetails && !item.isComplete && (
             <button
               className={styles.completeBtn}
               onPointerDown={e => e.stopPropagation()}
@@ -133,7 +146,7 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
               aria-label="Mark complete"
             >✓</button>
           )}
-          {item.isComplete && (
+          {showDetails && item.isComplete && (
             <button
               className={styles.undoBtn}
               onPointerDown={e => e.stopPropagation()}
@@ -142,20 +155,31 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
               aria-label="Undo complete"
             >↩</button>
           )}
-          <button
-            className={styles.deleteBtn}
-            onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onDelete(item) }}
-            disabled={isPending}
-            aria-label="Delete"
-          >✕</button>
+          {showDetails && (
+            <button
+              className={styles.deleteBtn}
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onDelete(item) }}
+              disabled={isPending}
+              aria-label="Delete"
+            >✕</button>
+          )}
         </div>
 
         <div className={`${styles.cardTitle}${item.isComplete ? ' ' + styles.cardTitleDone : ''}`}>
           {item.displayTitle}
         </div>
-        {item.treeNodeTitle && item.source === 'tree' && (
+        {showDetails && item.treeNodeTitle && item.source === 'tree' && (
           <div className={styles.cardOrigin}>↳ {item.treeNodeTitle}</div>
+        )}
+        {isMobile && open && (
+          <button
+            className={styles.mobileEditBtn}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onEdit(item) }}
+          >
+            Edit details
+          </button>
         )}
       </div>
     </>
@@ -174,24 +198,34 @@ interface ClusterItemRowProps {
 
 function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: ClusterItemRowProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
+  const showDetails = !isMobile || open
+
+  function handleRowClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (isMobile) setOpen(o => !o)
+    else onEdit(item)
+  }
 
   return (
     <div
       ref={setNodeRef}
       className={styles.clusterExpandedRow}
       style={{ opacity: isDragging ? 0 : item.isComplete ? 0.6 : undefined }}
-      onClick={e => { e.stopPropagation(); onEdit(item) }}
+      onClick={handleRowClick}
       {...attributes}
       {...listeners}
     >
       <span className={styles.clusterExpandedTime}>{item.startTime}</span>
+      {item.colour && <span className={styles.colourDot} style={{ background: item.colour }} />}
       <span className={[styles.clusterExpandedTitle, item.isComplete ? styles.clusterExpandedTitleDone : ''].filter(Boolean).join(' ')}>
         {item.displayTitle}
       </span>
-      {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-      {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
-      {item.isComplete && <span className={styles.doneBadge}>✓</span>}
-      {!item.isComplete && (
+      {showDetails && item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
+      {showDetails && item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+      {showDetails && item.isComplete && <span className={styles.doneBadge}>✓</span>}
+      {showDetails && !item.isComplete && (
         <button
           className={styles.clusterCompleteBtn}
           onPointerDown={e => e.stopPropagation()}
@@ -200,7 +234,7 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
           aria-label="Mark complete"
         >✓</button>
       )}
-      {item.isComplete && (
+      {showDetails && item.isComplete && (
         <button
           className={styles.clusterUndoBtn}
           onPointerDown={e => e.stopPropagation()}
@@ -209,13 +243,24 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
           aria-label="Undo complete"
         >↩</button>
       )}
-      <button
-        className={styles.clusterDeleteBtn}
-        onPointerDown={e => e.stopPropagation()}
-        onClick={e => { e.stopPropagation(); onDelete(item) }}
-        disabled={isPending}
-        aria-label="Delete"
-      >✕</button>
+      {showDetails && (
+        <button
+          className={styles.clusterDeleteBtn}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onDelete(item) }}
+          disabled={isPending}
+          aria-label="Delete"
+        >✕</button>
+      )}
+      {isMobile && open && (
+        <button
+          className={styles.mobileEditBtn}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onEdit(item) }}
+        >
+          Edit details
+        </button>
+      )}
     </div>
   )
 }
@@ -285,6 +330,7 @@ function ClusterBlock({ items, now, isPending, onEdit, onToggle, onDelete }: Clu
               {sorted.map(item => (
                 <div key={item.id} className={styles.clusterTaskItem}>
                   <span className={styles.clusterTaskTime}>{item.startTime}</span>
+                  {item.colour && <span className={styles.colourDot} style={{ background: item.colour }} />}
                   <span className={styles.clusterTaskTitle}>{item.displayTitle}</span>
                 </div>
               ))}

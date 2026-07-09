@@ -23,6 +23,7 @@ export interface RawDayItem {
   endTime:      string | null
   isComplete:   boolean
   priority:     DayItemPriority
+  colour:       string | null    // cosmetic block colour hex, independent of priority
   position:     number
   createdAt:    string
   updatedAt:    string
@@ -62,6 +63,7 @@ function row2raw(r: Record<string, unknown>): RawDayItem {
     endTime:     normTime(r.end_time),
     isComplete:  r.is_complete   as boolean,
     priority:    normPriority(r.priority),
+    colour:      (r.colour as string | null) ?? null,
     position:    r.position      as number,
     createdAt:   r.created_at    as string,
     updatedAt:   r.updated_at    as string,
@@ -96,6 +98,7 @@ export function useDayItems(date: string) {
           endTime:     r.endTime,
           isComplete:  r.isComplete,
           priority:    r.priority as RawDayItem['priority'],
+          colour:      r.colour ?? null,
           position:    r.position,
           createdAt:   r.createdAt,
           updatedAt:   r.updatedAt,
@@ -130,6 +133,7 @@ export interface CreateDayItemInput {
   startTime?:   string | null
   endTime?:     string | null
   priority?:    DayItemPriority
+  colour?:      string | null
 }
 
 export function useCreateDayItem() {
@@ -150,6 +154,7 @@ export function useCreateDayItem() {
           start_time:    input.startTime     ?? null,
           end_time:      input.endTime       ?? null,
           priority:      input.priority      ?? 'medium',
+          colour:        input.colour        ?? null,
           is_complete:   false,
           position:      0,
         })
@@ -168,10 +173,11 @@ export function useAddInboxToDay() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ inboxItemId, date, priority }: {
+    mutationFn: async ({ inboxItemId, date, priority, colour }: {
       inboxItemId: string
       date: string
       priority?: DayItemPriority
+      colour?:   string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       const { error: e1 } = await supabase
@@ -181,6 +187,7 @@ export function useAddInboxToDay() {
           source: 'inbox', inbox_item_id: inboxItemId,
           is_complete: false, position: 0,
           priority: priority ?? 'medium',
+          colour: colour ?? null,
         })
       if (e1) throw e1
       const { error: e2 } = await supabase
@@ -253,6 +260,7 @@ export interface UpdateDayItemInput {
   startTime?: string | null
   endTime?:   string | null
   priority?:  DayItemPriority
+  colour?:    string | null
 }
 
 export function useUpdateDayItem() {
@@ -266,6 +274,7 @@ export function useUpdateDayItem() {
       if (input.startTime !== undefined) patch.start_time = input.startTime
       if (input.endTime   !== undefined) patch.end_time   = input.endTime
       if (input.priority  !== undefined) patch.priority   = input.priority
+      if (input.colour    !== undefined) patch.colour     = input.colour
       const { error } = await supabase
         .from('ns_day_items')
         .update(patch)

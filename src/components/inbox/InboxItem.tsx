@@ -31,7 +31,7 @@ export default function InboxItem({ item, onPromote }: Props) {
 
   return (
     <div
-      className={`${styles.card}${open ? ' ' + styles.cardOpen : ''}`}
+      className={`${styles.card}${open ? ' ' + styles.cardOpen : ''}${item.carriedOver ? ' ' + styles.cardCarried : ''}`}
       style={{ '--state': `var(--ns-inbox-${item.state})` } as CSSProperties}
     >
       {/* Row: click toggles action panel */}
@@ -44,7 +44,7 @@ export default function InboxItem({ item, onPromote }: Props) {
         <span className={styles.stateDot} />
         <span className={styles.content}>{item.content}</span>
         <span className={styles.meta}>
-          <span className={styles.stateLabel}>{STATE_LABEL[item.state]}</span>
+          <span className={styles.stateLabel}>{item.carriedOver ? 'carried over' : STATE_LABEL[item.state]}</span>
           <span className={styles.time}>{relativeTime(item.createdAt)}</span>
           <span className={`${styles.chevron}${open ? ' ' + styles.chevronOpen : ''}`}>›</span>
         </span>

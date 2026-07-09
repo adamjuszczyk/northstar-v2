@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUpdateDayItem, useDeleteDayItem } from '../../hooks/useDayItems'
 import type { DayItem, DayItemPriority } from '../../hooks/useDayItems'
-import { TimeSection, PriorityPicker, validateTimeRange } from './DayItemForm'
+import { TimeSection, PriorityPicker, ColourPicker, validateTimeRange } from './DayItemForm'
 import styles from './DayItemForm.module.css'
 
 interface Props {
@@ -15,6 +15,7 @@ export default function DayItemEditForm({ item, onClose }: Props) {
   const [startTime, setStartTime] = useState(item.startTime ?? '')
   const [endTime,   setEndTime]   = useState(item.endTime   ?? '')
   const [priority,  setPriority]  = useState<DayItemPriority>(item.priority)
+  const [colour,    setColour]    = useState<string | null>(item.colour)
   const [error,     setError]     = useState<string | null>(null)
 
   const { mutate: update, isPending: updating } = useUpdateDayItem()
@@ -38,6 +39,7 @@ export default function DayItemEditForm({ item, onClose }: Props) {
       startTime: hasTime && startTime ? startTime : null,
       endTime:   hasTime && endTime   ? endTime   : null,
       priority,
+      colour,
     }, {
       onSuccess: onClose,
       onError:   e => setError((e as Error).message),
@@ -113,6 +115,12 @@ export default function DayItemEditForm({ item, onClose }: Props) {
           <div className={styles.field}>
             <span className={styles.fieldLabel}>PRIORITY</span>
             <PriorityPicker priority={priority} onChange={setPriority} />
+          </div>
+
+          {/* Colour */}
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>COLOUR <span className={styles.optionalLabel}>(optional)</span></span>
+            <ColourPicker colour={colour} onChange={setColour} />
           </div>
 
         </div>

@@ -3,6 +3,7 @@ import { useCreateDayItem, useAddInboxToDay, timeToDecimal } from '../../hooks/u
 import type { DayItemPriority } from '../../hooks/useDayItems'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
+import { BLOCK_COLOURS } from '../../lib/blockColours'
 import type { TreeNode, NodeType } from '../../types'
 import styles from './DayItemForm.module.css'
 
@@ -43,6 +44,7 @@ export default function DayItemForm({ date, onClose }: Props) {
   const [inboxId,    setInboxId]    = useState<string | null>(null)
   const [treeSearch, setTreeSearch] = useState('')
   const [priority,   setPriority]   = useState<DayItemPriority>('medium')
+  const [colour,     setColour]     = useState<string | null>(null)
   const [error,      setError]      = useState<string | null>(null)
 
   const { mutate: createItem,   isPending: creating   } = useCreateDayItem()
@@ -70,6 +72,7 @@ export default function DayItemForm({ date, onClose }: Props) {
     setEndTime('')
     setError(null)
     setPriority('medium')
+    setColour(null)
   }, [source])
 
   useEffect(() => {
@@ -100,6 +103,7 @@ export default function DayItemForm({ date, onClose }: Props) {
         startTime: hasTime && startTime ? startTime : null,
         endTime:   hasTime && endTime   ? endTime   : null,
         priority,
+        colour,
       }, { onSuccess: onClose, onError: e => setError((e as Error).message) })
 
     } else if (source === 'tree') {
@@ -109,11 +113,12 @@ export default function DayItemForm({ date, onClose }: Props) {
         startTime: hasTime && startTime ? startTime : null,
         endTime:   hasTime && endTime   ? endTime   : null,
         priority,
+        colour,
       }, { onSuccess: onClose, onError: e => setError((e as Error).message) })
 
     } else if (source === 'inbox') {
       addFromInbox(
-        { inboxItemId: inboxId!, date, priority },
+        { inboxItemId: inboxId!, date, priority, colour },
         { onSuccess: onClose, onError: e => setError((e as Error).message) }
       )
     }
@@ -165,6 +170,10 @@ export default function DayItemForm({ date, onClose }: Props) {
               <span className={styles.fieldLabel}>PRIORITY</span>
               <PriorityPicker priority={priority} onChange={setPriority} />
             </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>COLOUR <span className={styles.optionalLabel}>(optional)</span></span>
+              <ColourPicker colour={colour} onChange={setColour} />
+            </div>
           </div>
         )}
 
@@ -194,6 +203,10 @@ export default function DayItemForm({ date, onClose }: Props) {
               <span className={styles.fieldLabel}>PRIORITY</span>
               <PriorityPicker priority={priority} onChange={setPriority} />
             </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>COLOUR <span className={styles.optionalLabel}>(optional)</span></span>
+              <ColourPicker colour={colour} onChange={setColour} />
+            </div>
           </div>
         )}
 
@@ -216,6 +229,10 @@ export default function DayItemForm({ date, onClose }: Props) {
             <div className={styles.field}>
               <span className={styles.fieldLabel}>PRIORITY</span>
               <PriorityPicker priority={priority} onChange={setPriority} />
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>COLOUR <span className={styles.optionalLabel}>(optional)</span></span>
+              <ColourPicker colour={colour} onChange={setColour} />
             </div>
           </div>
         )}
@@ -284,6 +301,36 @@ export function TimeSection({ hasTime, setHasTime, startTime, setStartTime, endT
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+export interface ColourPickerProps {
+  colour:   string | null
+  onChange: (c: string | null) => void
+}
+
+export function ColourPicker({ colour, onChange }: ColourPickerProps) {
+  return (
+    <div className={styles.colourRow}>
+      <button
+        type="button"
+        className={`${styles.colourSwatch} ${styles.colourSwatchNone}${colour === null ? ' ' + styles.colourSwatchActive : ''}`}
+        onClick={() => onChange(null)}
+        title="None"
+        aria-label="No colour"
+      />
+      {BLOCK_COLOURS.map(c => (
+        <button
+          key={c.hex}
+          type="button"
+          className={`${styles.colourSwatch}${colour === c.hex ? ' ' + styles.colourSwatchActive : ''}`}
+          style={{ background: c.hex }}
+          onClick={() => onChange(c.hex)}
+          title={c.name}
+          aria-label={`${c.name} colour${colour === c.hex ? ' (active)' : ''}`}
+        />
+      ))}
     </div>
   )
 }

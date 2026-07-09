@@ -17,6 +17,8 @@ import FloatingPool     from './FloatingPool'
 import DayListMode      from './DayListMode'
 import DayItemForm      from './DayItemForm'
 import DayItemEditForm  from './DayItemEditForm'
+import FocusReminder    from './FocusReminder'
+import JournalSection   from './JournalSection'
 import styles from './DayView.module.css'
 
 type Mode = 'schedule' | 'list'
@@ -220,6 +222,9 @@ export default function DayView({ date, onDateChange }: Props) {
           </div>
         </div>
 
+        {/* Week / month focus reminder */}
+        <FocusReminder date={date} />
+
         {/* Content */}
         {errorMsg ? (
           <div className={styles.errorState}>
@@ -249,6 +254,9 @@ export default function DayView({ date, onDateChange }: Props) {
             <DayListMode items={items} />
           </div>
         )}
+
+        {/* Daily journal */}
+        {!errorMsg && !isLoading && <JournalSection date={date} />}
 
       </div>
 

@@ -31,6 +31,7 @@ export function usePrefetch() {
           prefetchTreeNodes(user!.id),
           prefetchWeekFocus(user!.id, wkStart),
           prefetchMonthFocus(user!.id, moStart),
+          prefetchJournalEntry(user!.id, today),
         ])
       } catch {
         // silent — offline functionality is best-effort
@@ -44,7 +45,7 @@ export function usePrefetch() {
 async function prefetchDayItems(userId: string, date: string) {
   const { data } = await supabase
     .from('ns_day_items')
-    .select('id, user_id, date, source, title, tree_node_id, inbox_item_id, start_time, end_time, is_complete, priority, position, created_at, updated_at')
+    .select('id, user_id, date, source, title, tree_node_id, inbox_item_id, start_time, end_time, is_complete, priority, colour, position, created_at, updated_at')
     .eq('user_id', userId)
     .eq('date', date)
   if (!data) return
@@ -60,6 +61,7 @@ async function prefetchDayItems(userId: string, date: string) {
     endTime:     r.end_time    ? (r.end_time    as string).slice(0, 5) : null,
     isComplete:  r.is_complete,
     priority:    r.priority,
+    colour:      r.colour ?? null,
     position:    r.position,
     createdAt:   r.created_at,
     updatedAt:   r.updated_at,
@@ -69,7 +71,7 @@ async function prefetchDayItems(userId: string, date: string) {
 async function prefetchInboxItems(userId: string) {
   const { data } = await supabase
     .from('ns_inbox_items')
-    .select('id, user_id, content, state, promoted_node_id, created_at, updated_at')
+    .select('id, user_id, content, state, promoted_node_id, carried_over, created_at, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -80,6 +82,7 @@ async function prefetchInboxItems(userId: string) {
     content:        r.content,
     state:          r.state,
     promotedNodeId: r.promoted_node_id,
+    carriedOver:    r.carried_over,
     createdAt:      r.created_at,
     updatedAt:      r.updated_at,
   })))
@@ -122,6 +125,25 @@ async function prefetchWeekFocus(userId: string, wkStart: string) {
     isComplete:  r.is_complete,
     position:    r.position,
   })))
+}
+
+async function prefetchJournalEntry(userId: string, date: string) {
+  const { data, error } = await supabase
+    .from('ns_journal_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .maybeSingle()
+  // Table may not exist yet, or no entry for today — ignore
+  if (error || !data) return
+  await db.journalEntries.put({
+    id:        data.id,
+    userId:    data.user_id,
+    date:      data.date,
+    content:   data.content,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  })
 }
 
 async function prefetchMonthFocus(userId: string, moStart: string) {

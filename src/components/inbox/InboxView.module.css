@@ -134,6 +134,11 @@
   margin-bottom: var(--ns-space-1);
 }
 
+.sectionLabelCarried {
+  color: var(--ns-gold);
+  border-bottom-color: rgba(var(--ns-gold-rgb), .25);
+}
+
 /* ── Empty / hints ───────────────────────────────────────────────────────── */
 
 .empty {

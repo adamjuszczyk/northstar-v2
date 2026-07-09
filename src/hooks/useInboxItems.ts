@@ -14,6 +14,7 @@ function row2item(r: Record<string, unknown>): InboxItem {
     content:        r.content        as string,
     state:          r.state          as InboxState,
     promotedNodeId: r.promoted_node_id as string | null,
+    carriedOver:    r.carried_over   as boolean,
     createdAt:      r.created_at     as string,
     updatedAt:      r.updated_at     as string,
   }
@@ -37,6 +38,7 @@ export function useInboxItems() {
           content:        r.content,
           state:          r.state as InboxState,
           promotedNodeId: r.promotedNodeId,
+          carriedOver:    r.carriedOver,
           createdAt:      r.createdAt,
           updatedAt:      r.updatedAt,
         } satisfies InboxItem))
@@ -69,16 +71,16 @@ export function useCreateInboxItem() {
         const id  = crypto.randomUUID()
         const item: InboxItem = {
           id, userId: user.id, content,
-          state: 'unassigned', promotedNodeId: null,
+          state: 'unassigned', promotedNodeId: null, carriedOver: false,
           createdAt: now, updatedAt: now,
         }
         await db.inboxItems.add({
           id, userId: user.id, content, state: 'unassigned',
-          promotedNodeId: null, createdAt: now, updatedAt: now,
+          promotedNodeId: null, carriedOver: false, createdAt: now, updatedAt: now,
         })
         await enqueue('ns_inbox_items', 'insert', {
           id, user_id: user.id, content, state: 'unassigned',
-          promoted_node_id: null, created_at: now, updated_at: now,
+          promoted_node_id: null, carried_over: false, created_at: now, updated_at: now,
         }, user.id)
         return item
       }

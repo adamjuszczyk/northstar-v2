@@ -11,6 +11,7 @@ export interface MonthFocusItem {
   title:       string | null
   treeNodeId:  string | null
   inboxItemId: string | null
+  habitId:     string | null
   isComplete:  boolean
   position:    number
 }
@@ -23,6 +24,7 @@ function fromRow(r: Record<string, unknown>): MonthFocusItem {
     title:       r.title         as string | null,
     treeNodeId:  r.tree_node_id  as string | null,
     inboxItemId: r.inbox_item_id as string | null,
+    habitId:     (r.habit_id as string | null) ?? null,
     isComplete:  r.is_complete   as boolean,
     position:    r.position      as number,
   }
@@ -45,6 +47,7 @@ export function useMonthFocus(monthStart: string) {
           title:       r.title,
           treeNodeId:  r.treeNodeId,
           inboxItemId: r.inboxItemId,
+          habitId:     r.habitId ?? null,
           isComplete:  r.isComplete,
           position:    r.position,
         }))

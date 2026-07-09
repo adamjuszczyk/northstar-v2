@@ -58,9 +58,10 @@ export default function DayItemEditForm({ item, onClose }: Props) {
   const sourceLabel =
     item.source === 'tree'  ? '✦ GOAL TREE'   :
     item.source === 'inbox' ? '⌵ FROM INBOX'  :
+    item.source === 'habit' ? '◆ HABIT'       :
                               '• STANDALONE'
 
-  const linkedTitle = item.treeNodeTitle ?? item.inboxContent
+  const linkedTitle = item.treeNodeTitle ?? item.inboxContent ?? item.habitName
 
   return (
     <div className={styles.backdrop} onClick={handleBackdrop}>
@@ -83,7 +84,7 @@ export default function DayItemEditForm({ item, onClose }: Props) {
           {linkedTitle && (
             <div className={styles.field}>
               <span className={styles.fieldLabel}>
-                {item.source === 'tree' ? 'LINKED NODE' : 'INBOX ITEM'}
+                {item.source === 'tree' ? 'LINKED NODE' : item.source === 'habit' ? 'HABIT' : 'INBOX ITEM'}
               </span>
               <div className={styles.linkedTitle}>{linkedTitle}</div>
             </div>

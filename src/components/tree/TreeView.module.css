@@ -179,6 +179,12 @@
   gap: 28px;
 }
 
+/* Dragging a node over empty canvas — dropping here makes it a root node */
+.stageRootDrop {
+  box-shadow: inset 0 0 0 2px rgba(var(--ns-accent-rgb), .5);
+  border-radius: var(--ns-radius-2xl);
+}
+
 /* ── Empty state ──────────────────────────────────────────────────────────── */
 
 .empty {

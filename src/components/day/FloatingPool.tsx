@@ -11,11 +11,13 @@ const SOURCE_CFG = {
   tree:       { accentVar: '--ns-gold',           accentRgbVar: '--ns-gold-rgb',           tag: '✦ GOAL TREE',  dashed: false },
   standalone: { accentVar: '--ns-task-accent',    accentRgbVar: '--ns-task-accent-rgb',    tag: '• STANDALONE', dashed: false },
   inbox:      { accentVar: '--ns-project-accent', accentRgbVar: '--ns-project-accent-rgb', tag: '⌵ FROM INBOX', dashed: true  },
+  habit:      { accentVar: '--ns-ok',             accentRgbVar: '--ns-ok-rgb',             tag: '◆ HABIT',      dashed: false },
 } as const
 
 function sourceKey(item: DayItem): keyof typeof SOURCE_CFG {
   if (item.source === 'tree')  return 'tree'
   if (item.source === 'inbox') return 'inbox'
+  if (item.source === 'habit') return 'habit'
   return 'standalone'
 }
 
@@ -91,8 +93,8 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
         </div>
         <div className={styles.metaRow}>
           <span className={styles.tag}>{cfg.tag}</span>
-          {(item.treeNodeTitle || item.inboxContent) && (
-            <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent}</span>
+          {(item.treeNodeTitle || item.inboxContent || item.habitName) && (
+            <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent ?? item.habitName}</span>
           )}
         </div>
       </div>
@@ -128,7 +130,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
   const isPending = toggling || removing
 
   function handleToggle(item: DayItem) {
-    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId })
+    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
   }
   function handleDelete(item: DayItem) {
     if (!window.confirm(`Remove "${item.displayTitle}" from today?`)) return
@@ -167,6 +169,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
             { label: 'GOAL TREE',  accentVar: '--ns-gold',           dashed: false },
             { label: 'STANDALONE', accentVar: '--ns-task-accent',    dashed: false },
             { label: 'FROM INBOX', accentVar: '--ns-project-accent', dashed: true  },
+            { label: 'HABIT',      accentVar: '--ns-ok',             dashed: false },
           ].map(({ label, accentVar, dashed }) => (
             <span key={label} className={styles.legendChip}>
               <span

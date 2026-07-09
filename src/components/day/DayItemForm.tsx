@@ -3,11 +3,12 @@ import { useCreateDayItem, useAddInboxToDay, timeToDecimal } from '../../hooks/u
 import type { DayItemPriority } from '../../hooks/useDayItems'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
+import { useHabits } from '../../hooks/useHabits'
 import { BLOCK_COLOURS } from '../../lib/blockColours'
 import type { TreeNode, NodeType } from '../../types'
 import styles from './DayItemForm.module.css'
 
-type Source = 'standalone' | 'tree' | 'inbox'
+type Source = 'standalone' | 'tree' | 'inbox' | 'habit'
 
 const NODE_TYPE_ORDER: NodeType[] = ['vision', 'goal', 'project', 'task']
 
@@ -42,6 +43,7 @@ export default function DayItemForm({ date, onClose }: Props) {
   const [endTime,    setEndTime]    = useState('')
   const [treeNodeId, setTreeNodeId] = useState<string | null>(null)
   const [inboxId,    setInboxId]    = useState<string | null>(null)
+  const [habitId,    setHabitId]    = useState<string | null>(null)
   const [treeSearch, setTreeSearch] = useState('')
   const [priority,   setPriority]   = useState<DayItemPriority>('medium')
   const [colour,     setColour]     = useState<string | null>(null)
@@ -51,6 +53,7 @@ export default function DayItemForm({ date, onClose }: Props) {
   const { mutate: addFromInbox, isPending: addingInbox } = useAddInboxToDay()
   const { data: treeNodes  = [] } = useTreeNodes()
   const { data: inboxItems = [] } = useInboxItems()
+  const { data: habits     = [] } = useHabits()
 
   const isPending = creating || addingInbox
   const unassignedInbox = inboxItems.filter(i => i.state === 'unassigned')
@@ -66,6 +69,7 @@ export default function DayItemForm({ date, onClose }: Props) {
   useEffect(() => {
     setTreeNodeId(null)
     setInboxId(null)
+    setHabitId(null)
     setTitle('')
     setHasTime(false)
     setStartTime('')
@@ -86,6 +90,7 @@ export default function DayItemForm({ date, onClose }: Props) {
     if (source === 'standalone') return title.trim().length > 0
     if (source === 'tree')       return treeNodeId !== null
     if (source === 'inbox')      return inboxId !== null
+    if (source === 'habit')      return habitId !== null
     return false
   }
 
@@ -121,6 +126,16 @@ export default function DayItemForm({ date, onClose }: Props) {
         { inboxItemId: inboxId!, date, priority, colour },
         { onSuccess: onClose, onError: e => setError((e as Error).message) }
       )
+
+    } else if (source === 'habit') {
+      createItem({
+        date, source: 'habit',
+        habitId,
+        startTime: hasTime && startTime ? startTime : null,
+        endTime:   hasTime && endTime   ? endTime   : null,
+        priority,
+        colour,
+      }, { onSuccess: onClose, onError: e => setError((e as Error).message) })
     }
   }
 
@@ -138,13 +153,16 @@ export default function DayItemForm({ date, onClose }: Props) {
         </div>
 
         <div className={styles.sourceTabs}>
-          {(['standalone', 'tree', 'inbox'] as Source[]).map(s => (
+          {(['standalone', 'tree', 'inbox', 'habit'] as Source[]).map(s => (
             <button
               key={s}
               className={`${styles.sourceTab}${source === s ? ' ' + styles.sourceTabActive : ''}`}
               onClick={() => setSource(s)}
             >
-              {s === 'standalone' ? '+ New item' : s === 'tree' ? '✦ From tree' : '⌵ From inbox'}
+              {s === 'standalone' ? '+ New item'
+                : s === 'tree'    ? '✦ From tree'
+                : s === 'inbox'   ? '⌵ From inbox'
+                :                   '◆ From habits'}
             </button>
           ))}
         </div>
@@ -226,6 +244,37 @@ export default function DayItemForm({ date, onClose }: Props) {
                 </button>
               ))}
             </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>PRIORITY</span>
+              <PriorityPicker priority={priority} onChange={setPriority} />
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>COLOUR <span className={styles.optionalLabel}>(optional)</span></span>
+              <ColourPicker colour={colour} onChange={setColour} />
+            </div>
+          </div>
+        )}
+
+        {source === 'habit' && (
+          <div className={styles.body}>
+            <p className={styles.fieldLabel}>HABITS</p>
+            <div className={styles.nodeList}>
+              {habits.length === 0 && <p className={styles.emptyHint}>No habits yet — add one from the Habits tab.</p>}
+              {habits.map(h => (
+                <button
+                  key={h.id}
+                  className={`${styles.nodeRow}${habitId === h.id ? ' ' + styles.nodeRowSelected : ''}`}
+                  onClick={() => setHabitId(h.id)}
+                >
+                  <span className={styles.nodeTypeDot} style={{ background: h.mode === 'build' ? 'var(--ns-ok)' : 'var(--ns-project-accent)' }} />
+                  <span className={styles.nodeTitle}>{h.name}</span>
+                  <span className={styles.nodeType}>{h.mode}</span>
+                </button>
+              ))}
+            </div>
+            <TimeSection hasTime={hasTime} setHasTime={setHasTime}
+              startTime={startTime} setStartTime={setStartTime}
+              endTime={endTime} setEndTime={setEndTime} />
             <div className={styles.field}>
               <span className={styles.fieldLabel}>PRIORITY</span>
               <PriorityPicker priority={priority} onChange={setPriority} />

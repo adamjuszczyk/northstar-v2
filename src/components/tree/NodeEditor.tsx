@@ -26,12 +26,14 @@ export type EditorState =
   | { mode: 'edit';   node: TreeNodeWithChildren }
 
 interface Props {
-  state:     EditorState
-  onClose:   () => void
+  state:      EditorState
+  onClose:    () => void
   onCreated?: (nodeId: string) => void
+  /** Edit mode only — switches to the Move-to picker for this node. */
+  onMoveTo?:  (node: TreeNodeWithChildren) => void
 }
 
-export default function NodeEditor({ state, onClose, onCreated }: Props) {
+export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Props) {
   const isCreate = state.mode === 'create'
 
   const [type,   setType]   = useState<NodeType>(
@@ -181,6 +183,15 @@ export default function NodeEditor({ state, onClose, onCreated }: Props) {
 
         {/* Actions */}
         <div className={styles.actions}>
+          {!isCreate && onMoveTo && (
+            <button
+              className={styles.moveBtn}
+              onClick={() => { if (state.mode === 'edit') onMoveTo(state.node) }}
+              disabled={isPending}
+            >
+              Move to…
+            </button>
+          )}
           {!isCreate && (
             <button
               className={styles.deleteBtn}

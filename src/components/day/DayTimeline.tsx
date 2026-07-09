@@ -159,8 +159,11 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
         <div className={`${styles.cardTitle}${item.isComplete ? ' ' + styles.cardTitleDone : ''}`}>
           {item.displayTitle}
         </div>
-        {item.treeNodeTitle && item.source === 'tree' && (
+        {item.source === 'tree' && item.treeNodeTitle && (
           <div className={styles.cardOrigin}>↳ {item.treeNodeTitle}</div>
+        )}
+        {item.source === 'habit' && item.habitName && (
+          <div className={styles.cardOrigin}>↳ {item.habitName}</div>
         )}
       </div>
     </>
@@ -351,7 +354,7 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
   const isPending = toggling || removing
 
   function handleToggle(item: DayItem) {
-    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId })
+    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
   }
   function handleDelete(item: DayItem) {
     if (!window.confirm(`Delete "${item.displayTitle}"?`)) return

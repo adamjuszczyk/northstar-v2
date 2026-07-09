@@ -1,8 +1,8 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .62);
-  z-index: 200;
+  background: var(--ns-scrim);
+  z-index: 210;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,16 +14,16 @@
 .modal {
   width: 100%;
   max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--ns-space-4);
   padding: var(--ns-space-6) var(--ns-space-7);
   border-radius: var(--ns-radius-2xl);
-  background: var(--ns-bg-surface);
+  background: var(--ns-surface-raised);
   border: 1px solid var(--ns-border-soft);
-  box-shadow:
-    0 32px 80px -20px rgba(0, 0, 0, .9),
-    0 0 0 1px rgba(var(--ns-gold-rgb), .04);
+  box-shadow: var(--ns-shadow-modal);
   animation: ns-rise 0.28s ease both;
 }
 
@@ -40,7 +40,7 @@
   font-size: var(--ns-text-xs);
   font-weight: var(--ns-fw-semibold);
   letter-spacing: var(--ns-ls-caps);
-  color: var(--ns-gold);
+  color: var(--ns-ok);
 }
 
 .closeBtn {
@@ -56,10 +56,7 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
 }
-.closeBtn:hover {
-  color: var(--ns-text-hi);
-  border-color: var(--ns-border-soft);
-}
+.closeBtn:hover { color: var(--ns-text-hi); border-color: var(--ns-border-soft); }
 
 /* ── Fields ────────────────────────────────────────────────────────────── */
 
@@ -85,40 +82,7 @@
   opacity: 0.7;
 }
 
-/* ── Type chips ────────────────────────────────────────────────────────── */
-
-.typeRow {
-  display: flex;
-  gap: var(--ns-space-2);
-  flex-wrap: wrap;
-}
-
-.typeChip {
-  padding: 5px 11px;
-  border-radius: var(--ns-radius-sm);
-  border: 1px solid var(--ns-border-mid);
-  background: rgba(255, 255, 255, .03);
-  color: var(--ns-text-mid);
-  font-family: var(--ns-font-mono);
-  font-size: var(--ns-text-xs);
-  letter-spacing: var(--ns-ls-mono);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-.typeChip:hover {
-  border-color: rgba(var(--chip-accent-rgb), .5);
-  color: var(--chip-accent);
-}
-.typeChipActive {
-  background: rgba(var(--chip-accent-rgb), .14);
-  border-color: rgba(var(--chip-accent-rgb), .7);
-  color: var(--chip-accent);
-}
-
-/* ── Text inputs ───────────────────────────────────────────────────────── */
-
-.titleInput {
+.input, .numberInput {
   width: 100%;
   padding: 10px 12px;
   border-radius: var(--ns-radius-md);
@@ -131,54 +95,143 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
-.titleInput::placeholder { color: var(--ns-text-lo); }
-.titleInput:focus        { border-color: rgba(var(--ns-gold-rgb), .4); }
+.input::placeholder { color: var(--ns-text-lo); }
+.input:focus, .numberInput:focus { border-color: rgba(var(--ns-ok-rgb), .4); }
+.numberInput { max-width: 90px; }
 
-.notesInput {
-  width: 100%;
-  padding: 9px 12px;
-  border-radius: var(--ns-radius-md);
-  border: 1px solid var(--ns-border-mid);
-  background: var(--ns-surface-input);
-  color: var(--ns-text-hi);
-  font-family: var(--ns-font-ui);
-  font-size: var(--ns-text-base);
-  outline: none;
-  box-sizing: border-box;
-  resize: vertical;
-  min-height: 72px;
-  transition: border-color 0.15s;
-}
-.notesInput::placeholder { color: var(--ns-text-lo); }
-.notesInput:focus        { border-color: rgba(var(--ns-gold-rgb), .4); }
+/* ── Pill rows (mode / frequency / auto-add target) ───────────────────────── */
 
-/* ── Status buttons ────────────────────────────────────────────────────── */
-
-.statusRow {
+.pillRow {
   display: flex;
   gap: var(--ns-space-2);
+  flex-wrap: wrap;
 }
 
-.statusBtn {
+.pillBtn {
   flex: 1;
-  padding: 6px 8px;
+  padding: 7px 10px;
   border-radius: var(--ns-radius-sm);
   border: 1px solid var(--ns-border-mid);
-  background: rgba(255, 255, 255, .03);
+  background: var(--ns-border-subtle);
   color: var(--ns-text-mid);
   font-family: var(--ns-font-mono);
   font-size: var(--ns-text-xs);
   letter-spacing: var(--ns-ls-sm);
+  text-transform: uppercase;
   cursor: pointer;
   transition: all 0.15s;
 }
-.statusBtnActive {
+.pillBtnActive {
   background: rgba(var(--ns-ok-rgb), .12);
   border-color: rgba(var(--ns-ok-rgb), .5);
   color: var(--ns-ok);
 }
+.pillBtnBuild {
+  background: rgba(var(--ns-ok-rgb), .12);
+  border-color: rgba(var(--ns-ok-rgb), .5);
+  color: var(--ns-ok);
+}
+.pillBtnReduce {
+  background: rgba(var(--ns-project-accent-rgb), .12);
+  border-color: rgba(var(--ns-project-accent-rgb), .5);
+  color: var(--ns-project-accent);
+}
 
-/* ── Action row ────────────────────────────────────────────────────────── */
+/* ── Tree node link ────────────────────────────────────────────────────── */
+
+.linkBtn {
+  padding: 9px 12px;
+  border-radius: var(--ns-radius-md);
+  border: 1px dashed var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.linkBtn:hover { border-color: rgba(var(--ns-vision-accent-rgb), .5); color: var(--ns-vision-accent); }
+
+.treePicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-2);
+}
+
+.treeList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-1);
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-faint);
+  padding: var(--ns-space-2);
+}
+
+.treeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+  padding: 7px 9px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-sm);
+  color: var(--ns-text-hi);
+  transition: background 0.12s, border-color 0.12s;
+}
+.treeRow:hover { background: var(--ns-border-subtle); border-color: var(--ns-border-faint); }
+.treeRowSelected { background: rgba(var(--ns-ok-rgb), .1); border-color: rgba(var(--ns-ok-rgb), .4); }
+
+.nodeTypeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.nodeTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeType {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  color: var(--ns-text-lo);
+  flex-shrink: 0;
+}
+
+/* ── Auto-add toggle ───────────────────────────────────────────────────── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+  cursor: pointer;
+}
+
+.toggleCheck {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ns-ok);
+  cursor: pointer;
+}
+
+.toggleLabel {
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-base);
+  color: var(--ns-text-hi);
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────── */
 
 .actions {
   display: flex;
@@ -186,21 +239,6 @@
   gap: var(--ns-space-2);
   padding-top: var(--ns-space-1);
 }
-
-.moveBtn {
-  padding: 7px 14px;
-  border-radius: var(--ns-radius-sm);
-  border: 1px solid rgba(var(--ns-project-accent-rgb), .35);
-  background: rgba(var(--ns-project-accent-rgb), .08);
-  color: var(--ns-project-accent);
-  font-family: var(--ns-font-mono);
-  font-size: var(--ns-text-xs);
-  letter-spacing: var(--ns-ls-sm);
-  cursor: pointer;
-  transition: opacity 0.15s, background 0.15s;
-}
-.moveBtn:hover:not(:disabled) { background: rgba(var(--ns-project-accent-rgb), .16); }
-.moveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .deleteBtn {
   padding: 7px 14px;
@@ -228,15 +266,15 @@
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.cancelBtn:hover   { opacity: 0.8; }
+.cancelBtn:hover { opacity: 0.8; }
 .cancelBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .saveBtn {
   padding: 7px 18px;
   border-radius: var(--ns-radius-sm);
-  border: 1px solid rgba(var(--ns-gold-rgb), .4);
-  background: rgba(var(--ns-gold-rgb), .12);
-  color: var(--ns-gold);
+  border: 1px solid rgba(var(--ns-ok-rgb), .4);
+  background: rgba(var(--ns-ok-rgb), .14);
+  color: var(--ns-ok);
   font-family: var(--ns-font-mono);
   font-size: var(--ns-text-xs);
   font-weight: var(--ns-fw-semibold);
@@ -244,7 +282,5 @@
   cursor: pointer;
   transition: opacity 0.15s, background 0.15s;
 }
-.saveBtn:hover:not(:disabled) {
-  background: rgba(var(--ns-gold-rgb), .2);
-}
+.saveBtn:hover:not(:disabled) { background: rgba(var(--ns-ok-rgb), .22); }
 .saveBtn:disabled { opacity: 0.35; cursor: not-allowed; }

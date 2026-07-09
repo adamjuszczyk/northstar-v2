@@ -146,40 +146,31 @@ export function useDeleteNode() {
   })
 }
 
-export interface ReorderInput {
-  updates: Array<{ id: string; position: number }>
+export interface MoveNodeInput {
+  id:       string
+  parentId: string | null
+  position: number
 }
 
-export function useReorderNodes() {
+/**
+ * Reparents a node (and, implicitly, its whole subtree — parent_id is the
+ * only structural field in this adjacency list). Used by both the drag-and-
+ * drop handler and the "Move to…" picker so they stay behaviourally
+ * identical. One Supabase update, one invalidation.
+ */
+export function useMoveNode() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ updates }: ReorderInput) => {
-      for (const u of updates) {
-        const { error } = await supabase
-          .from('ns_tree_nodes')
-          .update({ position: u.position })
-          .eq('id', u.id)
-          .eq('user_id', user!.id)
-        if (error) throw error
-      }
+    mutationFn: async ({ id, parentId, position }: MoveNodeInput) => {
+      const { error } = await supabase
+        .from('ns_tree_nodes')
+        .update({ parent_id: parentId, position, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user!.id)
+      if (error) throw error
     },
-    onMutate: async ({ updates }) => {
-      if (!user) return
-      await qc.cancelQueries({ queryKey: QK(user.id) })
-      const prev = qc.getQueryData<TreeNode[]>(QK(user.id))
-      qc.setQueryData<TreeNode[]>(QK(user.id), old =>
-        old?.map(n => {
-          const u = updates.find(x => x.id === n.id)
-          return u ? { ...n, position: u.position } : n
-        })
-      )
-      return { prev }
-    },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev && user) qc.setQueryData(QK(user.id), ctx.prev)
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['ns_tree_nodes'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ns_tree_nodes'] }),
   })
 }
 
@@ -219,4 +210,37 @@ export function countCompleted(node: TreeNodeWithChildren): number {
   return node.children.reduce((sum, c) => {
     return sum + (c.status === 'complete' ? 1 : 0) + countCompleted(c)
   }, 0)
+}
+
+// ── Reparenting utilities ────────────────────────────────────────────────────
+
+/**
+ * True if moving `draggedId` to become a child of `targetId` would create a
+ * cycle — i.e. targetId is draggedId itself, or already sits somewhere in
+ * draggedId's own subtree. Walks up from targetId through parentId links;
+ * if draggedId is encountered, targetId is a descendant (or draggedId
+ * itself) and the move is invalid.
+ */
+export function wouldCreateCycle(
+  draggedId: string,
+  targetId:  string,
+  nodes:     TreeNode[],
+): boolean {
+  if (draggedId === targetId) return true
+  const byId = new Map(nodes.map(n => [n.id, n]))
+  let current: string | null = targetId
+  const seen = new Set<string>()
+  while (current) {
+    if (current === draggedId) return true
+    if (seen.has(current)) break // defensive: pre-existing corrupt data shouldn't infinite-loop
+    seen.add(current)
+    current = byId.get(current)?.parentId ?? null
+  }
+  return false
+}
+
+/** Number of nodes directly under parentId (null = root level) — used to
+ *  append a reparented node at the end of its new siblings. */
+export function siblingCount(parentId: string | null, nodes: TreeNode[]): number {
+  return nodes.filter(n => n.parentId === parentId).length
 }

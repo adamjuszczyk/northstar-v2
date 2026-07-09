@@ -10,6 +10,7 @@ export interface CachedDayItem {
   title:       string | null
   treeNodeId:  string | null
   inboxItemId: string | null
+  habitId:     string | null
   startTime:   string | null
   endTime:     string | null
   isComplete:  boolean
@@ -50,6 +51,7 @@ export interface CachedWeekFocus {
   title:       string | null
   treeNodeId:  string | null
   inboxItemId: string | null
+  habitId:     string | null
   isComplete:  boolean
   position:    number
 }
@@ -62,6 +64,7 @@ export interface CachedMonthFocus {
   title:       string | null
   treeNodeId:  string | null
   inboxItemId: string | null
+  habitId:     string | null
   isComplete:  boolean
   position:    number
 }

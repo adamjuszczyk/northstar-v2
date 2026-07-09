@@ -6,6 +6,7 @@ const SOURCE_TAG: Record<DayItem['source'], string> = {
   standalone: '• STANDALONE',
   tree:       '✦ GOAL TREE',
   inbox:      '⌵ INBOX',
+  habit:      '◆ HABIT',
 }
 
 interface Props {
@@ -21,7 +22,7 @@ export default function DayListMode({ items }: Props) {
   const floating = items.filter(i => i.startTime === null)
 
   function handleToggle(item: DayItem) {
-    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId })
+    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
   }
 
   function handleDelete(item: DayItem) {
@@ -98,8 +99,8 @@ function ListRow({ item, isPending, onToggle, onDelete }: RowProps) {
           <span className={`${styles.rowTag} ${styles['rowTag_' + item.source]}`}>
             {SOURCE_TAG[item.source]}
           </span>
-          {item.treeNodeTitle && (
-            <span className={styles.rowOrigin}>↳ {item.treeNodeTitle}</span>
+          {(item.treeNodeTitle ?? item.habitName) && (
+            <span className={styles.rowOrigin}>↳ {item.treeNodeTitle ?? item.habitName}</span>
           )}
         </div>
       </div>

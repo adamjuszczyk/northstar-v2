@@ -6,6 +6,7 @@ import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayIt
 import type { DayItemSummaryRow } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
+import { useHabits } from '../../hooks/useHabits'
 import { useSettings } from '../../hooks/useSettings'
 import { weekDisplayStart } from '../../lib/dates'
 import FocusItemForm from '../planner/FocusItemForm'
@@ -114,6 +115,7 @@ function FocusRow({ item, displayTitle, onToggle, onDelete, isPending }: FocusRo
   const sourceLabel =
     item.source === 'tree'       ? '✦ GOAL TREE'  :
     item.source === 'inbox'      ? '⌵ FROM INBOX' :
+    item.source === 'habit'      ? '◆ HABIT'      :
                                     '• STANDALONE'
 
   return (
@@ -163,6 +165,7 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
   const { data: focusItems = [], isLoading: loadingFocus } = useWeekFocus(weekStart)
   const { data: treeNodes  = [] } = useTreeNodes()
   const { data: inboxItems = [] } = useInboxItems()
+  const { data: habits     = [] } = useHabits()
 
   const { mutate: createFocus, isPending: creating } = useCreateWeekFocus()
   const { mutate: toggleFocus, isPending: toggling  } = useToggleWeekFocus()
@@ -171,6 +174,7 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
 
   const nodeMap   = new Map(treeNodes.map(n => [n.id, n]))
   const inboxMap  = new Map(inboxItems.map(i => [i.id, i]))
+  const habitMap  = new Map(habits.map(h => [h.id, h]))
   const byDate    = groupByDate(rawItems)
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(parseISO(displayStart), i))
@@ -178,6 +182,7 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
   function displayTitle(item: WeekFocusItem): string {
     if (item.title) return item.title
     if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? '(untitled)'
+    if (item.habitId) return habitMap.get(item.habitId)?.name ?? '(untitled)'
     return '(untitled)'
   }
 

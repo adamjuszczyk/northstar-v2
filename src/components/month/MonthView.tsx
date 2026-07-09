@@ -4,6 +4,7 @@ import { useMonthFocus, useCreateMonthFocus, useToggleMonthFocus, useDeleteMonth
 import type { MonthFocusItem } from '../../hooks/useMonthFocus'
 import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
+import { useHabits } from '../../hooks/useHabits'
 import { useSettings } from '../../hooks/useSettings'
 import FocusItemForm from '../planner/FocusItemForm'
 import styles from './MonthView.module.css'
@@ -99,6 +100,7 @@ function FocusRow({ item, displayTitle, onToggle, onDelete, isPending }: FocusRo
   const sourceLabel =
     item.source === 'tree'  ? '✦ GOAL TREE'  :
     item.source === 'inbox' ? '⌵ FROM INBOX' :
+    item.source === 'habit' ? '◆ HABIT'      :
                                '• STANDALONE'
 
   return (
@@ -145,21 +147,24 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
   const { data: rawItems   = [], isLoading: loadingItems } = useRangeDayItems(monthStart, monthEnd)
   const { data: focusItems = [], isLoading: loadingFocus } = useMonthFocus(monthStart)
   const { data: treeNodes  = [] } = useTreeNodes()
+  const { data: habits     = [] } = useHabits()
 
   const { mutate: createFocus, isPending: creating } = useCreateMonthFocus()
   const { mutate: toggleFocus, isPending: toggling  } = useToggleMonthFocus()
   const { mutate: deleteFocus, isPending: deleting  } = useDeleteMonthFocus()
   const isPending = creating || toggling || deleting
 
-  const nodeMap = new Map(treeNodes.map(n => [n.id, n]))
-  const byDate  = groupByDate(rawItems)
-  const cells   = buildCalendarGrid(monthStart, settings.weekStartsOn)
+  const nodeMap  = new Map(treeNodes.map(n => [n.id, n]))
+  const habitMap = new Map(habits.map(h => [h.id, h]))
+  const byDate   = groupByDate(rawItems)
+  const cells    = buildCalendarGrid(monthStart, settings.weekStartsOn)
 
   const isLoading = loadingItems || loadingFocus
 
   function displayTitle(item: MonthFocusItem): string {
     if (item.title) return item.title
     if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? '(untitled)'
+    if (item.habitId) return habitMap.get(item.habitId)?.name ?? '(untitled)'
     return '(untitled)'
   }
 

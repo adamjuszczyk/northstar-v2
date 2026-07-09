@@ -5,6 +5,7 @@ import { useAuth } from './hooks/useAuth'
 import { usePrefetch } from './hooks/usePrefetch'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { useCarryOverSweep } from './hooks/useCarryOverSweep'
+import { useHabitAutoAddSweep } from './hooks/useHabitAutoAddSweep'
 import { supabase } from './lib/supabase'
 import { clearAllCaches } from './lib/db'
 import NavBar from './components/nav/NavBar'
@@ -13,6 +14,7 @@ import TodayPage from './pages/TodayPage'
 import TreePage from './pages/TreePage'
 import PlannerPage from './pages/PlannerPage'
 import InboxPage from './pages/InboxPage'
+import HabitsPage from './pages/HabitsPage'
 import SettingsPage from './pages/SettingsPage'
 import styles from './App.module.css'
 
@@ -60,6 +62,7 @@ function AuthCacheSync() {
 function AuthedApp() {
   usePrefetch()
   useCarryOverSweep()
+  useHabitAutoAddSweep()
   const online = useOnlineStatus()
   return (
     <div className={styles.shell}>
@@ -70,6 +73,7 @@ function AuthedApp() {
           <Route path="/tree"     element={<TreePage />} />
           <Route path="/planner"  element={<PlannerPage />} />
           <Route path="/inbox"    element={<InboxPage />} />
+          <Route path="/habits"   element={<HabitsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*"         element={<Navigate to="/" replace />} />
         </Routes>

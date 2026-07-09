@@ -7,7 +7,7 @@ import type { NodeType } from '../types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type DayItemSource   = 'standalone' | 'tree' | 'inbox'
+export type DayItemSource   = 'standalone' | 'tree' | 'inbox' | 'habit'
 export type DayItemPriority = 'high' | 'medium' | 'low'
 
 /** Raw row from ns_day_items — times normalised to HH:MM */
@@ -19,6 +19,7 @@ export interface RawDayItem {
   title:        string | null
   treeNodeId:   string | null
   inboxItemId:  string | null
+  habitId:      string | null
   startTime:    string | null    // 'HH:MM' or null (floating)
   endTime:      string | null
   isComplete:   boolean
@@ -35,6 +36,7 @@ export interface DayItem extends RawDayItem {
   treeNodeTitle:  string | null
   treeNodeType:   NodeType | null
   inboxContent:   string | null
+  habitName:      string | null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -59,6 +61,7 @@ function row2raw(r: Record<string, unknown>): RawDayItem {
     title:       r.title         as string | null,
     treeNodeId:  r.tree_node_id  as string | null,
     inboxItemId: r.inbox_item_id as string | null,
+    habitId:     (r.habit_id as string | null) ?? null,
     startTime:   normTime(r.start_time),
     endTime:     normTime(r.end_time),
     isComplete:  r.is_complete   as boolean,
@@ -94,6 +97,7 @@ export function useDayItems(date: string) {
           title:       r.title,
           treeNodeId:  r.treeNodeId,
           inboxItemId: r.inboxItemId,
+          habitId:     r.habitId ?? null,
           startTime:   r.startTime,
           endTime:     r.endTime,
           isComplete:  r.isComplete,
@@ -130,6 +134,7 @@ export interface CreateDayItemInput {
   title?:       string | null
   treeNodeId?:  string | null
   inboxItemId?: string | null
+  habitId?:     string | null
   startTime?:   string | null
   endTime?:     string | null
   priority?:    DayItemPriority
@@ -151,6 +156,7 @@ export function useCreateDayItem() {
           title:         input.title         ?? null,
           tree_node_id:  input.treeNodeId    ?? null,
           inbox_item_id: input.inboxItemId   ?? null,
+          habit_id:      input.habitId       ?? null,
           start_time:    input.startTime     ?? null,
           end_time:      input.endTime       ?? null,
           priority:      input.priority      ?? 'medium',
@@ -207,10 +213,11 @@ export function useToggleDayItem() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, isComplete, treeNodeId }: {
+    mutationFn: async ({ id, isComplete, treeNodeId, habitId }: {
       id:          string
       isComplete:  boolean
       treeNodeId:  string | null
+      habitId?:    string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       const now = new Date().toISOString()
@@ -230,6 +237,14 @@ export function useToggleDayItem() {
             id: treeNodeId, status, updated_at: now,
           }, user.id)
         }
+        // Completing (not un-completing) a habit day item logs an entry —
+        // a permanent record, so unchecking never removes it.
+        if (habitId && isComplete) {
+          await enqueue('ns_habit_entries', 'insert', {
+            id: crypto.randomUUID(), user_id: user.id, habit_id: habitId,
+            logged_at: now, note: null, source: 'day_view',
+          }, user.id)
+        }
         return
       }
 
@@ -245,11 +260,18 @@ export function useToggleDayItem() {
           .eq('id', treeNodeId).eq('user_id', user.id)
         if (e2) throw e2
       }
+      if (habitId && isComplete) {
+        const { error: e3 } = await supabase
+          .from('ns_habit_entries')
+          .insert({ user_id: user.id, habit_id: habitId, logged_at: now, source: 'day_view' })
+        if (e3) throw e3
+      }
     },
     networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_tree_nodes'] })
+      qc.invalidateQueries({ queryKey: ['ns_habit_entries'] })
     },
   })
 }

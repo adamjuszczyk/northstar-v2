@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
 import { useAuth } from './useAuth'
 
-export type FocusSource = 'standalone' | 'tree' | 'inbox'
+export type FocusSource = 'standalone' | 'tree' | 'inbox' | 'habit'
 
 export interface WeekFocusItem {
   id:          string
@@ -12,6 +12,7 @@ export interface WeekFocusItem {
   title:       string | null
   treeNodeId:  string | null
   inboxItemId: string | null
+  habitId:     string | null
   isComplete:  boolean
   position:    number
 }
@@ -24,6 +25,7 @@ function fromRow(r: Record<string, unknown>): WeekFocusItem {
     title:       r.title        as string | null,
     treeNodeId:  r.tree_node_id  as string | null,
     inboxItemId: r.inbox_item_id as string | null,
+    habitId:     (r.habit_id as string | null) ?? null,
     isComplete:  r.is_complete   as boolean,
     position:    r.position      as number,
   }
@@ -46,6 +48,7 @@ export function useWeekFocus(weekStart: string) {
           title:       r.title,
           treeNodeId:  r.treeNodeId,
           inboxItemId: r.inboxItemId,
+          habitId:     r.habitId ?? null,
           isComplete:  r.isComplete,
           position:    r.position,
         }))

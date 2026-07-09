@@ -1,15 +1,36 @@
 import { useState, useRef, useMemo, useCallback, useEffect, type CSSProperties } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
-  DndContext, closestCenter, type DragEndEvent,
+  DndContext, useDroppable, pointerWithin,
   MouseSensor, TouchSensor, useSensors, useSensor,
+  type DragStartEvent, type DragOverEvent, type DragEndEvent, type CollisionDetection,
 } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
-import { useTreeNodes, useReorderNodes, buildTree, type TreeNodeWithChildren } from '../../hooks/useTreeNodes'
+import {
+  useTreeNodes, useMoveNode, buildTree, wouldCreateCycle, siblingCount,
+  type TreeNodeWithChildren,
+} from '../../hooks/useTreeNodes'
+import { useHabits } from '../../hooks/useHabits'
 import type { NodeType } from '../../types'
 import TreeNode from './TreeNode'
 import NodeConnector from './NodeConnector'
 import NodeEditor, { type EditorState } from './NodeEditor'
+import MoveToPicker from './MoveToPicker'
 import styles from './TreeView.module.css'
+
+const CANVAS_ROOT_DROP_ID = 'tree-canvas-root'
+
+/**
+ * pointerWithin reports every droppable whose rect contains the pointer —
+ * since node cards sit inside the canvas droppable, both match at once.
+ * Prefer the node (more specific) whenever one is under the pointer; only
+ * fall back to the canvas root-drop zone when nothing else matches.
+ */
+const reparentCollisionDetection: CollisionDetection = (args) => {
+  const hits = pointerWithin(args)
+  if (hits.length === 0) return hits
+  const nodeHits = hits.filter(h => h.id !== CANVAS_ROOT_DROP_ID)
+  return nodeHits.length > 0 ? nodeHits : hits
+}
 
 type ViewMode = 'tree' | 'list'
 
@@ -76,24 +97,76 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   )
 }
 
+// ── Canvas stage (droppable root-drop zone) ─────────────────────────────────────
+//
+// useDroppable must be called by a component that DndContext actually renders
+// as a descendant — calling it directly in TreeView's body doesn't work,
+// because TreeView is the ANCESTOR that creates <DndContext> as its own
+// child; a hook call in TreeView's own function scope never resolves against
+// a context that TreeView itself renders further down the tree. This small
+// wrapper is rendered *inside* <DndContext>, so its useDroppable call
+// actually registers.
+
+interface CanvasStageProps {
+  stageRef:  React.MutableRefObject<HTMLDivElement | null>
+  className: string
+  style?:    CSSProperties
+  isDragActive: boolean
+  children:  React.ReactNode
+}
+
+function CanvasStage({ stageRef, className, style, isDragActive, children }: CanvasStageProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: CANVAS_ROOT_DROP_ID })
+  const setRefs = useCallback((el: HTMLDivElement | null) => {
+    stageRef.current = el
+    setNodeRef(el)
+  }, [stageRef, setNodeRef])
+
+  return (
+    <div
+      ref={setRefs}
+      className={`${className}${isDragActive && isOver ? ' ' + styles.stageRootDrop : ''}`}
+      style={style}
+    >
+      {children}
+    </div>
+  )
+}
+
 // ── TreeView ───────────────────────────────────────────────────────────────────
 
 export default function TreeView() {
   const { data, isLoading, error } = useTreeNodes()
-  const { mutate: reorderNodes } = useReorderNodes()
+  const { data: habits = [] } = useHabits()
+  const { mutate: moveNode } = useMoveNode()
+  const [searchParams] = useSearchParams()
+  const focusNodeId = searchParams.get('focus')
+
+  const habitByNodeId = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const h of habits) if (h.treeNodeId) m.set(h.treeNodeId, h.id)
+    return m
+  }, [habits])
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   )
 
-  const stageRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement | null>(null)
   const nodesRef = useRef<HTMLDivElement>(null)
 
   const [editorState, setEditorState] = useState<EditorState | null>(null)
+  const [movingNode,  setMovingNode]  = useState<TreeNodeWithChildren | null>(null)
   const [legendOpen,  setLegendOpen]  = useState(false)
   const [structureVersion, setStructureVersion] = useState(0)
   const bumpStructureVersion = useCallback(() => setStructureVersion(v => v + 1), [])
+
+  // Drag-to-reparent state — activeId drives "am I the thing being dragged"
+  // (per-node via its own useDraggable), overId + overInvalid drive the
+  // valid/invalid drop-target highlight threaded down through TreeNode.
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [overId,   setOverId]   = useState<string | null>(null)
 
   // Default: tree mode on desktop, list mode on mobile — user can toggle freely afterward.
   const [viewMode, setViewMode] = useState<ViewMode>(() => (
@@ -148,6 +221,13 @@ export default function TreeView() {
   const totalNodes = data?.length ?? 0
   const visionCount = data?.filter(n => n.type === 'vision' && !n.parentId).length ?? 0
 
+  // Scroll to + briefly highlight a node linked from a habit card.
+  useEffect(() => {
+    if (!focusNodeId) return
+    const el = document.querySelector(`[data-node-id="${focusNodeId}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+  }, [focusNodeId, roots.length])
+
   const handleEdit = useCallback((node: TreeNodeWithChildren) => {
     setEditorState({ mode: 'edit', node })
   }, [])
@@ -156,27 +236,48 @@ export default function TreeView() {
     setEditorState({ mode: 'create', parentId, parentType })
   }, [])
 
+  const overInvalid = useMemo(() => {
+    if (!activeId || !overId || overId === CANVAS_ROOT_DROP_ID) return false
+    return wouldCreateCycle(activeId, overId, data ?? [])
+  }, [activeId, overId, data])
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id))
+  }, [])
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    setOverId(event.over ? String(event.over.id) : null)
+  }, [])
+
+  /**
+   * Both drop targets — a node card, or the empty canvas — resolve to the
+   * exact same reparent write. Circular drops are rejected outright; a drop
+   * on the node's current parent (or onto the canvas while already a root)
+   * is a no-op, matching the "moving to current parent does nothing" rule.
+   */
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null)
+    setOverId(null)
+
     const { active, over } = event
-    if (!over || active.id === over.id) return
+    if (!over) return
 
     const flat       = data ?? []
     const activeNode = flat.find(n => n.id === String(active.id))
-    const overNode   = flat.find(n => n.id === String(over.id))
-    if (!activeNode || !overNode) return
-    if (activeNode.parentId !== overNode.parentId) return
+    if (!activeNode) return
 
-    const siblings = flat
-      .filter(n => n.parentId === activeNode.parentId)
-      .sort((a, b) => a.position - b.position)
+    const targetId = String(over.id)
+    const newParentId = targetId === CANVAS_ROOT_DROP_ID ? null : targetId
 
-    const oldIdx = siblings.findIndex(s => s.id === activeNode.id)
-    const newIdx = siblings.findIndex(s => s.id === overNode.id)
-    if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return
+    if (newParentId === activeNode.parentId) return // no-op: dropped on current parent / already root
+    if (newParentId && wouldCreateCycle(activeNode.id, newParentId, flat)) return // reject: circular
 
-    const reordered = arrayMove(siblings, oldIdx, newIdx)
-    reorderNodes({ updates: reordered.map((s, i) => ({ id: s.id, position: i })) })
-  }, [data, reorderNodes])
+    moveNode({
+      id:       activeNode.id,
+      parentId: newParentId,
+      position: siblingCount(newParentId, flat),
+    })
+  }, [data, moveNode])
 
   const errorMsg = error
     ? ((error as { message?: string }).message ?? 'Unknown error')
@@ -248,41 +349,47 @@ export default function TreeView() {
         ) : !isLoading && roots.length === 0 ? (
           <EmptyState onAdd={() => setEditorState({ mode: 'create', parentId: null })} />
         ) : (
-          <div
-            ref={stageRef}
-            className={`${styles.stage}${viewMode === 'list' ? ' tree-list-mode' : ''}`}
-            style={viewMode === 'tree' ? { zoom: treeZoom } : undefined}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={reparentCollisionDetection}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
           >
-            {/* SVG connector overlay — horizontal-layout bezier math, tree mode only */}
-            {viewMode === 'tree' && (
-              <NodeConnector
-                stageRef={stageRef}
-                nodesRef={nodesRef}
-                structureVersion={structureVersion}
-                zoom={treeZoom}
-              />
-            )}
+            <CanvasStage
+              stageRef={stageRef}
+              className={[styles.stage, viewMode === 'list' ? 'tree-list-mode' : ''].filter(Boolean).join(' ')}
+              style={viewMode === 'tree' ? { zoom: treeZoom } : undefined}
+              isDragActive={!!activeId}
+            >
+              {/* SVG connector overlay — horizontal-layout bezier math, tree mode only */}
+              {viewMode === 'tree' && (
+                <NodeConnector
+                  stageRef={stageRef}
+                  nodesRef={nodesRef}
+                  structureVersion={structureVersion}
+                  zoom={treeZoom}
+                />
+              )}
 
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div ref={nodesRef} className={styles.nodes}>
-                <SortableContext
-                  items={roots.map(r => r.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {roots.map(r => (
-                    <TreeNode
-                      key={r.id}
-                      node={r}
-                      parentId={null}
-                      onEdit={handleEdit}
-                      onAddChild={handleAddChild}
-                      onStructureChange={bumpStructureVersion}
-                    />
-                  ))}
-                </SortableContext>
+                {roots.map(r => (
+                  <TreeNode
+                    key={r.id}
+                    node={r}
+                    parentId={null}
+                    onEdit={handleEdit}
+                    onAddChild={handleAddChild}
+                    onStructureChange={bumpStructureVersion}
+                    dropTargetId={overId === CANVAS_ROOT_DROP_ID ? null : overId}
+                    dropInvalid={overInvalid}
+                    habitByNodeId={habitByNodeId}
+                    focusNodeId={focusNodeId}
+                  />
+                ))}
               </div>
-            </DndContext>
-          </div>
+            </CanvasStage>
+          </DndContext>
         )}
       </div>
 
@@ -303,7 +410,20 @@ export default function TreeView() {
 
       {/* Node editor modal */}
       {editorState && (
-        <NodeEditor state={editorState} onClose={() => setEditorState(null)} />
+        <NodeEditor
+          state={editorState}
+          onClose={() => setEditorState(null)}
+          onMoveTo={editorState.mode === 'edit' ? (node) => { setEditorState(null); setMovingNode(node) } : undefined}
+        />
+      )}
+
+      {/* Move-to picker (drag-and-drop fallback) */}
+      {movingNode && (
+        <MoveToPicker
+          node={movingNode}
+          allNodes={data ?? []}
+          onClose={() => setMovingNode(null)}
+        />
       )}
     </div>
   )

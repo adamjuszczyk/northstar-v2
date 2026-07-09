@@ -1,0 +1,160 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-3);
+  padding: var(--ns-space-5);
+  border-radius: var(--ns-radius-xl);
+  background: var(--ns-surface-card);
+  border: 1px solid var(--ns-border-faint);
+  box-shadow: var(--ns-shadow-card);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.cardHighlighted {
+  border-color: rgba(var(--ns-accent-rgb), .55);
+  box-shadow: 0 0 0 2px rgba(var(--ns-accent-rgb), .35), var(--ns-shadow-card);
+  animation: ns-pulse 1.4s ease-in-out 2;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-3);
+}
+
+.name {
+  flex: 1;
+  font-family: var(--ns-font-ui);
+  font-weight: var(--ns-fw-semibold);
+  font-size: var(--ns-text-lg);
+  color: var(--ns-text-hi);
+  cursor: default;
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-tag);
+  padding: 3px 8px;
+  border-radius: var(--ns-radius-full);
+  border: 1px solid transparent;
+}
+
+.status_good {
+  color: var(--ns-ok);
+  background: rgba(var(--ns-ok-rgb), .12);
+  border-color: rgba(var(--ns-ok-rgb), .35);
+}
+.status_struggling {
+  color: var(--ns-danger);
+  background: rgba(var(--ns-danger-rgb), .12);
+  border-color: rgba(var(--ns-danger-rgb), .35);
+}
+.status_early {
+  color: var(--ns-project-accent);
+  background: rgba(var(--ns-project-accent-rgb), .12);
+  border-color: rgba(var(--ns-project-accent-rgb), .35);
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-3);
+}
+
+.metric {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-sm);
+  color: var(--ns-text-mid);
+  letter-spacing: var(--ns-ls-sm);
+}
+
+.autoBadge {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-tag);
+  color: var(--ns-gold);
+  padding: 2px 7px;
+  border-radius: var(--ns-radius-full);
+  border: 1px solid rgba(var(--ns-gold-rgb), .35);
+  background: rgba(var(--ns-gold-rgb), .1);
+}
+
+.treeLink {
+  align-self: flex-start;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  color: var(--ns-vision-accent);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.treeLink:hover { text-decoration: underline; }
+
+.logRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+}
+
+.logBtn {
+  padding: 7px 16px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-ok-rgb), .4);
+  background: rgba(var(--ns-ok-rgb), .14);
+  color: var(--ns-ok);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.logBtn:hover:not(:disabled) { background: rgba(var(--ns-ok-rgb), .22); }
+.logBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.noteToggle {
+  padding: 7px 10px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.noteToggle:hover { color: var(--ns-text-mid); border-color: var(--ns-border-soft); }
+
+.editBtn {
+  margin-left: auto;
+  padding: 7px 10px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.editBtn:hover { color: var(--ns-text-mid); }
+
+.noteInput {
+  padding: 8px 11px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-input);
+  color: var(--ns-text-hi);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-sm);
+  outline: none;
+  box-sizing: border-box;
+}
+.noteInput::placeholder { color: var(--ns-text-lo); }
+.noteInput:focus { border-color: rgba(var(--ns-accent-rgb), .5); }

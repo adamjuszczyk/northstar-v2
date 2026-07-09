@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/',         label: 'Today',    icon: '◎', end: true },
   { to: '/planner',  label: 'Planner',  icon: '▦' },
   { to: '/inbox',    label: 'Inbox',    icon: '⌵' },
+  { to: '/habits',   label: 'Habits',   icon: '◆' },
   { to: '/settings', label: 'Settings', icon: '⊞' },
 ]
 

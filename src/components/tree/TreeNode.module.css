@@ -37,6 +37,44 @@
   filter: saturate(0.5);
 }
 
+/* ── Drag-and-drop reparent target highlight ──────────────────────────────── */
+
+.dropValid {
+  box-shadow: 0 0 0 2px var(--ns-ok), 0 0 22px rgba(var(--ns-ok-rgb), .5);
+  transform: scale(1.03);
+}
+
+.dropInvalid {
+  box-shadow: 0 0 0 2px var(--ns-danger), 0 0 22px rgba(var(--ns-danger-rgb), .5);
+  cursor: not-allowed;
+}
+
+/* ── Focus highlight (arrived via a habit's "tracked as habit" link) ────────── */
+
+.cardFocused {
+  box-shadow: 0 0 0 2px var(--ns-ok), 0 0 26px rgba(var(--ns-ok-rgb), .55);
+  animation: ns-pulse 1.4s ease-in-out 2;
+}
+
+/* ── Habit badge ──────────────────────────────────────────────────────────── */
+
+.habitBadge {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--ns-ok);
+  font-size: 9px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s;
+}
+.habitBadge:hover { transform: scale(1.2); }
+
 /* ── Vision halo glow ─────────────────────────────────────────────────────── */
 
 .halo {

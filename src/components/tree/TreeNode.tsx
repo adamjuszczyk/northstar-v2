@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useNavigate } from 'react-router-dom'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   useUpdateNode,
   countDescendants, countCompleted,
@@ -111,27 +111,51 @@ interface Props {
   onAddChild:         (parentId: string, parentType: NodeType) => void
   /** Notifies NodeConnector to recompute immediately when collapse toggles. */
   onStructureChange:  () => void
+  /** id of the node currently hovered as a reparent drop target, if any. */
+  dropTargetId:       string | null
+  /** true when dropTargetId is an invalid (cyclic) target — dragged node
+   *  would become its own ancestor. */
+  dropInvalid:        boolean
+  /** nodeId → habitId, for nodes that a habit tracks. */
+  habitByNodeId:      Map<string, string>
+  /** id of the node to scroll to and briefly highlight, if any (from a
+   *  habit card's "tracked as habit" link). */
+  focusNodeId:        string | null
 }
 
-export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructureChange }: Props) {
+export default function TreeNode({
+  node, parentId, onEdit, onAddChild, onStructureChange, dropTargetId, dropInvalid,
+  habitByNodeId, focusNodeId,
+}: Props) {
   const isTask   = node.type === 'task'
   const isVision = node.type === 'vision'
   const isDone   = node.status === 'complete'
 
   const [collapsed, setCollapsed] = useState(false)
 
+  const navigate = useNavigate()
   const { mutate: updateNode } = useUpdateNode()
+  const habitId    = habitByNodeId.get(node.id)
+  const isFocused  = focusNodeId === node.id
 
-  const {
-    attributes, listeners, setNodeRef,
-    transform, transition, isDragging,
-  } = useSortable({ id: node.id })
+  function onHabitBadgeClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    navigate(`/habits?highlight=${habitId}`)
+  }
 
+  // Dragging moves the node (and its whole subtree, rendered inside the same
+  // wrapper) directly under the pointer; dropping re-parents rather than
+  // reorders, so this is a plain draggable/droppable pair rather than
+  // @dnd-kit/sortable's list-reorder model.
+  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({ id: node.id })
+  const { setNodeRef: setDropRef } = useDroppable({ id: node.id })
+
+  const isDropTarget = dropTargetId === node.id
   const dndStyle: CSSProperties = {
-    transform:  CSS.Transform.toString(transform),
-    transition,
+    transform:  transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     opacity:    isDragging ? 0.45 : 1,
     position:   'relative',
+    zIndex:     isDragging ? 40 : undefined,
   }
 
   const hasChildren     = node.children.length > 0
@@ -148,22 +172,25 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructu
     updateNode({ id: node.id, status: isDone ? 'not_started' : 'complete' })
   }
 
+  const dropHighlight = !isDropTarget ? '' : dropInvalid ? styles.dropInvalid : styles.dropValid
+
   // ── Task card ───────────────────────────────────────────────────────────────
 
   if (isTask) {
     return (
       <div
-        ref={setNodeRef}
+        ref={setDragRef}
         style={{ ...dndStyle, ...nodeVars(node.type) }}
         className={styles.taskRow}
         {...attributes}
       >
         <div
+          ref={setDropRef}
           data-node-id={node.id}
           data-parent-id={parentId ?? ''}
           data-type={node.type}
           data-state={node.status}
-          className={cx(styles.taskCard, isDone && styles.cardDone)}
+          className={cx(styles.taskCard, isDone && styles.cardDone, dropHighlight, isFocused && styles.cardFocused)}
           onDoubleClick={() => onEdit(node)}
           {...listeners}
         >
@@ -178,6 +205,15 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructu
           <span className={cx(styles.taskTitle, isDone && styles.taskTitleDone)}>
             {node.title}
           </span>
+          {habitId && (
+            <button
+              className={styles.habitBadge}
+              onClick={onHabitBadgeClick}
+              onPointerDown={e => e.stopPropagation()}
+              title="Tracked as habit"
+              aria-label="Tracked as habit"
+            >◆</button>
+          )}
         </div>
       </div>
     )
@@ -187,18 +223,19 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructu
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setDragRef}
       style={{ ...dndStyle, ...nodeVars(node.type) }}
       className={styles.row}
       {...attributes}
     >
       {/* Card */}
       <div
+        ref={setDropRef}
         data-node-id={node.id}
         data-parent-id={parentId ?? ''}
         data-type={node.type}
         data-state={node.status}
-        className={cx(styles.card, isDone && styles.cardDone)}
+        className={cx(styles.card, isDone && styles.cardDone, dropHighlight, isFocused && styles.cardFocused)}
         onDoubleClick={() => onEdit(node)}
         {...listeners}
       >
@@ -208,6 +245,15 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructu
         <div className={styles.head}>
           <StatusDot status={node.status} onClick={onDotClick} />
           <span className={styles.typeLabel}>{node.type}</span>
+          {habitId && (
+            <button
+              className={styles.habitBadge}
+              onClick={onHabitBadgeClick}
+              onPointerDown={e => e.stopPropagation()}
+              title="Tracked as habit"
+              aria-label="Tracked as habit"
+            >◆</button>
+          )}
           <span className={styles.headSpacer} />
           <button
             className={cx(styles.headBtn, styles.addBtn)}
@@ -249,18 +295,20 @@ export default function TreeNode({ node, parentId, onEdit, onAddChild, onStructu
       {/* Children column */}
       {showChildrenCol && (
         <div className={cx(styles.children, kidsAreTasks && styles.childrenTask)}>
-          <SortableContext items={node.children.map(c => c.id)} strategy={verticalListSortingStrategy}>
-            {node.children.map(child => (
-              <TreeNode
-                key={child.id}
-                node={child}
-                parentId={node.id}
-                onEdit={onEdit}
-                onAddChild={onAddChild}
-                onStructureChange={onStructureChange}
-              />
-            ))}
-          </SortableContext>
+          {node.children.map(child => (
+            <TreeNode
+              key={child.id}
+              node={child}
+              parentId={node.id}
+              onEdit={onEdit}
+              onAddChild={onAddChild}
+              onStructureChange={onStructureChange}
+              dropTargetId={dropTargetId}
+              dropInvalid={dropInvalid}
+              habitByNodeId={habitByNodeId}
+              focusNodeId={focusNodeId}
+            />
+          ))}
         </div>
       )}
     </div>

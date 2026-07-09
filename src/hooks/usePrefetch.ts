@@ -45,7 +45,7 @@ export function usePrefetch() {
 async function prefetchDayItems(userId: string, date: string) {
   const { data } = await supabase
     .from('ns_day_items')
-    .select('id, user_id, date, source, title, tree_node_id, inbox_item_id, start_time, end_time, is_complete, priority, colour, position, created_at, updated_at')
+    .select('id, user_id, date, source, title, tree_node_id, inbox_item_id, habit_id, start_time, end_time, is_complete, priority, colour, position, created_at, updated_at')
     .eq('user_id', userId)
     .eq('date', date)
   if (!data) return
@@ -57,6 +57,7 @@ async function prefetchDayItems(userId: string, date: string) {
     title:       r.title,
     treeNodeId:  r.tree_node_id,
     inboxItemId: r.inbox_item_id,
+    habitId:     r.habit_id ?? null,
     startTime:   r.start_time  ? (r.start_time  as string).slice(0, 5) : null,
     endTime:     r.end_time    ? (r.end_time    as string).slice(0, 5) : null,
     isComplete:  r.is_complete,
@@ -122,6 +123,7 @@ async function prefetchWeekFocus(userId: string, wkStart: string) {
     title:       r.title,
     treeNodeId:  r.tree_node_id,
     inboxItemId: r.inbox_item_id,
+    habitId:     r.habit_id ?? null,
     isComplete:  r.is_complete,
     position:    r.position,
   })))
@@ -162,6 +164,7 @@ async function prefetchMonthFocus(userId: string, moStart: string) {
     title:       r.title,
     treeNodeId:  r.tree_node_id,
     inboxItemId: r.inbox_item_id,
+    habitId:     r.habit_id ?? null,
     isComplete:  r.is_complete,
     position:    r.position,
   })))

@@ -12,6 +12,7 @@ import {
 import type { DayItem } from '../../hooks/useDayItems'
 import { useTreeNodes }  from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
+import { useHabits }     from '../../hooks/useHabits'
 import DayTimeline      from './DayTimeline'
 import FloatingPool     from './FloatingPool'
 import DayListMode      from './DayListMode'
@@ -63,24 +64,28 @@ export default function DayView({ date, onDateChange }: Props) {
   const { data: rawItems   = [], isLoading, error } = useDayItems(date)
   const { data: treeNodes  = [] } = useTreeNodes()
   const { data: inboxItems = [] } = useInboxItems()
+  const { data: habits     = [] } = useHabits()
   const { mutate: updateItem } = useUpdateDayItem()
 
-  // Resolve display titles from cached tree/inbox data
+  // Resolve display titles from cached tree/inbox/habit data
   const items: DayItem[] = useMemo(() => {
     const nodeMap  = new Map(treeNodes.map(n  => [n.id,  n]))
     const inboxMap = new Map(inboxItems.map(i => [i.id, i]))
+    const habitMap = new Map(habits.map(h => [h.id, h]))
     return rawItems.map(item => {
       const treeNode  = item.treeNodeId  ? nodeMap.get(item.treeNodeId)   : null
       const inboxItem = item.inboxItemId ? inboxMap.get(item.inboxItemId) : null
+      const habit     = item.habitId     ? habitMap.get(item.habitId)     : null
       return {
         ...item,
         treeNodeTitle: treeNode?.title    ?? null,
         treeNodeType:  treeNode?.type     ?? null,
         inboxContent:  inboxItem?.content ?? null,
-        displayTitle:  item.title ?? treeNode?.title ?? inboxItem?.content ?? 'Untitled',
+        habitName:     habit?.name        ?? null,
+        displayTitle:  item.title ?? treeNode?.title ?? inboxItem?.content ?? habit?.name ?? 'Untitled',
       }
     })
-  }, [rawItems, treeNodes, inboxItems])
+  }, [rawItems, treeNodes, inboxItems, habits])
 
   const anchored = items.filter(i => i.startTime !== null)
   const floating = items.filter(i => i.startTime === null)

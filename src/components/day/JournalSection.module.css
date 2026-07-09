@@ -8,6 +8,33 @@
   background: var(--ns-bg-surface);
 }
 
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.chevron {
+  font-size: 14px;
+  color: var(--ns-text-lo);
+  transition: transform 0.15s ease;
+  display: none;
+}
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
 .label {
   font-family: var(--ns-font-mono);
   font-size: var(--ns-text-2xs);
@@ -38,4 +65,6 @@
 
 @media (max-width: 767px) {
   .section { padding: 12px 16px 16px; }
+  .header { cursor: pointer; }
+  .chevron { display: inline-block; }
 }

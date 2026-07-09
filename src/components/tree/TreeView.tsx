@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, type CSSProperties } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect, type CSSProperties } from 'react'
 import {
   DndContext, closestCenter, type DragEndEvent,
   MouseSensor, TouchSensor, useSensors, useSensor,
@@ -8,11 +8,18 @@ import { useTreeNodes, useReorderNodes, buildTree, type TreeNodeWithChildren } f
 import type { NodeType } from '../../types'
 import TreeNode from './TreeNode'
 import NodeConnector from './NodeConnector'
-import TreeListView from './TreeListView'
 import NodeEditor, { type EditorState } from './NodeEditor'
 import styles from './TreeView.module.css'
 
 type ViewMode = 'tree' | 'list'
+
+const ZOOM_MIN  = 0.5
+const ZOOM_MAX  = 1.5
+const ZOOM_STEP = 0.1
+
+function clampZoom(z: number): number {
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
+}
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +100,50 @@ export default function TreeView() {
     typeof window !== 'undefined' && window.innerWidth < 768 ? 'list' : 'tree'
   ))
 
+  // Zoom applies to tree mode only — 50% to 150%, default 100%.
+  const [treeZoom, setTreeZoom] = useState(1)
+
+  // Pinch-to-zoom (mobile). Attached as a native, non-passive listener so
+  // touchmove can preventDefault() and stop the browser's own page-zoom
+  // gesture from fighting with ours — React's synthetic touch handlers are
+  // passive by default and can't do that.
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+
+    let startDist = 0
+    let startZoom = 1
+
+    function dist(t1: Touch, t2: Touch) {
+      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+    }
+    function onTouchStart(e: TouchEvent) {
+      if (viewMode !== 'tree' || e.touches.length !== 2) return
+      startDist = dist(e.touches[0], e.touches[1])
+      startZoom = treeZoom
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (startDist === 0 || e.touches.length !== 2) return
+      e.preventDefault()
+      const d = dist(e.touches[0], e.touches[1])
+      setTreeZoom(clampZoom(startZoom * (d / startDist)))
+    }
+    function onTouchEnd(e: TouchEvent) {
+      if (e.touches.length < 2) startDist = 0
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    el.addEventListener('touchcancel', onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [viewMode, treeZoom])
+
   const roots      = useMemo(() => buildTree(data ?? []), [data])
   const totalNodes = data?.length ?? 0
   const visionCount = data?.filter(n => n.type === 'vision' && !n.parentId).length ?? 0
@@ -158,6 +209,27 @@ export default function TreeView() {
             LIST
           </button>
         </div>
+        {viewMode === 'tree' && (
+          <div className={styles.zoomControls} role="group" aria-label="Tree zoom">
+            <button
+              className={styles.zoomBtn}
+              onClick={() => setTreeZoom(z => clampZoom(z - ZOOM_STEP))}
+              disabled={treeZoom <= ZOOM_MIN}
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+            <span className={styles.zoomLabel}>{Math.round(treeZoom * 100)}%</span>
+            <button
+              className={styles.zoomBtn}
+              onClick={() => setTreeZoom(z => clampZoom(z + ZOOM_STEP))}
+              disabled={treeZoom >= ZOOM_MAX}
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+          </div>
+        )}
         <button
           className={styles.addRootBtn}
           onClick={() => setEditorState({ mode: 'create', parentId: null })}
@@ -175,14 +247,21 @@ export default function TreeView() {
           </div>
         ) : !isLoading && roots.length === 0 ? (
           <EmptyState onAdd={() => setEditorState({ mode: 'create', parentId: null })} />
-        ) : viewMode === 'list' ? (
-          <TreeListView roots={roots} onEdit={handleEdit} />
         ) : (
-          <div ref={stageRef} className={styles.stage}>
-            {/* SVG connector overlay — horizontal-layout math only, hidden on mobile */}
-            <div className={styles.connectorWrap}>
-              <NodeConnector stageRef={stageRef} nodesRef={nodesRef} structureVersion={structureVersion} />
-            </div>
+          <div
+            ref={stageRef}
+            className={`${styles.stage}${viewMode === 'list' ? ' tree-list-mode' : ''}`}
+            style={viewMode === 'tree' ? { zoom: treeZoom } : undefined}
+          >
+            {/* SVG connector overlay — horizontal-layout bezier math, tree mode only */}
+            {viewMode === 'tree' && (
+              <NodeConnector
+                stageRef={stageRef}
+                nodesRef={nodesRef}
+                structureVersion={structureVersion}
+                zoom={treeZoom}
+              />
+            )}
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div ref={nodesRef} className={styles.nodes}>

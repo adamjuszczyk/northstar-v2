@@ -414,56 +414,55 @@
   color: rgba(255, 255, 255, .32);
 }
 
-/* ── Mobile tree mode: vertical indented layout with a left-side rail ────────
+/* ── List mode: vertical indented layout with a left-side rail ───────────────
    Same hierarchy conveyed through card size/colour (unchanged), just laid
-   out downward instead of rightward — no horizontal scrolling required. ── */
+   out downward instead of rightward — no horizontal scrolling required.
+   Applied whenever the tree/list toggle is set to list, on any viewport. ── */
 
-@media (max-width: 767px) {
-  .row,
-  .taskRow {
-    flex-direction: column;
-    align-items: stretch;
-    width: auto;
-  }
+:global(.tree-list-mode) .row,
+:global(.tree-list-mode) .taskRow {
+  flex-direction: column;
+  align-items: stretch;
+  width: auto;
+}
 
-  /* Halo's desktop inset (-45% -28%) overflows once cards are full-width */
-  .halo {
-    inset: -18% -6%;
-  }
+/* Halo's desktop inset (-45% -28%) overflows once cards are full-width */
+:global(.tree-list-mode) .halo {
+  inset: -18% -6%;
+}
 
-  .card,
-  .taskCard {
-    max-width: 100%;
-    width: 100%;
-  }
+:global(.tree-list-mode) .card,
+:global(.tree-list-mode) .taskCard {
+  max-width: 100%;
+  width: 100%;
+}
 
-  .children {
-    margin-left: 16px;
-    padding-left: 18px;
-    margin-top: 10px;
-    justify-content: flex-start;
-  }
+:global(.tree-list-mode) .children {
+  margin-left: 16px;
+  padding-left: 18px;
+  margin-top: 10px;
+  justify-content: flex-start;
+}
 
-  .children::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: -4px;
-    bottom: 14px;
-    width: 1.5px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, rgba(var(--ns-node-accent-rgb), .4), rgba(var(--ns-node-accent-rgb), .1));
-  }
+:global(.tree-list-mode) .children::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -4px;
+  bottom: 14px;
+  width: 1.5px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(var(--ns-node-accent-rgb), .4), rgba(var(--ns-node-accent-rgb), .1));
+}
 
-  .children > .row::before,
-  .children > .taskRow::before {
-    content: '';
-    position: absolute;
-    left: -18px;
-    top: 20px;
-    width: 16px;
-    height: 1.5px;
-    border-radius: 2px;
-    background: rgba(var(--ns-node-accent-rgb), .4);
-  }
+:global(.tree-list-mode) .children > .row::before,
+:global(.tree-list-mode) .children > .taskRow::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 20px;
+  width: 16px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: rgba(var(--ns-node-accent-rgb), .4);
 }

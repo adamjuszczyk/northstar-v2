@@ -70,6 +70,55 @@
   color: var(--ns-accent);
 }
 
+/* ── Tree zoom controls (tree mode only, desktop) ─────────────────────────── */
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-faint);
+  background: rgba(255, 255, 255, .03);
+}
+
+.zoomBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: calc(var(--ns-radius-md) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.zoomBtn:hover:not(:disabled) {
+  color: var(--ns-text-mid);
+  background: rgba(var(--ns-accent-rgb), .1);
+}
+.zoomBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.zoomLabel {
+  min-width: 34px;
+  text-align: center;
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--ns-ls-mono);
+  color: var(--ns-text-lo);
+}
+
+@media (max-width: 767px) {
+  .zoomControls { display: none; }
+}
+
 .addRootBtn {
   padding: 5px 13px;
   border-radius: var(--ns-radius-sm);
@@ -104,26 +153,14 @@
   min-width: max-content;
   min-height: 100%;
   padding: 70px 120px 120px 74px;
+  touch-action: pan-x pan-y;
 }
 
-@media (max-width: 767px) {
-  .stage {
-    min-width: 0;
-    padding: 20px 16px 60px;
-  }
-}
-
-/* ── Connector overlay wrapper — hidden on mobile (rail/elbow CSS in
-   TreeNode.module.css replaces it under the same breakpoint) ────────────── */
-
-.connectorWrap {
-  display: contents;
-}
-
-@media (max-width: 767px) {
-  .connectorWrap {
-    display: none;
-  }
+/* List mode: same vertical layout Session 2 built, now driven by the
+   tree/list toggle instead of viewport width — works at any screen size. */
+.stage:global(.tree-list-mode) {
+  min-width: 0;
+  padding: 20px 16px 60px;
 }
 
 /* ── Nodes container ──────────────────────────────────────────────────────── */
@@ -137,11 +174,9 @@
   width: max-content;
 }
 
-@media (max-width: 767px) {
-  .nodes {
-    width: auto;
-    gap: 28px;
-  }
+.stage:global(.tree-list-mode) .nodes {
+  width: auto;
+  gap: 28px;
 }
 
 /* ── Empty state ──────────────────────────────────────────────────────────── */

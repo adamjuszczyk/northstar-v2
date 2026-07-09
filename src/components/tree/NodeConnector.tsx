@@ -25,9 +25,14 @@ interface Props {
   /** Bumped by TreeView whenever any node's collapse state toggles — forces
    *  an immediate recompute independent of the MutationObserver/RAF path. */
   structureVersion?: number
+  /** Current CSS zoom applied to the stage. getBoundingClientRect() reports
+   *  already-zoomed pixel values, but the SVG itself inherits the same zoom
+   *  from its ancestor — so raw measurements must be divided back down to
+   *  true (unzoomed) units, or the paths would be scaled twice. */
+  zoom?: number
 }
 
-export default function NodeConnector({ stageRef, nodesRef, structureVersion }: Props) {
+export default function NodeConnector({ stageRef, nodesRef, structureVersion, zoom = 1 }: Props) {
   const [paths, setPaths]   = useState<ConnectorPath[]>([])
   const [svgW,  setSvgW]   = useState(0)
   const [svgH,  setSvgH]   = useState(0)
@@ -48,10 +53,10 @@ export default function NodeConnector({ stageRef, nodesRef, structureVersion }: 
     els.forEach(el => {
       const r = el.getBoundingClientRect()
       map[el.dataset.nodeId!] = {
-        x: r.left - base.left,
-        y: r.top  - base.top,
-        w: r.width,
-        h: r.height,
+        x: (r.left - base.left) / zoom,
+        y: (r.top  - base.top) / zoom,
+        w: r.width  / zoom,
+        h: r.height / zoom,
         type:   el.dataset.type   || 'task',
         state:  el.dataset.state  || 'not_started',
         dashed: el.dataset.dashed === '1',
@@ -88,15 +93,15 @@ export default function NodeConnector({ stageRef, nodesRef, structureVersion }: 
       })
     })
 
-    const W = Math.max(stage.scrollWidth, nodes.scrollWidth, base.width)
-    const H = Math.max(stage.scrollHeight, nodes.scrollHeight, base.height)
+    const W = Math.max(stage.scrollWidth / zoom, nodes.scrollWidth / zoom, base.width / zoom)
+    const H = Math.max(stage.scrollHeight / zoom, nodes.scrollHeight / zoom, base.height / zoom)
     const sig = JSON.stringify(newPaths) + `|${W}x${H}`
     if (sig === sigRef.current) return
     sigRef.current = sig
     setPaths(newPaths)
     setSvgW(W)
     setSvgH(H)
-  }, [stageRef, nodesRef])
+  }, [stageRef, nodesRef, zoom])
 
   // Coalesced via queueMicrotask rather than requestAnimationFrame — rAF is
   // throttled/paused entirely for backgrounded or hidden tabs, which could

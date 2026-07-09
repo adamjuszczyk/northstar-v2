@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, .62);
+  background: var(--ns-scrim);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   z-index: 50;
@@ -17,10 +17,10 @@
   max-height: 80vh;
   border-radius: var(--ns-radius-2xl);
   border: 1px solid var(--ns-border-mid);
-  background: rgba(14, 17, 26, .96);
+  background: var(--ns-surface-raised);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 32px 80px -20px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255,255,255,.04);
+  box-shadow: var(--ns-shadow-modal);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -220,7 +220,7 @@
   transition: background 0.12s, border-color 0.12s;
 }
 .nodeRow:hover {
-  background: rgba(255, 255, 255, .04);
+  background: var(--ns-border-subtle);
   border-color: var(--ns-border-faint);
 }
 .nodeRowSelected {
@@ -268,7 +268,7 @@
   transition: background 0.12s, border-color 0.12s;
 }
 .inboxRow:hover {
-  background: rgba(255, 255, 255, .04);
+  background: var(--ns-border-subtle);
   border-color: var(--ns-border-faint);
 }
 .inboxRowSelected {
@@ -377,7 +377,7 @@
 }
 .priorityBtnActiveMed {
   border-color: var(--ns-border-mid);
-  background: rgba(255, 255, 255, .06);
+  background: var(--ns-border-faint);
   color: var(--ns-text-mid);
 }
 .priorityBtnActiveLow {
@@ -470,7 +470,7 @@
   line-height: 1.4;
   padding: 8px 10px;
   border-radius: var(--ns-radius-sm);
-  background: rgba(255, 255, 255, .03);
+  background: var(--ns-border-subtle);
   border: 1px solid var(--ns-border-faint);
 }
 

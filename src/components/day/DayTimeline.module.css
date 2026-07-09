@@ -71,7 +71,7 @@
 .hourLine {
   position: absolute;
   height: 1px;
-  background: rgba(255, 255, 255, .045);
+  background: var(--ns-border-subtle);
 }
 
 .hourLabel {
@@ -141,7 +141,7 @@
   gap: 5px;
   padding: 10px 14px;
   border-radius: 12px;
-  background: linear-gradient(158deg, rgba(58,45,22,.55), rgba(15,16,24,.72));
+  background: var(--ns-vision-bg);
   border: 1px solid rgba(var(--ns-accent-rgb), .4);
   box-shadow: 0 14px 34px -22px rgba(var(--ns-accent-rgb), .5);
   backdrop-filter: blur(6px);
@@ -155,7 +155,7 @@
   transform: translateY(-1px);
 }
 .cardDim {
-  background: linear-gradient(158deg, rgba(28,26,20,.5), rgba(13,15,22,.6));
+  background: var(--ns-goal-bg);
   border-color: rgba(var(--ns-accent-rgb), .18);
   box-shadow: none;
 }
@@ -172,7 +172,7 @@
   border-color: rgba(var(--ns-accent-rgb), .6);
 }
 .cardLow {
-  background: linear-gradient(158deg, rgba(22,22,28,.5), rgba(13,15,22,.65));
+  background: var(--ns-task-bg);
   border-color: rgba(var(--ns-task-accent-rgb), .25);
   box-shadow: none;
   opacity: 0.7;
@@ -354,7 +354,7 @@
 .clusterBlock {
   position: absolute;
   border-radius: 12px;
-  background: linear-gradient(158deg, rgba(58,45,22,.55), rgba(15,16,24,.72));
+  background: var(--ns-vision-bg);
   border: 1px solid rgba(var(--ns-accent-rgb), .4);
   box-shadow: 0 14px 34px -22px rgba(var(--ns-accent-rgb), .5);
   backdrop-filter: blur(6px);
@@ -456,7 +456,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  border-top: 1px solid rgba(255, 255, 255, .07);
+  border-top: 1px solid var(--ns-border-faint);
   min-height: 0;
 }
 
@@ -466,7 +466,7 @@
   gap: 9px;
   padding: 9px 12px;
   cursor: grab;
-  border-bottom: 1px solid rgba(255, 255, 255, .04);
+  border-bottom: 1px solid var(--ns-border-subtle);
   transition: background 0.12s;
   flex-shrink: 0;
   touch-action: none;
@@ -475,7 +475,7 @@
   cursor: grabbing;
 }
 .clusterExpandedRow:hover {
-  background: rgba(255, 255, 255, .05);
+  background: var(--ns-border-subtle);
 }
 
 .clusterExpandedTime {

@@ -41,7 +41,7 @@
 }
 .dayCol:hover {
   border-color: rgba(var(--day-accent-rgb, 255,255,255), .35);
-  background: rgba(22, 26, 36, .7);
+  background: var(--ns-surface-raised);
 }
 .dayColToday {
   border-color: rgba(var(--ns-accent-rgb), .35);

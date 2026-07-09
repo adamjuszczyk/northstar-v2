@@ -3,7 +3,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(6, 8, 14, .72);
+  background: var(--ns-scrim);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   z-index: 200;
@@ -18,10 +18,9 @@
   width: 100%;
   max-width: 460px;
   border-radius: var(--ns-radius-3xl);
-  background: linear-gradient(158deg, rgba(14,17,28,.97), rgba(9,11,19,.98));
+  background: var(--ns-surface-raised);
   border: 1px solid var(--ns-border-mid);
-  box-shadow: 0 32px 80px -20px rgba(0,0,0,.9),
-              0 0 0 1px rgba(255,255,255,.04);
+  box-shadow: var(--ns-shadow-modal);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -162,7 +161,7 @@
   transition: background .12s, border-color .12s;
   width: 100%;
 }
-.nodeRow:hover { background: rgba(255,255,255,.04); border-color: var(--ns-border-faint); }
+.nodeRow:hover { background: var(--ns-border-subtle); border-color: var(--ns-border-faint); }
 .nodeRowSelected {
   background: rgba(var(--ns-gold-rgb), .07);
   border-color: rgba(var(--ns-gold-rgb), .3);

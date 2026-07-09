@@ -14,7 +14,7 @@
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--ns-border-faint);
-  background: var(--ns-surface-base);
+  background: var(--ns-surface-header);
   flex-wrap: wrap;
 }
 
@@ -23,7 +23,7 @@
 .tabs {
   display: flex;
   gap: 2px;
-  background: rgba(255,255,255,.04);
+  background: var(--ns-border-subtle);
   border-radius: var(--ns-radius-md);
   padding: 3px;
   border: 1px solid var(--ns-border-faint);
@@ -44,7 +44,7 @@
 }
 .tab:hover:not(.tabActive) {
   color: var(--ns-text-mid);
-  background: rgba(255,255,255,.04);
+  background: var(--ns-border-subtle);
 }
 .tabActive {
   background: rgba(var(--ns-accent-rgb), .12);

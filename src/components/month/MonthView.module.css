@@ -55,7 +55,7 @@
 }
 .dayCell:hover {
   border-color: var(--ns-border-soft);
-  background: rgba(255,255,255,.02);
+  background: var(--ns-border-subtle);
 }
 .dayCellActive {
   background: rgba(var(--day-accent-rgb, 255,255,255), .03);

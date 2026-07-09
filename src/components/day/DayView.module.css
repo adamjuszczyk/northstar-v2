@@ -18,7 +18,7 @@
   gap: 20px;
   padding: 22px 26px 18px;
   border-bottom: 1px solid var(--ns-border-faint);
-  background: linear-gradient(180deg, rgba(10,12,20,.5), rgba(10,12,20,0));
+  background: var(--ns-surface-header);
   flex-wrap: wrap;
 }
 
@@ -137,7 +137,7 @@
   padding: 3px;
   border-radius: 11px;
   border: 1px solid var(--ns-border-soft);
-  background: rgba(12, 15, 23, .6);
+  background: var(--ns-border-subtle);
 }
 
 .modeBtn {
@@ -222,9 +222,9 @@
 .dragPreview {
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(52, 40, 18, .92);
+  background: var(--ns-surface-raised);
   border: 1.5px solid rgba(var(--ns-gold-rgb), .65);
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, .8), 0 0 20px rgba(var(--ns-accent-rgb), .18);
+  box-shadow: var(--ns-shadow-card), 0 0 20px rgba(var(--ns-accent-rgb), .18);
   min-width: 160px;
   max-width: 280px;
   display: flex;

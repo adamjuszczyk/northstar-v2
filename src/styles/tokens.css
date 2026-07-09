@@ -142,6 +142,10 @@
   --ns-shadow-panel: 0 26px 60px -30px rgba(0,0,0,.8);
   --ns-shadow-nav:   0 22px 50px -24px rgba(0,0,0,.9);
   --ns-shadow-card:  0 14px 34px -22px rgba(0,0,0,.7);
+  --ns-shadow-modal: 0 32px 80px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.04);
+
+  /* ── Modal backdrop scrim ────────────────────────────────────── */
+  --ns-scrim: rgba(0,0,0,.62);
 
   /* ── Ambient background layers ───────────────────────────────── */
   --ns-ambient-gradient:
@@ -153,7 +157,7 @@
 
   /* ── Timeline (Day view) ─────────────────────────────────────── */
   --ns-timeline-px-per-hour: 64px;
-  --ns-timeline-rail:        linear-gradient(180deg, rgba(var(--ns-accent-rgb), .35), rgba(143,166,203,.18));
+  --ns-timeline-rail:        linear-gradient(180deg, rgba(var(--ns-accent-rgb), .35), rgba(var(--ns-project-accent-rgb), .18));
   --ns-timeline-now-color:   var(--ns-accent);
   --ns-timeline-past-overlay: linear-gradient(180deg, rgba(8,10,17,.55), rgba(8,10,17,.38));
 
@@ -260,6 +264,10 @@
   --ns-shadow-panel: 0 8px 30px -10px rgba(80,60,30,.18);
   --ns-shadow-nav:   0 8px 20px -8px  rgba(80,60,30,.14);
   --ns-shadow-card:  0 4px 16px -8px  rgba(80,60,30,.14);
+  --ns-shadow-modal: 0 32px 80px -20px rgba(80,60,30,.35), 0 0 0 1px rgba(255,255,255,.6);
+
+  /* Modal backdrop scrim — warm ink wash, lighter than dark mode's black */
+  --ns-scrim: rgba(60,45,20,.35);
 
   /* Ambient — keep star-glow, lighter */
   --ns-ambient-gradient:

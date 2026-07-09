@@ -259,6 +259,10 @@
   .dateHeader { padding: 16px 16px 14px; }
   .scheduleCanvas {
     flex-direction: column;
+    /* Desktop's flex-start top-aligns the two side-by-side panels; in the
+       mobile column layout that same property stops them stretching to
+       full width, leaving unused space on the right. */
+    align-items: stretch;
     padding: 16px 16px 40px;
   }
   .listCanvas { padding: 16px 16px 40px; }

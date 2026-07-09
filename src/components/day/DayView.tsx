@@ -212,11 +212,13 @@ export default function DayView({ date, onDateChange }: Props) {
                 <button
                   className={`${styles.modeBtn}${mode === 'schedule' ? ' ' + styles.modeBtnActive : ''}`}
                   onClick={() => setMode('schedule')}
-                >▦ Schedule</button>
+                  aria-label="Schedule view"
+                >▦<span className={styles.modeBtnLabel}> Schedule</span></button>
                 <button
                   className={`${styles.modeBtn}${mode === 'list' ? ' ' + styles.modeBtnActive : ''}`}
                   onClick={() => setMode('list')}
-                >☰ List</button>
+                  aria-label="List view"
+                >☰<span className={styles.modeBtnLabel}> List</span></button>
               </div>
             </div>
           </div>

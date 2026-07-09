@@ -5,8 +5,6 @@ import type { DayItem } from '../../hooks/useDayItems'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import styles from './FloatingPool.module.css'
 
-const MOBILE_COLLAPSE_THRESHOLD = 5
-
 // ── Source config ──────────────────────────────────────────────────────────────
 
 const SOURCE_CFG = {
@@ -42,10 +40,6 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
   const cfg = SOURCE_CFG[sourceKey(item)]
   const { accentVar, accentRgbVar } = accentVars(item)
-  const isMobile = useIsMobile()
-  const [open, setOpen] = useState(false)
-  // Desktop always shows full detail; mobile hides tag/origin/badges/delete until tapped.
-  const showDetails = !isMobile || open
 
   const cardStyle: CSSProperties = {
     '--fp-accent':     `var(${accentVar})`,
@@ -53,11 +47,6 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
     '--fp-border':     cfg.dashed ? 'dashed' : 'solid',
     opacity:           isDragging ? 0 : undefined,
   } as CSSProperties
-
-  function handleCardClick() {
-    if (isMobile) setOpen(o => !o)
-    else onEdit(item)
-  }
 
   return (
     <div
@@ -69,7 +58,7 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
         isDragging              ? styles.cardDragging  : '',
       ].filter(Boolean).join(' ')}
       style={cardStyle}
-      onClick={handleCardClick}
+      onClick={() => onEdit(item)}
       {...attributes}
       {...listeners}
     >
@@ -89,43 +78,32 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
           <span className={`${styles.title}${item.isComplete ? ' ' + styles.titleDone : ''}`}>
             {item.displayTitle}
           </span>
-          {showDetails && item.source === 'tree' && item.treeNodeId && !item.isComplete && (
+          {item.source === 'tree' && item.treeNodeId && !item.isComplete && (
             <span className={styles.inProgressBadge}>
               <span className={styles.inProgressDot} />
               IN PROGRESS
             </span>
           )}
-          {showDetails && item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-          {showDetails && item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
+          {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {/* Compact mobile-only priority indicator — replaces the text badges above */}
+          <span className={styles.priorityDot} />
         </div>
-        {showDetails && (
-          <div className={styles.metaRow}>
-            <span className={styles.tag}>{cfg.tag}</span>
-            {(item.treeNodeTitle || item.inboxContent) && (
-              <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent}</span>
-            )}
-          </div>
-        )}
-        {isMobile && open && (
-          <button
-            className={styles.mobileEditBtn}
-            onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onEdit(item) }}
-          >
-            Edit details
-          </button>
-        )}
+        <div className={styles.metaRow}>
+          <span className={styles.tag}>{cfg.tag}</span>
+          {(item.treeNodeTitle || item.inboxContent) && (
+            <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent}</span>
+          )}
+        </div>
       </div>
 
-      {showDetails && (
-        <button
-          className={styles.deleteBtn}
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); onDelete() }}
-          disabled={isPending}
-          aria-label="Remove from day"
-        >✕</button>
-      )}
+      <button
+        className={styles.deleteBtn}
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        disabled={isPending}
+        aria-label="Remove from day"
+      >✕</button>
     </div>
   )
 }
@@ -140,7 +118,10 @@ interface Props {
 export default function FloatingPool({ items, onEdit }: Props) {
   const { setNodeRef: setPoolRef, isOver: poolOver } = useDroppable({ id: 'pool-drop' })
   const isMobile = useIsMobile()
-  const [showAll, setShowAll] = useState(false)
+  // Mobile-only collapsible drawer — collapsed by default. Meaningless on
+  // desktop, where the list always renders regardless of this state.
+  const [expanded, setExpanded] = useState(false)
+  const showList = !isMobile || expanded
 
   const { mutate: toggle, isPending: toggling } = useToggleDayItem()
   const { mutate: remove, isPending: removing  } = useDeleteDayItem()
@@ -154,9 +135,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
     remove(item.id)
   }
 
-  const isCollapsible = isMobile && items.length > MOBILE_COLLAPSE_THRESHOLD && !showAll
-  const visibleItems  = isCollapsible ? items.slice(0, MOBILE_COLLAPSE_THRESHOLD) : items
-  const hiddenCount   = items.length - visibleItems.length
+  const completedCount = items.filter(i => i.isComplete).length
 
   return (
     <div
@@ -164,11 +143,23 @@ export default function FloatingPool({ items, onEdit }: Props) {
       className={`${styles.panel}${poolOver ? ' ' + styles.panelDropOver : ''}`}
     >
       <div className={styles.panelHeader}>
-        <div className={styles.headerTop}>
+        <button
+          className={styles.headerTop}
+          onClick={() => isMobile && setExpanded(e => !e)}
+          aria-expanded={showList}
+          aria-label={isMobile ? (expanded ? 'Collapse floating pool' : 'Expand floating pool') : undefined}
+        >
           <span className={styles.headerDot} />
           <span className={styles.headerTitle}>FLOATING POOL</span>
-          <span className={styles.headerCount}>· {items.length}</span>
-        </div>
+          <span className={styles.headerCount}>
+            <span className={styles.headerCountDesktop}>· {items.length}</span>
+            <span className={styles.headerCountMobile}>{completedCount}/{items.length} done</span>
+          </span>
+          <span className={styles.headerSpacer} />
+          {isMobile && (
+            <span className={`${styles.headerChevron}${expanded ? ' ' + styles.headerChevronOpen : ''}`}>⌄</span>
+          )}
+        </button>
         <p className={styles.headerHint}>No fixed time — check off as the day goes.</p>
 
         <div className={styles.legend}>
@@ -193,30 +184,27 @@ export default function FloatingPool({ items, onEdit }: Props) {
         </div>
       </div>
 
-      <div className={styles.list}>
-        {items.length === 0 && (
-          <p className={styles.empty}>
-            {poolOver
-              ? 'Drop here to unanchor'
-              : 'Nothing floating yet — add tasks or pull from your tree.'}
-          </p>
-        )}
-        {visibleItems.map(item => (
-          <FloatingCard
-            key={item.id}
-            item={item}
-            isPending={isPending}
-            onEdit={onEdit}
-            onToggle={() => handleToggle(item)}
-            onDelete={() => handleDelete(item)}
-          />
-        ))}
-        {isCollapsible && (
-          <button className={styles.showAllBtn} onClick={() => setShowAll(true)}>
-            Show all ({items.length})
-          </button>
-        )}
-      </div>
+      {showList && (
+        <div className={styles.list}>
+          {items.length === 0 && (
+            <p className={styles.empty}>
+              {poolOver
+                ? 'Drop here to unanchor'
+                : 'Nothing floating yet — add tasks or pull from your tree.'}
+            </p>
+          )}
+          {items.map(item => (
+            <FloatingCard
+              key={item.id}
+              item={item}
+              isPending={isPending}
+              onEdit={onEdit}
+              onToggle={() => handleToggle(item)}
+              onDelete={() => handleDelete(item)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

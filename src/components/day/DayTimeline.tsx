@@ -5,7 +5,6 @@ import {
   PXH, TOPPAD, timeToDecimal, timeToY, timeStrToY, nowDecimal,
 } from '../../hooks/useDayItems'
 import type { DayItem, DayItemPriority } from '../../hooks/useDayItems'
-import { useIsMobile } from '../../hooks/useIsMobile'
 import styles from './DayTimeline.module.css'
 
 const HOURS_START = 0
@@ -80,10 +79,6 @@ interface CardProps {
 
 function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDelete }: CardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
-  const isMobile = useIsMobile()
-  const [open, setOpen] = useState(false)
-  // Desktop always shows full detail; mobile hides badges/actions until tapped.
-  const showDetails = !isMobile || open
 
   const top    = timeStrToY(item.startTime!)
   const minH   = itemDurationH(item) * PXH - 8
@@ -98,11 +93,6 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
                     : isPast && !item.isComplete ? 0.62
                     : item.isComplete            ? 0.6
                     : 1
-
-  function handleCardClick() {
-    if (isMobile) setOpen(o => !o)
-    else onEdit(item)
-  }
 
   return (
     <>
@@ -126,18 +116,20 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
           left: CARD_LEFT, right: CARD_RIGHT, top, minHeight: minH, opacity: cardOpacity,
           ...(item.colour ? { borderLeft: `3px solid ${item.colour}` } : {}),
         } as CSSProperties}
-        onClick={handleCardClick}
+        onClick={() => onEdit(item)}
         {...attributes}
         {...listeners}
       >
         <div className={styles.cardRow}>
           <span className={styles.cardTime}>{item.startTime}</span>
-          {showDetails && isUpNext && <span className={styles.nextBadge}>UP NEXT</span>}
-          {showDetails && item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-          {showDetails && item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {isUpNext && <span className={styles.nextBadge}>UP NEXT</span>}
+          {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
+          {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
           <span className={styles.cardSpacer} />
-          {showDetails && item.isComplete && <span className={styles.doneBadge}>✓ DONE</span>}
-          {showDetails && !item.isComplete && (
+          {item.isComplete && (
+            <span className={styles.doneBadge}>✓<span className={styles.doneBadgeLabel}> DONE</span></span>
+          )}
+          {!item.isComplete && (
             <button
               className={styles.completeBtn}
               onPointerDown={e => e.stopPropagation()}
@@ -146,7 +138,7 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
               aria-label="Mark complete"
             >✓</button>
           )}
-          {showDetails && item.isComplete && (
+          {item.isComplete && (
             <button
               className={styles.undoBtn}
               onPointerDown={e => e.stopPropagation()}
@@ -155,31 +147,20 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
               aria-label="Undo complete"
             >↩</button>
           )}
-          {showDetails && (
-            <button
-              className={styles.deleteBtn}
-              onPointerDown={e => e.stopPropagation()}
-              onClick={e => { e.stopPropagation(); onDelete(item) }}
-              disabled={isPending}
-              aria-label="Delete"
-            >✕</button>
-          )}
+          <button
+            className={styles.deleteBtn}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onDelete(item) }}
+            disabled={isPending}
+            aria-label="Delete"
+          >✕</button>
         </div>
 
         <div className={`${styles.cardTitle}${item.isComplete ? ' ' + styles.cardTitleDone : ''}`}>
           {item.displayTitle}
         </div>
-        {showDetails && item.treeNodeTitle && item.source === 'tree' && (
+        {item.treeNodeTitle && item.source === 'tree' && (
           <div className={styles.cardOrigin}>↳ {item.treeNodeTitle}</div>
-        )}
-        {isMobile && open && (
-          <button
-            className={styles.mobileEditBtn}
-            onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onEdit(item) }}
-          >
-            Edit details
-          </button>
         )}
       </div>
     </>
@@ -198,22 +179,13 @@ interface ClusterItemRowProps {
 
 function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: ClusterItemRowProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
-  const isMobile = useIsMobile()
-  const [open, setOpen] = useState(false)
-  const showDetails = !isMobile || open
-
-  function handleRowClick(e: React.MouseEvent) {
-    e.stopPropagation()
-    if (isMobile) setOpen(o => !o)
-    else onEdit(item)
-  }
 
   return (
     <div
       ref={setNodeRef}
       className={styles.clusterExpandedRow}
       style={{ opacity: isDragging ? 0 : item.isComplete ? 0.6 : undefined }}
-      onClick={handleRowClick}
+      onClick={e => { e.stopPropagation(); onEdit(item) }}
       {...attributes}
       {...listeners}
     >
@@ -222,10 +194,10 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
       <span className={[styles.clusterExpandedTitle, item.isComplete ? styles.clusterExpandedTitleDone : ''].filter(Boolean).join(' ')}>
         {item.displayTitle}
       </span>
-      {showDetails && item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-      {showDetails && item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
-      {showDetails && item.isComplete && <span className={styles.doneBadge}>✓</span>}
-      {showDetails && !item.isComplete && (
+      {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
+      {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+      {item.isComplete && <span className={styles.doneBadge}>✓</span>}
+      {!item.isComplete && (
         <button
           className={styles.clusterCompleteBtn}
           onPointerDown={e => e.stopPropagation()}
@@ -234,7 +206,7 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
           aria-label="Mark complete"
         >✓</button>
       )}
-      {showDetails && item.isComplete && (
+      {item.isComplete && (
         <button
           className={styles.clusterUndoBtn}
           onPointerDown={e => e.stopPropagation()}
@@ -243,24 +215,13 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
           aria-label="Undo complete"
         >↩</button>
       )}
-      {showDetails && (
-        <button
-          className={styles.clusterDeleteBtn}
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); onDelete(item) }}
-          disabled={isPending}
-          aria-label="Delete"
-        >✕</button>
-      )}
-      {isMobile && open && (
-        <button
-          className={styles.mobileEditBtn}
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); onEdit(item) }}
-        >
-          Edit details
-        </button>
-      )}
+      <button
+        className={styles.clusterDeleteBtn}
+        onPointerDown={e => e.stopPropagation()}
+        onClick={e => { e.stopPropagation(); onDelete(item) }}
+        disabled={isPending}
+        aria-label="Delete"
+      >✕</button>
     </div>
   )
 }
@@ -410,7 +371,7 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
       <div className={styles.panelHeader}>
         <span className={styles.headerDot} />
         <span className={styles.headerTitle}>TIMELINE</span>
-        <span className={styles.headerSub}>· ANCHORED · FIXED TIME</span>
+        <span className={styles.headerSub}>· <span className={styles.headerSubFull}>ANCHORED · </span>FIXED TIME</span>
         <span className={styles.headerCount}>{items.length}</span>
       </div>
 
@@ -478,10 +439,8 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
           )}
 
           {/* NOW line */}
-          <div className={styles.nowLine}
-            style={{ left: RAIL_X - 6, right: CARD_RIGHT, top: nowY } as CSSProperties} />
-          <div className={styles.nowDot}
-            style={{ left: RAIL_X - 5, top: nowY - 6 } as CSSProperties} />
+          <div className={styles.nowLine} style={{ top: nowY } as CSSProperties} />
+          <div className={styles.nowDot} style={{ top: nowY - 6 } as CSSProperties} />
           <div className={styles.nowLabel}
             style={{ left: RAIL_X + 10, top: nowY - 26 } as CSSProperties}>
             NOW · {nowLabel}

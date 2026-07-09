@@ -45,6 +45,10 @@
   color: var(--ns-text-lo);
 }
 
+.headerSubFull {
+  /* Split out so mobile can hide "ANCHORED" and keep just "FIXED TIME" */
+}
+
 .headerCount {
   margin-left: auto;
   font-family: var(--ns-font-mono);
@@ -221,6 +225,10 @@
   color: rgba(var(--ns-ok-rgb), .9);
 }
 
+.doneBadgeLabel {
+  /* Split out so mobile can hide the word "DONE" and keep just the checkmark */
+}
+
 .completeBtn,
 .undoBtn,
 .deleteBtn {
@@ -259,36 +267,6 @@
 .cardTitleDone {
   text-decoration: line-through;
   opacity: 0.45;
-}
-
-/* ── Mobile: tighter card spacing/type, tap-to-reveal edit affordance ────── */
-
-.mobileEditBtn {
-  align-self: flex-start;
-  margin-top: 4px;
-  padding: 5px 10px;
-  border-radius: var(--ns-radius-sm);
-  border: 1px solid rgba(var(--ns-accent-rgb), .35);
-  background: rgba(var(--ns-accent-rgb), .08);
-  color: var(--ns-accent);
-  font-family: var(--ns-font-mono);
-  font-size: 9.5px;
-  font-weight: var(--ns-fw-semibold);
-  letter-spacing: var(--ns-ls-sm);
-  cursor: pointer;
-}
-
-@media (max-width: 767px) {
-  .card {
-    padding: 8px 11px;
-    gap: 3px;
-  }
-  .cardTitle {
-    font-size: 13.5px;
-  }
-  .cardTime {
-    font-size: 10px;
-  }
 }
 
 .cardOrigin {
@@ -574,6 +552,8 @@
 
 .nowLine {
   position: absolute;
+  left: 56px;
+  right: 16px;
   height: 0;
   border-top: 1.5px solid var(--ns-timeline-now-color);
   box-shadow: 0 0 14px rgba(var(--ns-gold-rgb), .7);
@@ -583,6 +563,7 @@
 
 .nowDot {
   position: absolute;
+  left: 57px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -605,10 +586,88 @@
   pointer-events: none;
 }
 
-/* ── Mobile: minimal NOW line — thin, no glow, no label ───────────────────── */
+/* ── Mobile: simplified timeline — panel dominates height, flat minimal
+   cards (time + title + done-checkmark only), thin full-width NOW line
+   with no label. ──────────────────────────────────────────────────────── */
 
 @media (max-width: 767px) {
+  /* flex-basis:0 (not auto) so this panel's naturally-tall internal content
+     (24hr grid, independently scrollable) doesn't balloon its own flex basis
+     and starve the floating pool panel below it of shrink-space. */
+  .panel {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .headerSubFull {
+    display: none;
+  }
+  .headerCount {
+    display: none;
+  }
+
+  .hourLabel {
+    font-size: 9.5px;
+  }
+
+  .rail {
+    width: 1.5px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    box-shadow: none;
+  }
+
+  .card,
+  .clusterBlock {
+    padding: 9px 12px;
+    gap: 3px;
+    border-radius: 10px;
+    border-color: var(--ns-border-faint);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .card:hover,
+  .clusterBlock:hover {
+    transform: none;
+  }
+  .cardHigh {
+    box-shadow: none;
+  }
+
+  .cardTitle {
+    font-size: 13.5px;
+  }
+  .cardTime {
+    font-size: 10px;
+  }
+
+  .nextBadge,
+  .priBadgeHigh,
+  .priBadgeLow,
+  .cardOrigin,
+  .deleteBtn,
+  .doneBadgeLabel,
+  .clusterDeleteBtn {
+    display: none;
+  }
+
+  /* Complete/undo stay available (tap to toggle), just plain icon-only */
+  .completeBtn,
+  .undoBtn,
+  .clusterCompleteBtn,
+  .clusterUndoBtn {
+    opacity: 1;
+    border-color: transparent;
+    background: transparent;
+  }
+
   .nowLine {
+    left: 0;
+    right: 0;
     box-shadow: none;
   }
   .nowDot {

@@ -22,9 +22,38 @@
 }
 
 .headerTop {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+.headerChevron {
+  font-size: 14px;
+  color: var(--ns-text-lo);
+  transition: transform 0.15s ease;
+  display: none;
+}
+.headerChevronOpen {
+  transform: rotate(180deg);
+}
+
+.headerCountDesktop {
+  display: inline;
+}
+.headerCountMobile {
+  display: none;
 }
 
 .headerDot {
@@ -237,49 +266,15 @@
   animation: ns-pulse-gold 2.2s ease-in-out infinite;
 }
 
-/* ── Mobile: tap-to-reveal edit affordance + collapsible pool ─────────────── */
+/* ── Compact mobile priority indicator — hidden on desktop ────────────────── */
 
-.mobileEditBtn {
-  align-self: flex-start;
-  padding: 5px 10px;
-  border-radius: var(--ns-radius-sm);
-  border: 1px solid rgba(var(--fp-accent-rgb), .35);
-  background: rgba(var(--fp-accent-rgb), .1);
-  color: var(--fp-accent);
-  font-family: var(--ns-font-mono);
-  font-size: 9.5px;
-  font-weight: var(--ns-fw-semibold);
-  letter-spacing: var(--ns-ls-sm);
-  cursor: pointer;
-}
-
-.showAllBtn {
-  padding: 10px;
-  border-radius: var(--ns-radius-lg);
-  border: 1px dashed var(--ns-border-mid);
-  background: transparent;
-  color: var(--ns-text-mid);
-  font-family: var(--ns-font-mono);
-  font-size: 10.5px;
-  font-weight: var(--ns-fw-semibold);
-  letter-spacing: var(--ns-ls-sm);
-  cursor: pointer;
-  min-height: 44px;
-  transition: border-color 0.15s, color 0.15s;
-}
-.showAllBtn:hover {
-  border-color: var(--ns-border-soft);
-  color: var(--ns-text-hi);
-}
-
-@media (max-width: 767px) {
-  .card {
-    padding: 10px 12px;
-    gap: 10px;
-  }
-  .title {
-    font-size: 13.5px;
-  }
+.priorityDot {
+  display: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fp-accent);
+  flex-shrink: 0;
 }
 
 .metaRow {
@@ -377,4 +372,77 @@
   border: 1px solid rgba(var(--ns-task-accent-rgb), .3);
   color: var(--ns-task-accent);
   flex-shrink: 0;
+}
+
+/* ── Mobile: collapsible drawer, simple checkbox/title/dot rows ───────────── */
+
+@media (max-width: 767px) {
+  /* Collapsed by default — shrink to header height instead of stretching
+     to share flex space equally with the timeline panel above it. */
+  .panel {
+    flex: 0 1 auto;
+  }
+
+  /* flex:1 + min-height:0 collapses to 0 in a content-hugging (auto-height)
+     parent — switch to a content-sized basis with an internal-scroll cap. */
+  .list {
+    flex: 0 1 auto;
+    min-height: auto;
+    max-height: 45vh;
+  }
+
+  .headerTop {
+    cursor: pointer;
+  }
+  .headerChevron {
+    display: inline-block;
+  }
+  .headerCountDesktop {
+    display: none;
+  }
+  .headerCountMobile {
+    display: inline;
+  }
+  .headerHint,
+  .legend {
+    display: none;
+  }
+
+  .list {
+    padding: 4px 16px 16px;
+    gap: 2px;
+  }
+
+  .card {
+    padding: 10px 4px;
+    gap: 10px;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--ns-border-faint);
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .card:hover {
+    background: transparent;
+  }
+  .cardLow {
+    opacity: 1;
+  }
+
+  .title {
+    font-size: 13.5px;
+  }
+
+  .inProgressBadge,
+  .priBadgeHigh,
+  .priBadgeLow,
+  .metaRow,
+  .deleteBtn {
+    display: none;
+  }
+
+  .priorityDot {
+    display: block;
+  }
 }

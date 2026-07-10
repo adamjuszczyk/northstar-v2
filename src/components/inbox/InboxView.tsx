@@ -14,9 +14,9 @@ export default function InboxView() {
   const [promoteItem,  setPromoteItem]  = useState<InboxItem | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const carriedOver = items.filter(i => i.state === 'unassigned' && i.carriedOver)
-  const unassigned  = items.filter(i => i.state === 'unassigned' && !i.carriedOver)
-  const processed   = items.filter(i => i.state !== 'unassigned')
+  const carriedOver = items.filter(i => i.state === 'unassigned' && !i.isCompleted && i.carriedOver)
+  const unassigned  = items.filter(i => i.state === 'unassigned' && !i.isCompleted && !i.carriedOver)
+  const processed   = items.filter(i => i.state !== 'unassigned' || i.isCompleted)
   const unassignedCount = carriedOver.length + unassigned.length
 
   function handleCapture() {

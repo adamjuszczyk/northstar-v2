@@ -13,6 +13,8 @@
 .row {
   display: flex;
   align-items: center;
+  gap: var(--ns-space-2);
+  flex-wrap: wrap;
 }
 
 .actionBtn {

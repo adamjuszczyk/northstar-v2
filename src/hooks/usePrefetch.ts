@@ -72,7 +72,7 @@ async function prefetchDayItems(userId: string, date: string) {
 async function prefetchInboxItems(userId: string) {
   const { data } = await supabase
     .from('ns_inbox_items')
-    .select('id, user_id, content, state, promoted_node_id, carried_over, created_at, updated_at')
+    .select('id, user_id, content, state, promoted_node_id, carried_over, is_completed, created_at, updated_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -84,6 +84,7 @@ async function prefetchInboxItems(userId: string) {
     state:          r.state,
     promotedNodeId: r.promoted_node_id,
     carriedOver:    r.carried_over,
+    isCompleted:    r.is_completed,
     createdAt:      r.created_at,
     updatedAt:      r.updated_at,
   })))

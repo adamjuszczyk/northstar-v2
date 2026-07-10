@@ -217,6 +217,7 @@
   --ns-inbox-unassigned: var(--ns-text-lo);
   --ns-inbox-scheduled:  var(--ns-project-accent);
   --ns-inbox-promoted:   var(--ns-gold);
+  --ns-inbox-completed:  var(--ns-ok);
 
   /* ── Tree canvas layout ──────────────────────────────────────── */
   --ns-tree-roots-gap:      88px;

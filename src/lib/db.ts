@@ -28,6 +28,7 @@ export interface CachedInboxItem {
   state:          string
   promotedNodeId: string | null
   carriedOver:    boolean
+  isCompleted:    boolean
   createdAt:      string
   updatedAt:      string
 }

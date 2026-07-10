@@ -14,10 +14,11 @@ type ScheduleTarget = 'day' | 'week' | 'month' | null
 interface Props {
   item:      InboxItem
   onPromote: () => void
+  onEdit:    () => void
   onClose:   () => void
 }
 
-export default function InboxItemActions({ item, onPromote, onClose }: Props) {
+export default function InboxItemActions({ item, onPromote, onEdit, onClose }: Props) {
   const [scheduleTarget, setScheduleTarget] = useState<ScheduleTarget>(null)
   const [dateValue,      setDateValue]      = useState('')
   const [error,          setError]          = useState<string | null>(null)
@@ -85,6 +86,15 @@ export default function InboxItemActions({ item, onPromote, onClose }: Props) {
         >
           <span className={styles.btnIcon}>→</span>
           Promote to tree
+        </button>
+        <button
+          className={styles.actionBtn}
+          style={{ '--btn-accent': 'var(--ns-project-accent)', '--btn-accent-rgb': 'var(--ns-project-accent-rgb)' } as CSSProperties}
+          onClick={onEdit}
+          disabled={isPending}
+        >
+          <span className={styles.btnIcon}>✎</span>
+          Edit
         </button>
       </div>
 

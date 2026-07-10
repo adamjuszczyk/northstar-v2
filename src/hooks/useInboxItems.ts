@@ -15,6 +15,7 @@ function row2item(r: Record<string, unknown>): InboxItem {
     state:          r.state          as InboxState,
     promotedNodeId: r.promoted_node_id as string | null,
     carriedOver:    r.carried_over   as boolean,
+    isCompleted:    r.is_completed   as boolean,
     createdAt:      r.created_at     as string,
     updatedAt:      r.updated_at     as string,
   }
@@ -39,6 +40,7 @@ export function useInboxItems() {
           state:          r.state as InboxState,
           promotedNodeId: r.promotedNodeId,
           carriedOver:    r.carriedOver,
+          isCompleted:    r.isCompleted,
           createdAt:      r.createdAt,
           updatedAt:      r.updatedAt,
         } satisfies InboxItem))
@@ -71,16 +73,16 @@ export function useCreateInboxItem() {
         const id  = crypto.randomUUID()
         const item: InboxItem = {
           id, userId: user.id, content,
-          state: 'unassigned', promotedNodeId: null, carriedOver: false,
+          state: 'unassigned', promotedNodeId: null, carriedOver: false, isCompleted: false,
           createdAt: now, updatedAt: now,
         }
         await db.inboxItems.add({
           id, userId: user.id, content, state: 'unassigned',
-          promotedNodeId: null, carriedOver: false, createdAt: now, updatedAt: now,
+          promotedNodeId: null, carriedOver: false, isCompleted: false, createdAt: now, updatedAt: now,
         })
         await enqueue('ns_inbox_items', 'insert', {
           id, user_id: user.id, content, state: 'unassigned',
-          promoted_node_id: null, carried_over: false, created_at: now, updated_at: now,
+          promoted_node_id: null, carried_over: false, is_completed: false, created_at: now, updated_at: now,
         }, user.id)
         return item
       }
@@ -124,15 +126,17 @@ export function useUpdateInboxItem() {
       content?:        string
       state?:          InboxState
       promotedNodeId?: string | null
+      isCompleted?:    boolean
     }) => {
       if (!user) throw new Error('Not authenticated')
-      const db: Record<string, unknown> = { updated_at: new Date().toISOString() }
-      if (patch.content        !== undefined) db.content          = patch.content
-      if (patch.state          !== undefined) db.state            = patch.state
-      if (patch.promotedNodeId !== undefined) db.promoted_node_id = patch.promotedNodeId
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      if (patch.content        !== undefined) updates.content          = patch.content
+      if (patch.state          !== undefined) updates.state            = patch.state
+      if (patch.promotedNodeId !== undefined) updates.promoted_node_id = patch.promotedNodeId
+      if (patch.isCompleted    !== undefined) updates.is_completed     = patch.isCompleted
       const { data, error } = await supabase
         .from('ns_inbox_items')
-        .update(db)
+        .update(updates)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

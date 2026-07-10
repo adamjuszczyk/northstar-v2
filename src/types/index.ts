@@ -27,6 +27,7 @@ export interface InboxItem {
   state:           InboxState
   promotedNodeId:  string | null  // set when state = 'promoted'
   carriedOver:     boolean        // true if auto-moved here from an unfinished standalone day item
+  isCompleted:     boolean        // marked done directly from inbox — independent of state/tree
   createdAt:       string
   updatedAt:       string
 }

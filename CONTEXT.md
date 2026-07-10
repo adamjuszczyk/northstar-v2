@@ -67,20 +67,16 @@ RLS enabled and verified on all tables.
 ---
 
 ## Active work
-Nothing active. Two inbox fixes shipped (July 10, 2026):
+Nothing active. Two inbox fixes shipped and fully live (July 10, 2026):
 - Edit inbox items: `InboxItemEditor.tsx` — content-only edit sheet,
   opened via the "Edit" action in the item's action panel.
 - Complete inbox items directly: checkbox on each `InboxItem` row,
-  independent of tree/day propagation (see rule below).
+  independent of tree/day propagation. `ns_inbox_items.is_completed`
+  migration (`scripts/migration_08_inbox_completed.sql`) has been run
+  — verified live: toggling complete/incomplete round-trips through
+  Supabase with no errors, item moves to PROCESSED with a DONE badge.
 
-**Pending manual step:** run `scripts/migration_08_inbox_completed.sql`
-in the Supabase SQL Editor — adds `ns_inbox_items.is_completed`.
-Until it's run, the checkbox UI works but the Supabase read/write
-calls 400 (missing column), same failure mode as any unrun migration
-in this project. Verified this in the live preview: build/typecheck
-are clean, but the actual complete/uncomplete toggle needs the column.
-
-Next: run the migration, then use in real life, collect feedback, plan v3.
+Next: use in real life, collect feedback, plan v3.
 
 ---
 

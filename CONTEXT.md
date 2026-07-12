@@ -80,14 +80,14 @@ RLS enabled and verified on all tables.
 ---
 
 ## Active work
-**Pending your action:** run `scripts/migration_09_habit_x_per_day.sql`
-in the Supabase SQL editor. Until then, creating an `x_per_day` habit
-fails with a clear constraint error (confirmed live, no bad data
-written) and the day-items offline prefetch silently 400s on the two
-new columns (degrades gracefully — the main online query is
-unaffected). Everything else in this session is fully live-verified.
+`scripts/migration_09_habit_x_per_day.sql` has been run — confirmed
+live: created an `x_per_day` habit (target 3, auto-add to day), it
+auto-added as a "0 / 3" counter item on Today, tapping it incremented
+to "1 / 3" and logged an `ns_habit_entries` row, deleting the habit
+cascade-deleted the day item cleanly. Feature 5 (habits x_per_day) is
+fully live, not just typechecked.
 
-Session of July 12, 2026 — 3 fixes + 6 features, all typechecked
+Session of July 12, 2026 — 3 fixes + 6 features + 1 follow-up fix, all typechecked
 (zero errors) and browser-verified against live Supabase data:
 - Fixed week/month focus items with `source = 'inbox'` showing
   "(untitled)" — `WeekView.tsx` was missing the inbox lookup in its
@@ -105,7 +105,7 @@ Session of July 12, 2026 — 3 fixes + 6 features, all typechecked
 - Custom day/week/month pickers replacing native browser inputs.
 - Habits: `x_per_day` frequency + day-item counters ("0 / 2", tap to
   increment, logs one `ns_habit_entries` row per tap, reaching target
-  marks the item complete) — **needs migration_09, see above**.
+  marks the item complete) — migration_09 run, confirmed live.
 - Habits: reduce mode stripped down to name + mode only — no
   frequency, no auto-add, no target. Existing reduce habits with old
   frequency data are untouched in the DB, just ignored by the UI.
@@ -125,7 +125,7 @@ scope — flag before starting new work nearby):
   `resolveEventTitle` in `WeekView.tsx` needs a habitId branch, and
   `useDayItemsSummary.ts` needs to fetch `habit_id` in the first place.
 
-Next: run migration_09, use in real life, collect feedback, plan v3.
+Next: use in real life, collect feedback, plan v3.
 
 ---
 

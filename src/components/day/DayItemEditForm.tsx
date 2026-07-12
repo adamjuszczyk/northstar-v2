@@ -48,7 +48,7 @@ export default function DayItemEditForm({ item, onClose }: Props) {
 
   function handleDelete() {
     if (!window.confirm(`Delete "${item.displayTitle}"?`)) return
-    remove(item.id, { onSuccess: onClose })
+    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId }, { onSuccess: onClose })
   }
 
   function handleBackdrop(e: React.MouseEvent) {

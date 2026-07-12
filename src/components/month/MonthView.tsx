@@ -239,7 +239,7 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
               })}
               onDelete={() => {
                 if (!window.confirm(`Remove "${displayTitle(item)}" from this month?`)) return
-                deleteFocus({ id: item.id, monthStart })
+                deleteFocus({ id: item.id, monthStart, source: item.source, inboxItemId: item.inboxItemId })
               }}
             />
           ))}

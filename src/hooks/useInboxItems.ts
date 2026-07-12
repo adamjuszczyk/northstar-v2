@@ -7,6 +7,38 @@ import type { InboxItem, InboxState } from '../types'
 
 const QK = (uid: string) => ['ns_inbox', uid] as const
 
+/**
+ * After deleting a schedule record (day item, week focus, or month focus)
+ * that came from an inbox item, this reverts the inbox item back to
+ * 'unassigned' — but only if no OTHER schedule still references it (a
+ * single inbox item can in principle be scheduled to a day AND a week at
+ * once). Best-effort: never throws, so a reconciliation failure can't
+ * block the delete the user actually asked for.
+ */
+export async function maybeRevertInboxItemState(userId: string, inboxItemId: string): Promise<void> {
+  try {
+    const [dayRes, weekRes, monthRes] = await Promise.all([
+      supabase.from('ns_day_items').select('id', { count: 'exact', head: true })
+        .eq('user_id', userId).eq('inbox_item_id', inboxItemId),
+      supabase.from('ns_week_focus').select('id', { count: 'exact', head: true })
+        .eq('user_id', userId).eq('inbox_item_id', inboxItemId),
+      supabase.from('ns_month_focus').select('id', { count: 'exact', head: true })
+        .eq('user_id', userId).eq('inbox_item_id', inboxItemId),
+    ])
+    const stillScheduled = (dayRes.count ?? 0) > 0 || (weekRes.count ?? 0) > 0 || (monthRes.count ?? 0) > 0
+    if (stillScheduled) return
+
+    await supabase
+      .from('ns_inbox_items')
+      .update({ state: 'unassigned', updated_at: new Date().toISOString() })
+      .eq('id', inboxItemId)
+      .eq('user_id', userId)
+  } catch {
+    // best-effort — leaving the inbox item's state stale is safer than
+    // failing the delete the user actually asked for
+  }
+}
+
 function row2item(r: Record<string, unknown>): InboxItem {
   return {
     id:             r.id             as string,

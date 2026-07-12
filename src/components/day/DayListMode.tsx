@@ -33,7 +33,7 @@ export default function DayListMode({ items }: Props) {
 
   function handleDelete(item: DayItem) {
     if (!window.confirm(`Delete "${item.displayTitle}"?`)) return
-    remove(item.id)
+    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId })
   }
 
   if (items.length === 0) {

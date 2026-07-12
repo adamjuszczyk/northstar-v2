@@ -250,7 +250,7 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
               })}
               onDelete={() => {
                 if (!window.confirm(`Remove "${displayTitle(item)}" from this week?`)) return
-                deleteFocus({ id: item.id, weekStart })
+                deleteFocus({ id: item.id, weekStart, source: item.source, inboxItemId: item.inboxItemId })
               }}
             />
           ))}

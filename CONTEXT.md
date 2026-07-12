@@ -109,8 +109,14 @@ Session of July 12, 2026 — 3 fixes + 6 features, all typechecked
 - Habits: reduce mode stripped down to name + mode only — no
   frequency, no auto-add, no target. Existing reduce habits with old
   frequency data are untouched in the DB, just ignored by the UI.
+- Deleting a scheduled inbox item's day/week/month record now reverts
+  `ns_inbox_items.state` back to `'unassigned'` (`maybeRevertInboxItemState`
+  in `useInboxItems.ts`, called from `useDeleteDayItem`/
+  `useDeleteWeekFocus`/`useDeleteMonthFocus`) — checks the other two
+  tables first so an item still scheduled elsewhere isn't wrongly
+  reverted. Live-verified on both the day and week delete paths.
 
-Two pre-existing bugs found but **not fixed** (out of this session's
+One pre-existing bug found but **not fixed** (out of this session's
 scope — flag before starting new work nearby):
 - The 7-day mini-grid inside Week/Month view (`useDayItemsSummary.ts`)
   never resolves habit-sourced day items — shows "Untitled" for any
@@ -118,10 +124,6 @@ scope — flag before starting new work nearby):
   was the week/month *focus list*, not this day-item preview grid).
   `resolveEventTitle` in `WeekView.tsx` needs a habitId branch, and
   `useDayItemsSummary.ts` needs to fetch `habit_id` in the first place.
-- Deleting a `ns_day_items` row sourced from inbox never reverts the
-  parent `ns_inbox_items.state` back to `'unassigned'` — it's stuck
-  showing "SCHEDULED" with nothing actually scheduled. Same root
-  cause as AUDIT.md's E6 (no un-promote/re-triage path).
 
 Next: run migration_09, use in real life, collect feedback, plan v3.
 

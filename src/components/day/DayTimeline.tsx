@@ -358,7 +358,7 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
   }
   function handleDelete(item: DayItem) {
     if (!window.confirm(`Delete "${item.displayTitle}"?`)) return
-    remove(item.id)
+    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId })
   }
 
   const { setNodeRef: setDropRef } = useDroppable({ id: 'timeline-area' })

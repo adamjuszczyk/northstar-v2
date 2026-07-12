@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
 import { useAuth } from './useAuth'
+import { maybeRevertInboxItemState } from './useInboxItems'
 
 export type FocusSource = 'standalone' | 'tree' | 'inbox' | 'habit'
 
@@ -147,7 +148,12 @@ export function useDeleteWeekFocus() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, weekStart }: { id: string; weekStart: string }) => {
+    mutationFn: async ({ id, weekStart, source, inboxItemId }: {
+      id:           string
+      weekStart:    string
+      source?:      FocusSource
+      inboxItemId?: string | null
+    }) => {
       if (!user) throw new Error('Not authenticated')
       const { error } = await supabase
         .from('ns_week_focus')
@@ -155,10 +161,14 @@ export function useDeleteWeekFocus() {
         .eq('id', id)
         .eq('user_id', user.id)
       if (error) throw error
+      if (source === 'inbox' && inboxItemId) {
+        await maybeRevertInboxItemState(user.id, inboxItemId)
+      }
       return weekStart
     },
     onSuccess: (weekStart) => {
       qc.invalidateQueries({ queryKey: ['ns_week_focus', weekStart] })
+      qc.invalidateQueries({ queryKey: ['ns_inbox'] })
     },
   })
 }

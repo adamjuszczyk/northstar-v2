@@ -144,7 +144,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
   }
   function handleDelete(item: DayItem) {
     if (!window.confirm(`Remove "${item.displayTitle}" from today?`)) return
-    remove(item.id)
+    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId })
   }
 
   const completedCount = items.filter(i => i.isComplete).length

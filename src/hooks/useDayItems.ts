@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
 import { enqueue } from '../lib/syncQueue'
 import { useAuth } from './useAuth'
+import { maybeRevertInboxItemState } from './useInboxItems'
 import type { NodeType } from '../types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -353,15 +354,25 @@ export function useDeleteDayItem() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, source, inboxItemId }: {
+      id:           string
+      source?:      DayItemSource
+      inboxItemId?: string | null
+    }) => {
       if (!user) throw new Error('Not authenticated')
       const { error } = await supabase
         .from('ns_day_items')
         .delete()
         .eq('id', id).eq('user_id', user.id)
       if (error) throw error
+      if (source === 'inbox' && inboxItemId) {
+        await maybeRevertInboxItemState(user.id, inboxItemId)
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ns_day_items'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ns_day_items'] })
+      qc.invalidateQueries({ queryKey: ['ns_inbox'] })
+    },
   })
 }
 

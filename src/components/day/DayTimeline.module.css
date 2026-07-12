@@ -682,4 +682,16 @@
   .nowLabel {
     display: none;
   }
+
+  /* Expanded cluster grows to fit its content instead of scrolling inside a
+     fixed-height box — the panel's own scrollArea handles scrolling. Rises
+     above later same-row siblings so it isn't painted over while expanded. */
+  .clusterBlock:has(.clusterExpanded) {
+    height: auto !important;
+    z-index: 6;
+  }
+  .clusterExpanded {
+    flex: none;
+    overflow: visible;
+  }
 }

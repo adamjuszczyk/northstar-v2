@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { useToggleDayItem, useDeleteDayItem } from '../../hooks/useDayItems'
+import { useToggleDayItem, useDeleteDayItem, useIncrementDayItemCounter } from '../../hooks/useDayItems'
 import type { DayItem } from '../../hooks/useDayItems'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import styles from './FloatingPool.module.css'
@@ -31,17 +31,19 @@ function accentVars(item: DayItem): { accentVar: string; accentRgbVar: string } 
 // ── Draggable floating card ────────────────────────────────────────────────────
 
 interface CardProps {
-  item:      DayItem
-  isPending: boolean
-  onEdit:    (item: DayItem) => void
-  onToggle:  () => void
-  onDelete:  () => void
+  item:        DayItem
+  isPending:   boolean
+  onEdit:      (item: DayItem) => void
+  onToggle:    () => void
+  onIncrement: () => void
+  onDelete:    () => void
 }
 
-function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps) {
+function FloatingCard({ item, isPending, onEdit, onToggle, onIncrement, onDelete }: CardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
   const cfg = SOURCE_CFG[sourceKey(item)]
   const { accentVar, accentRgbVar } = accentVars(item)
+  const isCounter = item.counterTarget !== null
 
   const cardStyle: CSSProperties = {
     '--fp-accent':     `var(${accentVar})`,
@@ -67,9 +69,9 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
       <button
         className={`${styles.check}${item.isComplete ? ' ' + styles.checkDone : ''}`}
         onPointerDown={e => e.stopPropagation()}
-        onClick={e => { e.stopPropagation(); onToggle() }}
+        onClick={e => { e.stopPropagation(); isCounter && !item.isComplete ? onIncrement() : onToggle() }}
         disabled={isPending}
-        aria-label={item.isComplete ? 'Mark incomplete' : 'Mark complete'}
+        aria-label={item.isComplete ? 'Mark incomplete' : isCounter ? 'Log one' : 'Mark complete'}
       >
         {item.isComplete ? '✓' : ''}
       </button>
@@ -80,6 +82,9 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onDelete }: CardProps
           <span className={`${styles.title}${item.isComplete ? ' ' + styles.titleDone : ''}`}>
             {item.displayTitle}
           </span>
+          {isCounter && (
+            <span className={styles.counterBadge}>{item.counterCurrent} / {item.counterTarget}</span>
+          )}
           {item.source === 'tree' && item.treeNodeId && !item.isComplete && (
             <span className={styles.inProgressBadge}>
               <span className={styles.inProgressDot} />
@@ -125,12 +130,17 @@ export default function FloatingPool({ items, onEdit }: Props) {
   const [expanded, setExpanded] = useState(false)
   const showList = !isMobile || expanded
 
-  const { mutate: toggle, isPending: toggling } = useToggleDayItem()
-  const { mutate: remove, isPending: removing  } = useDeleteDayItem()
-  const isPending = toggling || removing
+  const { mutate: toggle,    isPending: toggling    } = useToggleDayItem()
+  const { mutate: remove,    isPending: removing    } = useDeleteDayItem()
+  const { mutate: increment, isPending: incrementing } = useIncrementDayItemCounter()
+  const isPending = toggling || removing || incrementing
 
   function handleToggle(item: DayItem) {
     toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
+  }
+  function handleIncrement(item: DayItem) {
+    if (!item.habitId || item.counterTarget === null) return
+    increment({ id: item.id, habitId: item.habitId, current: item.counterCurrent, target: item.counterTarget })
   }
   function handleDelete(item: DayItem) {
     if (!window.confirm(`Remove "${item.displayTitle}" from today?`)) return
@@ -203,6 +213,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
               isPending={isPending}
               onEdit={onEdit}
               onToggle={() => handleToggle(item)}
+              onIncrement={() => handleIncrement(item)}
               onDelete={() => handleDelete(item)}
             />
           ))}

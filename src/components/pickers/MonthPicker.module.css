@@ -1,0 +1,88 @@
+.picker {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 268px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-input);
+}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ns-space-2);
+}
+
+.navBtn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ns-radius-xs);
+  border: 1px solid var(--ns-border-soft);
+  background: rgba(255, 255, 255, .03);
+  color: var(--ns-text-mid);
+  font-size: var(--ns-text-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.navBtn:hover {
+  border-color: rgba(var(--ns-gold-rgb), .5);
+  color: var(--ns-gold);
+}
+
+.headerLabel {
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-md);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-none);
+  color: var(--ns-text-hi);
+}
+
+/* ── Month grid ────────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.cell {
+  padding: 9px 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ns-radius-xs);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-sm);
+  letter-spacing: var(--ns-ls-mono);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.cell:hover {
+  background: rgba(var(--ns-gold-rgb), .1);
+  border-color: rgba(var(--ns-gold-rgb), .3);
+  color: var(--ns-text-hi);
+}
+.cellToday {
+  color: var(--ns-gold);
+  border-color: rgba(var(--ns-gold-rgb), .3);
+}
+.cellSelected {
+  background: rgba(var(--ns-gold-rgb), .22);
+  border-color: var(--ns-gold);
+  color: var(--ns-gold);
+  font-weight: var(--ns-fw-semibold);
+}

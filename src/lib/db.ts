@@ -17,6 +17,8 @@ export interface CachedDayItem {
   priority:    string
   colour:      string | null
   position:    number
+  counterCurrent: number
+  counterTarget:  number | null
   createdAt:   string
   updatedAt:   string
 }
@@ -124,6 +126,11 @@ class NorthstarDB extends Dexie {
     })
     this.version(5).stores({
       journalEntries: 'id, userId, date, [userId+date]',
+    })
+    this.version(6).stores({
+      // counterCurrent/counterTarget added to CachedDayItem — no new indexes,
+      // just a schema version bump per project convention.
+      dayItems: 'id, userId, date, [userId+date]',
     })
   }
 }

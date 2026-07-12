@@ -1,15 +1,34 @@
-import { useState, useRef, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
+import { addDays, addMonths } from 'date-fns'
 import {
   useDeleteInboxItem,
   useScheduleInboxToDay,
   useScheduleInboxToWeek,
   useScheduleInboxToMonth,
 } from '../../hooks/useInboxItems'
-import { weekStart } from '../../lib/dates'
+import { weekStart, monthStart, todayISO, toISODate } from '../../lib/dates'
 import type { InboxItem } from '../../types'
+import WeekPicker from '../pickers/WeekPicker'
+import DayPicker from '../pickers/DayPicker'
+import MonthPicker from '../pickers/MonthPicker'
 import styles from './InboxItemActions.module.css'
 
 type ScheduleTarget = 'day' | 'week' | 'month' | null
+
+const QUICK_OPTIONS: Record<'day' | 'week' | 'month', { label: string; value: () => string }[]> = {
+  day: [
+    { label: 'Today',    value: () => todayISO() },
+    { label: 'Tomorrow', value: () => toISODate(addDays(new Date(), 1)) },
+  ],
+  week: [
+    { label: 'This week', value: () => weekStart(new Date()) },
+    { label: 'Next week', value: () => weekStart(addDays(new Date(), 7)) },
+  ],
+  month: [
+    { label: 'This month', value: () => monthStart(new Date()) },
+    { label: 'Next month', value: () => monthStart(addMonths(new Date(), 1)) },
+  ],
+}
 
 interface Props {
   item:      InboxItem
@@ -21,8 +40,9 @@ interface Props {
 export default function InboxItemActions({ item, onPromote, onEdit, onClose }: Props) {
   const [scheduleTarget, setScheduleTarget] = useState<ScheduleTarget>(null)
   const [dateValue,      setDateValue]      = useState('')
+  // Always a valid Monday key — never empty — so WeekPicker never renders an invalid date.
+  const [weekValue,      setWeekValue]      = useState(() => weekStart(new Date()))
   const [error,          setError]          = useState<string | null>(null)
-  const dateRef = useRef<HTMLInputElement>(null)
 
   const { mutate: deleteItem,  isPending: deleting  } = useDeleteInboxItem()
   const { mutate: scheduleDay, isPending: dayPending } = useScheduleInboxToDay()
@@ -33,9 +53,12 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
 
   useEffect(() => {
     if (scheduleTarget) {
-      setDateValue('')
       setError(null)
-      setTimeout(() => dateRef.current?.focus(), 50)
+      if (scheduleTarget === 'week') {
+        setWeekValue(weekStart(new Date()))
+      } else {
+        setDateValue('')
+      }
     }
   }, [scheduleTarget])
 
@@ -43,27 +66,33 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
     setScheduleTarget(prev => prev === target ? null : target)
   }
 
-  function handleScheduleSubmit() {
-    if (!dateValue) return
+  function submitSchedule(target: 'day' | 'week' | 'month', value: string) {
     setError(null)
+    const onError = (e: unknown) => setError((e as Error).message)
 
-    if (scheduleTarget === 'day') {
-      scheduleDay(
-        { itemId: item.id, date: dateValue },
-        { onSuccess: onClose, onError: e => setError((e as Error).message) }
-      )
-    } else if (scheduleTarget === 'week') {
-      // Always the canonical Monday key — independent of the display setting.
-      scheduleWeek(
-        { itemId: item.id, weekStart: weekStart(dateValue) },
-        { onSuccess: onClose, onError: e => setError((e as Error).message) }
-      )
-    } else if (scheduleTarget === 'month') {
-      const monthStart = `${dateValue}-01`
-      scheduleMon(
-        { itemId: item.id, monthStart },
-        { onSuccess: onClose, onError: e => setError((e as Error).message) }
-      )
+    if (target === 'day') {
+      scheduleDay({ itemId: item.id, date: value }, { onSuccess: onClose, onError })
+    } else if (target === 'week') {
+      // value is already the canonical Monday key.
+      scheduleWeek({ itemId: item.id, weekStart: value }, { onSuccess: onClose, onError })
+    } else if (target === 'month') {
+      scheduleMon({ itemId: item.id, monthStart: value }, { onSuccess: onClose, onError })
+    }
+  }
+
+  function handleScheduleSubmit() {
+    if (scheduleTarget === 'day' && dateValue) {
+      submitSchedule('day', dateValue)
+    } else if (scheduleTarget === 'week' && weekValue) {
+      submitSchedule('week', weekValue)
+    } else if (scheduleTarget === 'month' && dateValue) {
+      submitSchedule('month', `${dateValue}-01`)
+    }
+  }
+
+  function handleQuickSchedule(value: string) {
+    if (scheduleTarget === 'day' || scheduleTarget === 'week' || scheduleTarget === 'month') {
+      submitSchedule(scheduleTarget, value)
     }
   }
 
@@ -72,7 +101,7 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
     deleteItem(item.id, { onSuccess: onClose })
   }
 
-  const inputType = scheduleTarget === 'month' ? 'month' : 'date'
+  const submitDisabled = isPending || (scheduleTarget === 'week' ? !weekValue : !dateValue)
 
   return (
     <div className={styles.panel}>
@@ -115,21 +144,32 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
         </div>
       </div>
 
-      {/* Inline date picker */}
+      {/* Quick scheduling chips */}
+      {scheduleTarget && (
+        <div className={styles.quickRow}>
+          {QUICK_OPTIONS[scheduleTarget].map(opt => (
+            <button
+              key={opt.label}
+              className={styles.quickChip}
+              onClick={() => handleQuickSchedule(opt.value())}
+              disabled={isPending}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Inline picker */}
       {scheduleTarget && (
         <div className={styles.pickerRow}>
-          <input
-            ref={dateRef}
-            type={inputType}
-            className={styles.datePicker}
-            value={dateValue}
-            onChange={e => setDateValue(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleScheduleSubmit() }}
-          />
+          {scheduleTarget === 'week' && <WeekPicker value={weekValue} onChange={setWeekValue} />}
+          {scheduleTarget === 'day'  && <DayPicker value={dateValue} onChange={setDateValue} />}
+          {scheduleTarget === 'month' && <MonthPicker value={dateValue} onChange={setDateValue} />}
           <button
             className={styles.confirmBtn}
             onClick={handleScheduleSubmit}
-            disabled={!dateValue || isPending}
+            disabled={submitDisabled}
           >
             {isPending ? '…' : '↵'}
           </button>

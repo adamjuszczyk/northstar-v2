@@ -75,6 +75,52 @@
 }
 .habitBadge:hover { transform: scale(1.2); }
 
+/* ── Note badge — always visible (no hover-gating) so it works on touch ─────── */
+
+.noteBadge {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: rgba(var(--ns-node-accent-rgb), .65);
+  font-size: 11px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: color 0.15s, transform 0.15s;
+}
+/* Expand touch target to 44×44 without affecting layout */
+.noteBadge::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+}
+.noteBadge:hover { color: rgba(var(--ns-node-accent-rgb), .95); transform: scale(1.15); }
+.noteBadgeOpen { color: var(--ns-node-accent); }
+
+/* ── Inline note block ────────────────────────────────────────────────────── */
+
+.noteBlock {
+  font-family: var(--ns-font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ns-text-mid);
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .18);
+  border: 1px solid rgba(var(--ns-node-accent-rgb), .18);
+  cursor: default;
+}
+
 /* ── Vision halo glow ─────────────────────────────────────────────────────── */
 
 .halo {
@@ -296,8 +342,8 @@
 .taskCard {
   box-sizing: border-box;
   display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: var(--ns-task-padding);
   border-radius: var(--ns-task-radius);
   background: var(--ns-task-bg);
@@ -313,6 +359,12 @@
   transition: opacity 0.25s, filter 0.25s;
 }
 .taskCard:active { cursor: grabbing; }
+
+.taskCardMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .taskCard.cardDone {
   background: var(--ns-surface-overlay);

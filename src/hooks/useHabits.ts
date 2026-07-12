@@ -7,7 +7,7 @@ import { weekStart } from '../lib/dates'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type HabitMode          = 'reduce' | 'build'
-export type HabitFrequencyType = 'daily' | 'weekly' | 'x_per_week'
+export type HabitFrequencyType = 'daily' | 'weekly' | 'x_per_week' | 'x_per_day'
 export type HabitAutoAddTo     = 'day' | 'week' | 'month'
 export type HabitEntrySource   = 'manual' | 'day_view'
 
@@ -245,6 +245,10 @@ function countSince(entries: HabitEntry[], days: number): number {
   return entries.filter(e => daysSince(e.loggedAt) < days).length
 }
 
+function countToday(entries: HabitEntry[]): number {
+  return entries.filter(e => daysSince(e.loggedAt) === 0).length
+}
+
 /** Target gap (in days) implied by a frequency — used by reduce mode. */
 function targetGapDays(freqType: HabitFrequencyType, freqValue: number | null): number {
   if (freqType === 'daily')  return 1
@@ -258,6 +262,13 @@ export function computeHabitStatus(habit: Habit, allEntries: HabitEntry[]): Habi
 
   if (habit.mode === 'build') {
     if (entries.length === 0) return age < 3 ? 'early' : 'struggling'
+    if (habit.frequencyType === 'x_per_day') {
+      const target = Math.max(1, habit.frequencyValue ?? 1)
+      const rate = countToday(entries) / target
+      if (rate >= 0.7) return 'good'
+      if (age < 3) return 'early'
+      return 'struggling'
+    }
     const windowDays = habit.frequencyType === 'daily' ? 7 : 7
     const target = habit.frequencyType === 'daily' ? 6
                  : habit.frequencyType === 'weekly' ? 1
@@ -277,11 +288,16 @@ export function computeHabitStatus(habit: Habit, allEntries: HabitEntry[]): Habi
   return 'struggling'
 }
 
-/** "X this week" (build) or "X days since last" (reduce). */
+/** "X this week" or "X times today" (build) / "X days since last time" (reduce). */
 export function computeCurrentMetric(habit: Habit, allEntries: HabitEntry[]): string {
   const entries = entriesForHabit(habit.id, allEntries)
 
   if (habit.mode === 'build') {
+    if (habit.frequencyType === 'x_per_day') {
+      const target = habit.frequencyValue ?? 1
+      const count  = countToday(entries)
+      return target > 1 ? `${count} / ${target} times today` : `${count} time${count === 1 ? '' : 's'} today`
+    }
     const wStart = weekStart(new Date())
     const count = entries.filter(e => weekStart(e.loggedAt) === wStart).length
     return `${count} this week`
@@ -289,5 +305,5 @@ export function computeCurrentMetric(habit: Habit, allEntries: HabitEntry[]): st
 
   if (entries.length === 0) return 'Never logged'
   const gap = daysSince(entries[entries.length - 1].loggedAt)
-  return gap === 0 ? 'Today' : `${gap} day${gap === 1 ? '' : 's'} since last`
+  return gap === 0 ? 'Today' : `${gap} day${gap === 1 ? '' : 's'} since last time`
 }

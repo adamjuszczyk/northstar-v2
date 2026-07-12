@@ -12,6 +12,7 @@ const FREQUENCIES: { value: HabitFrequencyType; label: string }[] = [
   { value: 'daily',      label: 'Daily' },
   { value: 'weekly',     label: 'Weekly' },
   { value: 'x_per_week', label: 'X / week' },
+  { value: 'x_per_day',  label: 'X / day' },
 ]
 const AUTO_ADD_TARGETS: { value: HabitAutoAddTo; label: string }[] = [
   { value: 'day',   label: 'Day' },
@@ -57,9 +58,12 @@ export default function HabitModal({ state, onClose }: Props) {
       return ai !== bi ? ai - bi : a.title.localeCompare(b.title)
     })
 
+  const isReduce = mode === 'reduce'
+  const usesFrequencyValue = !isReduce && (frequencyType === 'x_per_week' || frequencyType === 'x_per_day')
+
   function isValid(): boolean {
     if (!name.trim()) return false
-    if (frequencyType === 'x_per_week') {
+    if (usesFrequencyValue) {
       const n = Number(frequencyValue)
       if (!Number.isFinite(n) || n < 1) return false
     }
@@ -68,15 +72,28 @@ export default function HabitModal({ state, onClose }: Props) {
 
   function handleSave() {
     if (!isValid() || isPending) return
-    const input = {
-      name:           name.trim(),
-      mode,
-      treeNodeId,
-      frequencyType,
-      frequencyValue: frequencyType === 'x_per_week' ? Number(frequencyValue) : null,
-      autoAdd,
-      autoAddTo:      autoAdd ? autoAddTo : null,
-    }
+    // Reduce mode has no frequency/auto-add config — frequencyType still
+    // needs some value to satisfy the NOT NULL column, but nothing in the
+    // reduce UI ever reads it back.
+    const input = isReduce
+      ? {
+          name:           name.trim(),
+          mode,
+          treeNodeId,
+          frequencyType:  'daily' as HabitFrequencyType,
+          frequencyValue: null,
+          autoAdd:        false,
+          autoAddTo:      null,
+        }
+      : {
+          name:           name.trim(),
+          mode,
+          treeNodeId,
+          frequencyType,
+          frequencyValue: usesFrequencyValue ? Number(frequencyValue) : null,
+          autoAdd,
+          autoAddTo:      autoAdd ? autoAddTo : null,
+        }
     if (isCreate) {
       createHabit(input, { onSuccess: onClose })
     } else if (existing) {
@@ -129,87 +146,98 @@ export default function HabitModal({ state, onClose }: Props) {
           </div>
         </div>
 
-        <div className={styles.field}>
-          <span className={styles.fieldLabel}>FREQUENCY</span>
-          <div className={styles.pillRow}>
-            {FREQUENCIES.map(f => (
-              <button
-                key={f.value}
-                className={`${styles.pillBtn}${frequencyType === f.value ? ' ' + styles.pillBtnActive : ''}`}
-                onClick={() => setFrequencyType(f.value)}
-              >{f.label}</button>
-            ))}
-          </div>
-          {frequencyType === 'x_per_week' && (
-            <input
-              type="number"
-              min={1}
-              max={14}
-              className={styles.numberInput}
-              value={frequencyValue}
-              onChange={e => setFrequencyValue(e.target.value)}
-            />
-          )}
-        </div>
-
-        <div className={styles.field}>
-          <span className={styles.fieldLabel}>LINK TO TREE NODE <span className={styles.optional}>(optional)</span></span>
-          {!treePickerOpen ? (
-            <button className={styles.linkBtn} onClick={() => setTreePickerOpen(true)}>
-              {linkedNode ? `✦ ${linkedNode.title}` : '+ Link a node…'}
-            </button>
-          ) : (
-            <div className={styles.treePicker}>
-              <input
-                className={styles.input}
-                placeholder="Search nodes…"
-                value={treeSearch}
-                onChange={e => setTreeSearch(e.target.value)}
-                autoFocus
-              />
-              <div className={styles.treeList}>
-                <button
-                  className={styles.treeRow}
-                  onClick={() => { setTreeNodeId(null); setTreePickerOpen(false) }}
-                >— No linked node —</button>
-                {filteredNodes.map(n => (
-                  <button
-                    key={n.id}
-                    className={`${styles.treeRow}${treeNodeId === n.id ? ' ' + styles.treeRowSelected : ''}`}
-                    onClick={() => { setTreeNodeId(n.id); setTreePickerOpen(false) }}
-                  >
-                    <span className={styles.nodeTypeDot} style={{ background: `var(--ns-${n.type}-accent)` }} />
-                    <span className={styles.nodeTitle}>{n.title}</span>
-                    <span className={styles.nodeType}>{n.type}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.toggleRow}>
-            <input
-              type="checkbox"
-              className={styles.toggleCheck}
-              checked={autoAdd}
-              onChange={e => setAutoAdd(e.target.checked)}
-            />
-            <span className={styles.toggleLabel}>Auto-add on app open</span>
-          </label>
-          {autoAdd && (
+        {!isReduce && (
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>FREQUENCY</span>
             <div className={styles.pillRow}>
-              {AUTO_ADD_TARGETS.map(t => (
+              {FREQUENCIES.map(f => (
                 <button
-                  key={t.value}
-                  className={`${styles.pillBtn}${autoAddTo === t.value ? ' ' + styles.pillBtnActive : ''}`}
-                  onClick={() => setAutoAddTo(t.value)}
-                >{t.label}</button>
+                  key={f.value}
+                  className={`${styles.pillBtn}${frequencyType === f.value ? ' ' + styles.pillBtnActive : ''}`}
+                  onClick={() => setFrequencyType(f.value)}
+                >{f.label}</button>
               ))}
             </div>
-          )}
-        </div>
+            {usesFrequencyValue && (
+              <>
+                <input
+                  type="number"
+                  min={1}
+                  max={14}
+                  className={styles.numberInput}
+                  value={frequencyValue}
+                  onChange={e => setFrequencyValue(e.target.value)}
+                />
+                {frequencyType === 'x_per_day' && (
+                  <span className={styles.optional}>e.g. 2 = twice daily</span>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {!isReduce && (
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>LINK TO TREE NODE <span className={styles.optional}>(optional)</span></span>
+            {!treePickerOpen ? (
+              <button className={styles.linkBtn} onClick={() => setTreePickerOpen(true)}>
+                {linkedNode ? `✦ ${linkedNode.title}` : '+ Link a node…'}
+              </button>
+            ) : (
+              <div className={styles.treePicker}>
+                <input
+                  className={styles.input}
+                  placeholder="Search nodes…"
+                  value={treeSearch}
+                  onChange={e => setTreeSearch(e.target.value)}
+                  autoFocus
+                />
+                <div className={styles.treeList}>
+                  <button
+                    className={styles.treeRow}
+                    onClick={() => { setTreeNodeId(null); setTreePickerOpen(false) }}
+                  >— No linked node —</button>
+                  {filteredNodes.map(n => (
+                    <button
+                      key={n.id}
+                      className={`${styles.treeRow}${treeNodeId === n.id ? ' ' + styles.treeRowSelected : ''}`}
+                      onClick={() => { setTreeNodeId(n.id); setTreePickerOpen(false) }}
+                    >
+                      <span className={styles.nodeTypeDot} style={{ background: `var(--ns-${n.type}-accent)` }} />
+                      <span className={styles.nodeTitle}>{n.title}</span>
+                      <span className={styles.nodeType}>{n.type}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isReduce && (
+          <div className={styles.field}>
+            <label className={styles.toggleRow}>
+              <input
+                type="checkbox"
+                className={styles.toggleCheck}
+                checked={autoAdd}
+                onChange={e => setAutoAdd(e.target.checked)}
+              />
+              <span className={styles.toggleLabel}>Auto-add on app open</span>
+            </label>
+            {autoAdd && (
+              <div className={styles.pillRow}>
+                {AUTO_ADD_TARGETS.map(t => (
+                  <button
+                    key={t.value}
+                    className={`${styles.pillBtn}${autoAddTo === t.value ? ' ' + styles.pillBtnActive : ''}`}
+                    onClick={() => setAutoAddTo(t.value)}
+                  >{t.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={styles.actions}>
           {!isCreate && (

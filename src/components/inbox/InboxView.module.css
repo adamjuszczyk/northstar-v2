@@ -103,6 +103,41 @@
   cursor: not-allowed;
 }
 
+/* ── Filter bar ──────────────────────────────────────────────────────────── */
+
+.filterBar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ns-space-1);
+  padding: var(--ns-space-3) 24px;
+  border-bottom: 1px solid var(--ns-border-faint);
+  background: var(--ns-bg-surface);
+}
+
+.filterChip {
+  padding: 6px 12px;
+  min-height: 44px;
+  border-radius: var(--ns-radius-full);
+  border: 1px solid var(--ns-border-mid);
+  background: rgba(255, 255, 255, .03);
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-mono);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.filterChip:hover {
+  border-color: rgba(var(--ns-project-accent-rgb), .45);
+  color: var(--ns-project-accent);
+}
+.filterChipActive {
+  background: rgba(var(--ns-project-accent-rgb), .14);
+  border-color: rgba(var(--ns-project-accent-rgb), .55);
+  color: var(--ns-project-accent);
+}
+
 /* ── Scrollable list ─────────────────────────────────────────────────────── */
 
 .list {

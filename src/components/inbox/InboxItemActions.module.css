@@ -91,39 +91,49 @@
 }
 .scheduleChip:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Quick scheduling chips ───────────────────────────────────────────────── */
+
+.quickRow {
+  display: flex;
+  gap: var(--ns-space-1);
+  animation: ns-rise 0.15s ease both;
+}
+
+.quickChip {
+  padding: 6px 12px;
+  min-height: 44px;
+  border-radius: var(--ns-radius-full);
+  border: 1px solid rgba(var(--ns-gold-rgb), .3);
+  background: rgba(var(--ns-gold-rgb), .07);
+  color: var(--ns-gold);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.quickChip:hover:not(:disabled) {
+  background: rgba(var(--ns-gold-rgb), .14);
+  border-color: rgba(var(--ns-gold-rgb), .5);
+}
+.quickChip:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ── Date picker row ──────────────────────────────────────────────────────── */
 
 .pickerRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--ns-space-2);
   animation: ns-rise 0.15s ease both;
-}
-
-.datePicker {
-  flex: 1;
-  padding: 7px 10px;
-  border-radius: var(--ns-radius-sm);
-  border: 1px solid var(--ns-border-mid);
-  background: var(--ns-surface-input);
-  color: var(--ns-text-hi);
-  font-family: var(--ns-font-mono);
-  font-size: var(--ns-text-xs);
-  outline: none;
-  transition: border-color 0.15s;
-  color-scheme: dark;
-}
-.datePicker:focus {
-  border-color: rgba(var(--ns-project-accent-rgb), .5);
 }
 
 .confirmBtn {
   width: 44px;
   height: 44px;
   border-radius: var(--ns-radius-sm);
-  border: 1px solid rgba(var(--ns-project-accent-rgb), .35);
-  background: rgba(var(--ns-project-accent-rgb), .1);
-  color: var(--ns-project-accent);
+  border: 1px solid rgba(var(--ns-gold-rgb), .35);
+  background: rgba(var(--ns-gold-rgb), .1);
+  color: var(--ns-gold);
   font-family: var(--ns-font-mono);
   font-size: 13px;
   display: grid;
@@ -133,7 +143,7 @@
   flex-shrink: 0;
 }
 .confirmBtn:hover:not(:disabled) {
-  background: rgba(var(--ns-project-accent-rgb), .2);
+  background: rgba(var(--ns-gold-rgb), .2);
 }
 .confirmBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 

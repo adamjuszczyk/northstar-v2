@@ -52,7 +52,9 @@ export default function HabitCard({ habit, allEntries, treeNodeTitle, onEdit, hi
 
       <div className={styles.metaRow}>
         <span className={styles.metric}>{metric}</span>
-        {habit.autoAdd && habit.autoAddTo && (
+        {/* Reduce habits carry no schedule — ignore any stale auto-add data
+            left over from before this mode existed. */}
+        {habit.mode === 'build' && habit.autoAdd && habit.autoAddTo && (
           <span className={styles.autoBadge}>AUTO · {habit.autoAddTo.toUpperCase()}</span>
         )}
       </div>

@@ -132,15 +132,22 @@ export default function TreeNode({
   const isDone   = node.status === 'complete'
 
   const [collapsed, setCollapsed] = useState(false)
+  const [noteOpen,  setNoteOpen]  = useState(false)
 
   const navigate = useNavigate()
   const { mutate: updateNode } = useUpdateNode()
   const habitId    = habitByNodeId.get(node.id)
   const isFocused  = focusNodeId === node.id
+  const hasNote    = !!node.notes && node.notes.trim().length > 0
 
   function onHabitBadgeClick(e: React.MouseEvent) {
     e.stopPropagation()
     navigate(`/habits?highlight=${habitId}`)
+  }
+
+  function onNoteBadgeClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    setNoteOpen(o => !o)
   }
 
   // Dragging moves the node (and its whole subtree, rendered inside the same
@@ -194,25 +201,41 @@ export default function TreeNode({
           onDoubleClick={() => onEdit(node)}
           {...listeners}
         >
-          <button
-            className={cx(styles.taskCheck, isDone && styles.taskCheckDone)}
-            onClick={onCheckboxClick}
-            onPointerDown={e => e.stopPropagation()}
-            aria-label={isDone ? 'Mark not started' : 'Mark complete'}
-          >
-            {isDone ? '✓' : ''}
-          </button>
-          <span className={cx(styles.taskTitle, isDone && styles.taskTitleDone)}>
-            {node.title}
-          </span>
-          {habitId && (
+          <div className={styles.taskCardMain}>
             <button
-              className={styles.habitBadge}
-              onClick={onHabitBadgeClick}
+              className={cx(styles.taskCheck, isDone && styles.taskCheckDone)}
+              onClick={onCheckboxClick}
               onPointerDown={e => e.stopPropagation()}
-              title="Tracked as habit"
-              aria-label="Tracked as habit"
-            >◆</button>
+              aria-label={isDone ? 'Mark not started' : 'Mark complete'}
+            >
+              {isDone ? '✓' : ''}
+            </button>
+            <span className={cx(styles.taskTitle, isDone && styles.taskTitleDone)}>
+              {node.title}
+            </span>
+            {hasNote && (
+              <button
+                className={cx(styles.noteBadge, noteOpen && styles.noteBadgeOpen)}
+                onClick={onNoteBadgeClick}
+                onPointerDown={e => e.stopPropagation()}
+                title={noteOpen ? 'Hide note' : 'Show note'}
+                aria-label={noteOpen ? 'Hide note' : 'Show note'}
+              >▤</button>
+            )}
+            {habitId && (
+              <button
+                className={styles.habitBadge}
+                onClick={onHabitBadgeClick}
+                onPointerDown={e => e.stopPropagation()}
+                title="Tracked as habit"
+                aria-label="Tracked as habit"
+              >◆</button>
+            )}
+          </div>
+          {hasNote && noteOpen && (
+            <div className={styles.noteBlock} onPointerDown={e => e.stopPropagation()}>
+              {node.notes}
+            </div>
           )}
         </div>
       </div>
@@ -245,6 +268,15 @@ export default function TreeNode({
         <div className={styles.head}>
           <StatusDot status={node.status} onClick={onDotClick} />
           <span className={styles.typeLabel}>{node.type}</span>
+          {hasNote && (
+            <button
+              className={cx(styles.noteBadge, noteOpen && styles.noteBadgeOpen)}
+              onClick={onNoteBadgeClick}
+              onPointerDown={e => e.stopPropagation()}
+              title={noteOpen ? 'Hide note' : 'Show note'}
+              aria-label={noteOpen ? 'Hide note' : 'Show note'}
+            >▤</button>
+          )}
           {habitId && (
             <button
               className={styles.habitBadge}
@@ -280,6 +312,13 @@ export default function TreeNode({
         <div className={styles.title}>
           {node.title}
         </div>
+
+        {/* Note (inline, toggled by the note badge above) */}
+        {hasNote && noteOpen && (
+          <div className={styles.noteBlock} onPointerDown={e => e.stopPropagation()}>
+            {node.notes}
+          </div>
+        )}
 
         {/* Vision progress bar */}
         {isVision && !isDone && <ProgressBar node={node} />}

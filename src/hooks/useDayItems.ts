@@ -26,6 +26,8 @@ export interface RawDayItem {
   priority:     DayItemPriority
   colour:       string | null    // cosmetic block colour hex, independent of priority
   position:     number
+  counterCurrent: number         // x_per_day habit progress ("0 / 2") — 0 for non-counter items
+  counterTarget:  number | null  // non-null marks this item as a counter item
   createdAt:    string
   updatedAt:    string
 }
@@ -68,6 +70,8 @@ function row2raw(r: Record<string, unknown>): RawDayItem {
     priority:    normPriority(r.priority),
     colour:      (r.colour as string | null) ?? null,
     position:    r.position      as number,
+    counterCurrent: (r.counter_current as number | null) ?? 0,
+    counterTarget:  (r.counter_target as number | null) ?? null,
     createdAt:   r.created_at    as string,
     updatedAt:   r.updated_at    as string,
   }
@@ -104,6 +108,8 @@ export function useDayItems(date: string) {
           priority:    r.priority as RawDayItem['priority'],
           colour:      r.colour ?? null,
           position:    r.position,
+          counterCurrent: r.counterCurrent ?? 0,
+          counterTarget:  r.counterTarget ?? null,
           createdAt:   r.createdAt,
           updatedAt:   r.updatedAt,
         }))
@@ -271,6 +277,41 @@ export function useToggleDayItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_tree_nodes'] })
+      qc.invalidateQueries({ queryKey: ['ns_habit_entries'] })
+    },
+  })
+}
+
+/** Tap-to-increment for x_per_day habit counter items. Reaching the target
+ *  also marks the day item complete. Every tap logs one habit entry. */
+export function useIncrementDayItemCounter() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, habitId, current, target }: {
+      id:       string
+      habitId:  string
+      current:  number
+      target:   number
+    }) => {
+      if (!user) throw new Error('Not authenticated')
+      const now  = new Date().toISOString()
+      const next = current + 1
+
+      const { error: e1 } = await supabase
+        .from('ns_day_items')
+        .update({ counter_current: next, is_complete: next >= target, updated_at: now })
+        .eq('id', id).eq('user_id', user.id)
+      if (e1) throw e1
+
+      const { error: e2 } = await supabase
+        .from('ns_habit_entries')
+        .insert({ user_id: user.id, habit_id: habitId, logged_at: now, source: 'day_view' })
+      if (e2) throw e2
+    },
+    networkMode: 'always',
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_habit_entries'] })
     },
   })

@@ -4,6 +4,7 @@ import { useMonthFocus, useCreateMonthFocus, useToggleMonthFocus, useDeleteMonth
 import type { MonthFocusItem } from '../../hooks/useMonthFocus'
 import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
+import { useInboxItems } from '../../hooks/useInboxItems'
 import { useHabits } from '../../hooks/useHabits'
 import { useSettings } from '../../hooks/useSettings'
 import FocusItemForm from '../planner/FocusItemForm'
@@ -147,6 +148,7 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
   const { data: rawItems   = [], isLoading: loadingItems } = useRangeDayItems(monthStart, monthEnd)
   const { data: focusItems = [], isLoading: loadingFocus } = useMonthFocus(monthStart)
   const { data: treeNodes  = [] } = useTreeNodes()
+  const { data: inboxItems = [] } = useInboxItems()
   const { data: habits     = [] } = useHabits()
 
   const { mutate: createFocus, isPending: creating } = useCreateMonthFocus()
@@ -155,6 +157,7 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
   const isPending = creating || toggling || deleting
 
   const nodeMap  = new Map(treeNodes.map(n => [n.id, n]))
+  const inboxMap = new Map(inboxItems.map(i => [i.id, i]))
   const habitMap = new Map(habits.map(h => [h.id, h]))
   const byDate   = groupByDate(rawItems)
   const cells    = buildCalendarGrid(monthStart, settings.weekStartsOn)
@@ -165,6 +168,7 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
     if (item.title) return item.title
     if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? '(untitled)'
     if (item.habitId) return habitMap.get(item.habitId)?.name ?? '(untitled)'
+    if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? '(untitled)'
     return '(untitled)'
   }
 

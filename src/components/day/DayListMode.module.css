@@ -124,6 +124,18 @@
 .rowTag_inbox    { color: rgba(var(--ns-project-accent-rgb), .8); }
 .rowTag_standalone { color: rgba(var(--ns-task-accent-rgb), .8); }
 
+.counterBadge {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-mono);
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(var(--ns-ok-rgb), .14);
+  border: 1px solid rgba(var(--ns-ok-rgb), .4);
+  color: var(--ns-ok);
+}
+
 .rowOrigin {
   font-family: var(--ns-font-mono);
   font-size: var(--ns-text-2xs);

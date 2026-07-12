@@ -5,6 +5,26 @@ import InboxItemComponent from './InboxItem'
 import NodeEditor, { type EditorState } from '../tree/NodeEditor'
 import styles from './InboxView.module.css'
 
+type InboxFilter = 'all' | 'unassigned' | 'scheduled' | 'promoted' | 'completed'
+
+const FILTERS: { key: InboxFilter; label: string }[] = [
+  { key: 'all',        label: 'All' },
+  { key: 'unassigned', label: 'Unassigned' },
+  { key: 'scheduled',  label: 'Scheduled · not done' },
+  { key: 'promoted',   label: 'Promoted' },
+  { key: 'completed',  label: 'Completed' },
+]
+
+function matchesFilter(item: InboxItem, filter: InboxFilter): boolean {
+  switch (filter) {
+    case 'all':        return true
+    case 'unassigned': return item.state === 'unassigned' && !item.isCompleted
+    case 'scheduled':  return item.state === 'scheduled' && !item.isCompleted
+    case 'promoted':   return item.promotedNodeId !== null
+    case 'completed':  return item.isCompleted
+  }
+}
+
 export default function InboxView() {
   const { data: items = [], isLoading, error } = useInboxItems()
   const { mutate: createItem, isPending: creating } = useCreateInboxItem()
@@ -12,11 +32,13 @@ export default function InboxView() {
 
   const [draft,        setDraft]        = useState('')
   const [promoteItem,  setPromoteItem]  = useState<InboxItem | null>(null)
+  const [filter,       setFilter]       = useState<InboxFilter>('all')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const carriedOver = items.filter(i => i.state === 'unassigned' && !i.isCompleted && i.carriedOver)
-  const unassigned  = items.filter(i => i.state === 'unassigned' && !i.isCompleted && !i.carriedOver)
-  const processed   = items.filter(i => i.state !== 'unassigned' || i.isCompleted)
+  const filteredItems = items.filter(i => matchesFilter(i, filter))
+  const carriedOver = filteredItems.filter(i => i.state === 'unassigned' && !i.isCompleted && i.carriedOver)
+  const unassigned  = filteredItems.filter(i => i.state === 'unassigned' && !i.isCompleted && !i.carriedOver)
+  const processed   = filteredItems.filter(i => i.state !== 'unassigned' || i.isCompleted)
   const unassignedCount = carriedOver.length + unassigned.length
 
   function handleCapture() {
@@ -88,6 +110,21 @@ export default function InboxView() {
         </button>
       </div>
 
+      {/* Filter bar */}
+      <div className={styles.filterBar} role="tablist" aria-label="Filter inbox items">
+        {FILTERS.map(f => (
+          <button
+            key={f.key}
+            role="tab"
+            aria-selected={filter === f.key}
+            className={`${styles.filterChip}${filter === f.key ? ' ' + styles.filterChipActive : ''}`}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {/* Error */}
       {errorMsg && (
         <p className={styles.error}>{errorMsg}</p>
@@ -102,6 +139,12 @@ export default function InboxView() {
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>Nothing captured yet</p>
             <p className={styles.hint}>Use the field above to capture anything on your mind.</p>
+          </div>
+        )}
+        {!isLoading && items.length > 0 && filteredItems.length === 0 && (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>Nothing here</p>
+            <p className={styles.hint}>No items match this filter.</p>
           </div>
         )}
 

@@ -1,0 +1,58 @@
+.weekPicker {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 268px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ns-space-2);
+  padding: 6px var(--ns-space-2);
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-input);
+}
+
+.navBtn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ns-radius-xs);
+  border: 1px solid var(--ns-border-soft);
+  background: rgba(255, 255, 255, .03);
+  color: var(--ns-text-mid);
+  font-size: var(--ns-text-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.navBtn:hover {
+  border-color: rgba(var(--ns-gold-rgb), .5);
+  color: var(--ns-gold);
+}
+
+.label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.labelMain {
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-md);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-none);
+  color: var(--ns-text-hi);
+}
+
+.labelSub {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-mono);
+  color: var(--ns-text-lo);
+}

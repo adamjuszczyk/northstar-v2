@@ -1,4 +1,4 @@
-import { useToggleDayItem, useDeleteDayItem } from '../../hooks/useDayItems'
+import { useToggleDayItem, useDeleteDayItem, useIncrementDayItemCounter } from '../../hooks/useDayItems'
 import type { DayItem } from '../../hooks/useDayItems'
 import styles from './DayListMode.module.css'
 
@@ -14,15 +14,21 @@ interface Props {
 }
 
 export default function DayListMode({ items }: Props) {
-  const { mutate: toggle, isPending: toggling } = useToggleDayItem()
-  const { mutate: remove, isPending: removing  } = useDeleteDayItem()
-  const isPending = toggling || removing
+  const { mutate: toggle,    isPending: toggling    } = useToggleDayItem()
+  const { mutate: remove,    isPending: removing    } = useDeleteDayItem()
+  const { mutate: increment, isPending: incrementing } = useIncrementDayItemCounter()
+  const isPending = toggling || removing || incrementing
 
   const anchored = items.filter(i => i.startTime !== null)
   const floating = items.filter(i => i.startTime === null)
 
   function handleToggle(item: DayItem) {
     toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
+  }
+
+  function handleIncrement(item: DayItem) {
+    if (!item.habitId || item.counterTarget === null) return
+    increment({ id: item.id, habitId: item.habitId, current: item.counterCurrent, target: item.counterTarget })
   }
 
   function handleDelete(item: DayItem) {
@@ -47,6 +53,7 @@ export default function DayListMode({ items }: Props) {
           {anchored.map(item => (
             <ListRow key={item.id} item={item} isPending={isPending}
               onToggle={() => handleToggle(item)}
+              onIncrement={() => handleIncrement(item)}
               onDelete={() => handleDelete(item)}
             />
           ))}
@@ -58,6 +65,7 @@ export default function DayListMode({ items }: Props) {
           {floating.map(item => (
             <ListRow key={item.id} item={item} isPending={isPending}
               onToggle={() => handleToggle(item)}
+              onIncrement={() => handleIncrement(item)}
               onDelete={() => handleDelete(item)}
             />
           ))}
@@ -68,13 +76,16 @@ export default function DayListMode({ items }: Props) {
 }
 
 interface RowProps {
-  item:      DayItem
-  isPending: boolean
-  onToggle:  () => void
-  onDelete:  () => void
+  item:        DayItem
+  isPending:   boolean
+  onToggle:    () => void
+  onIncrement: () => void
+  onDelete:    () => void
 }
 
-function ListRow({ item, isPending, onToggle, onDelete }: RowProps) {
+function ListRow({ item, isPending, onToggle, onIncrement, onDelete }: RowProps) {
+  const isCounter = item.counterTarget !== null
+
   return (
     <div
       className={`${styles.row}${item.isComplete ? ' ' + styles.rowDone : ''}`}
@@ -82,9 +93,9 @@ function ListRow({ item, isPending, onToggle, onDelete }: RowProps) {
     >
       <button
         className={`${styles.check}${item.isComplete ? ' ' + styles.checkDone : ''}`}
-        onClick={onToggle}
+        onClick={() => (isCounter && !item.isComplete ? onIncrement() : onToggle())}
         disabled={isPending}
-        aria-label={item.isComplete ? 'Mark incomplete' : 'Mark complete'}
+        aria-label={item.isComplete ? 'Mark incomplete' : isCounter ? 'Log one' : 'Mark complete'}
       >
         {item.isComplete ? '✓' : ''}
       </button>
@@ -99,6 +110,9 @@ function ListRow({ item, isPending, onToggle, onDelete }: RowProps) {
           <span className={`${styles.rowTag} ${styles['rowTag_' + item.source]}`}>
             {SOURCE_TAG[item.source]}
           </span>
+          {isCounter && (
+            <span className={styles.counterBadge}>{item.counterCurrent} / {item.counterTarget}</span>
+          )}
           {(item.treeNodeTitle ?? item.habitName) && (
             <span className={styles.rowOrigin}>↳ {item.treeNodeTitle ?? item.habitName}</span>
           )}

@@ -6,8 +6,10 @@ import { useTodayISO } from './useTodayISO'
 import { weekStart, monthStart } from '../lib/dates'
 
 interface AutoAddHabitRow {
-  id:          string
-  auto_add_to: 'day' | 'week' | 'month' | null
+  id:              string
+  auto_add_to:     'day' | 'week' | 'month' | null
+  frequency_type:  string
+  frequency_value: number | null
 }
 
 /**
@@ -32,7 +34,7 @@ export function useHabitAutoAddSweep() {
     async function sweep() {
       const { data: habits, error } = await supabase
         .from('ns_habits')
-        .select('id, auto_add_to')
+        .select('id, auto_add_to, frequency_type, frequency_value')
         .eq('user_id', user!.id)
         .eq('auto_add', true)
       if (error || !habits || cancelled) return
@@ -48,9 +50,12 @@ export function useHabitAutoAddSweep() {
             .eq('user_id', user!.id).eq('habit_id', h.id).eq('date', today)
             .limit(1)
           if (!existing || existing.length === 0) {
+            const isCounter = h.frequency_type === 'x_per_day'
             const { error: insErr } = await supabase.from('ns_day_items').insert({
               user_id: user!.id, date: today, source: 'habit', habit_id: h.id,
               is_complete: false, position: 0, priority: 'medium',
+              counter_current: isCounter ? 0 : undefined,
+              counter_target:  isCounter ? (h.frequency_value ?? 1) : undefined,
             })
             if (!insErr) touchedDay = true
           }

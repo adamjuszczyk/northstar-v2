@@ -183,6 +183,7 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
     if (item.title) return item.title
     if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? '(untitled)'
     if (item.habitId) return habitMap.get(item.habitId)?.name ?? '(untitled)'
+    if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? '(untitled)'
     return '(untitled)'
   }
 

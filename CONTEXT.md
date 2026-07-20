@@ -71,21 +71,76 @@ RLS enabled and verified on all tables.
 - TASKS.md — technical architecture and data models
 - AUDIT.md — Fable 5 audit findings, fixed and deferred items
 - tokens.css — all CSS custom properties, single source of truth for colours
-- src/lib/db.ts — Dexie schema (version 6)
+- src/lib/db.ts — Dexie schema (version 7)
 - src/lib/supabase.ts — Supabase client
 - src/components/pickers/ — custom WeekPicker/DayPicker/MonthPicker,
   gold accent + Space Grotesk headers + JetBrains Mono grids, replace
-  the native browser date/week/month inputs in the inbox schedule flow
+  the native browser date/week/month inputs in the inbox schedule flow;
+  also TreeNodePicker.tsx (indented list + branching tree view, multi-
+  select), the shared tree-node picker used by DayItemForm and
+  FocusItemForm (Week/Month "add focus")
 
 ---
 
 ## Active work
-`scripts/migration_09_habit_x_per_day.sql` has been run — confirmed
-live: created an `x_per_day` habit (target 3, auto-add to day), it
-auto-added as a "0 / 3" counter item on Today, tapping it incremented
-to "1 / 3" and logged an `ns_habit_entries` row, deleting the habit
-cascade-deleted the day item cleanly. Feature 5 (habits x_per_day) is
-fully live, not just typechecked.
+`scripts/migration_10_focus_pool_linking.sql` has been written but
+**NOT YET RUN** — needs `origin_week_focus_id`/`origin_month_focus_id`
+columns on `ns_day_items` before Features 3-5 below actually track
+"pulled" state (the UI degrades gracefully without it: every week/month
+item just shows as permanently available, never pulled). Run it in the
+Supabase SQL editor before relying on the pull/pulled-indicator behaviour.
+
+Session of July 20, 2026 — planning UX overhaul, 6 features, typechecked
+(zero errors, `npm run build` clean) but **NOT browser-verified** —
+Adam chose to skip live verification this session (no login credentials
+available to the agent, and it will never enter a password). Smoke-test
+before trusting this in daily use:
+- **Tree picker redesign** (`src/components/pickers/TreeNodePicker.tsx`,
+  new shared component) — replaces every flat tree-node list used for
+  "add to day/week/month" with an indented expandable list by default
+  (chevron to expand, thin left connector line, type badge, child count
+  as "N inside", a dot indicator on any parent with a descendant already
+  scheduled in the current period) plus a LIST/TREE toggle in its own
+  toolbar that switches to a branching canvas view (reuses `NodeConnector`
+  from the main tree for real visual parity, not a re-implementation).
+  Selecting a parent never auto-selects children. Wired into both
+  `DayItemForm.tsx` (tree tab) and `FocusItemForm.tsx` (tree tab, shared
+  by Week and Month views).
+- **Multi-select everywhere** — every picker that adds to day/week/month
+  now supports selecting several items and confirming once ("Add N
+  items"): the tree tab (via `TreeNodePicker`), the inbox tab, and the
+  habit tab in `DayItemForm.tsx`; the tree tab in `FocusItemForm.tsx`.
+  New bulk-insert hooks: `useCreateDayItems`, `useAddInboxItemsToDay`,
+  `useCreateWeekFocusMany`, `useCreateMonthFocusMany` — one round trip
+  per batch, not N sequential inserts.
+- **Weekly pool in day view** (`WeekPoolPanel.tsx`) — collapsible "THIS
+  WEEK" panel in `DayView.tsx`, visible in both schedule and list modes,
+  listing every `ns_week_focus` item for the current week (tree/inbox/
+  habit/standalone, all sources). Available items show a pull button;
+  pulled items show which day(s) they went to. Collapsed by default if
+  empty, expanded if it has items.
+- **Tasks this week / this month** — new standalone-only sections below
+  the existing WEEKLY FOCUS / MONTHLY FOCUS lists in `WeekView.tsx` and
+  `MonthView.tsx` (`ns_week_focus`/`ns_month_focus` rows with
+  `source = 'standalone'`), each with its own inline quick-add (title
+  only, no tree link), a pulled-day indicator, an inline "pull to today"
+  button (disabled if today isn't in the displayed week/month), and the
+  existing complete/delete controls.
+- **Pulled-state tracking design decision:** rather than matching a day
+  item back to its source by `tree_node_id`/`inbox_item_id`/`habit_id`
+  (which doesn't work for standalone tasks — no reference id to match),
+  every pull sets a direct FK link: `ns_day_items.origin_week_focus_id`
+  / `origin_month_focus_id` → the exact focus row it came from. One
+  uniform "available vs pulled" computation across every source.
+  Confirmed with Adam before writing the migration.
+- **Bonus fix while in the area:** `WeekView.tsx`'s 7-day mini-grid was
+  showing "Untitled" for habit-sourced day items (flagged as known-but-
+  deferred in the previous session's notes) — `resolveEventTitle` was
+  missing a `habitId` branch and `useDayItemsSummary.ts` wasn't fetching
+  `habit_id` at all. Fixed both, now that `DayItemSummaryRow` needed
+  `habitId` anyway for the pull-tracking work above.
+- Dexie bumped to v7 (`originWeekFocusId`/`originMonthFocusId` added to
+  `CachedDayItem`, no new indexes — same pattern as the v6 bump).
 
 Session of July 12, 2026 — 3 fixes + 6 features + 1 follow-up fix, all typechecked
 (zero errors) and browser-verified against live Supabase data:
@@ -116,16 +171,9 @@ Session of July 12, 2026 — 3 fixes + 6 features + 1 follow-up fix, all typeche
   tables first so an item still scheduled elsewhere isn't wrongly
   reverted. Live-verified on both the day and week delete paths.
 
-One pre-existing bug found but **not fixed** (out of this session's
-scope — flag before starting new work nearby):
-- The 7-day mini-grid inside Week/Month view (`useDayItemsSummary.ts`)
-  never resolves habit-sourced day items — shows "Untitled" for any
-  anchored habit item. Different bug from the one fixed above (that
-  was the week/month *focus list*, not this day-item preview grid).
-  `resolveEventTitle` in `WeekView.tsx` needs a habitId branch, and
-  `useDayItemsSummary.ts` needs to fetch `habit_id` in the first place.
-
-Next: use in real life, collect feedback, plan v3.
+Next: run migration_10, smoke-test all 6 features from the July 20
+session live (tree picker, multi-select, weekly pool, week/month task
+pools), then use in real life and collect feedback.
 
 ---
 

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
-import { useCreateDayItem, useAddInboxToDay, timeToDecimal } from '../../hooks/useDayItems'
+import {
+  useCreateDayItem, useCreateDayItems, useAddInboxToDay, useAddInboxItemsToDay,
+  useDayItems, timeToDecimal,
+} from '../../hooks/useDayItems'
 import type { DayItemPriority } from '../../hooks/useDayItems'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
 import { useHabits } from '../../hooks/useHabits'
 import { BLOCK_COLOURS } from '../../lib/blockColours'
-import type { TreeNode, NodeType } from '../../types'
+import TreeNodePicker from '../pickers/TreeNodePicker'
 import styles from './DayItemForm.module.css'
 
 type Source = 'standalone' | 'tree' | 'inbox' | 'habit'
-
-const NODE_TYPE_ORDER: NodeType[] = ['vision', 'goal', 'project', 'task']
 
 /**
  * Shared time-anchor validation for DayItemForm and DayItemEditForm.
@@ -36,40 +37,62 @@ interface Props {
 }
 
 export default function DayItemForm({ date, onClose }: Props) {
-  const [source,     setSource]     = useState<Source>('standalone')
-  const [title,      setTitle]      = useState('')
-  const [hasTime,    setHasTime]    = useState(false)
-  const [startTime,  setStartTime]  = useState('')
-  const [endTime,    setEndTime]    = useState('')
-  const [treeNodeId, setTreeNodeId] = useState<string | null>(null)
-  const [inboxId,    setInboxId]    = useState<string | null>(null)
-  const [habitId,    setHabitId]    = useState<string | null>(null)
-  const [treeSearch, setTreeSearch] = useState('')
-  const [priority,   setPriority]   = useState<DayItemPriority>('medium')
-  const [colour,     setColour]     = useState<string | null>(null)
-  const [error,      setError]      = useState<string | null>(null)
+  const [source,      setSource]      = useState<Source>('standalone')
+  const [title,       setTitle]       = useState('')
+  const [hasTime,     setHasTime]     = useState(false)
+  const [startTime,   setStartTime]   = useState('')
+  const [endTime,     setEndTime]     = useState('')
+  const [treeNodeIds, setTreeNodeIds] = useState<Set<string>>(new Set())
+  const [inboxIds,    setInboxIds]    = useState<Set<string>>(new Set())
+  const [habitIds,    setHabitIds]    = useState<Set<string>>(new Set())
+  const [priority,    setPriority]    = useState<DayItemPriority>('medium')
+  const [colour,      setColour]      = useState<string | null>(null)
+  const [error,       setError]       = useState<string | null>(null)
 
-  const { mutate: createItem,   isPending: creating   } = useCreateDayItem()
-  const { mutate: addFromInbox, isPending: addingInbox } = useAddInboxToDay()
-  const { data: treeNodes  = [] } = useTreeNodes()
-  const { data: inboxItems = [] } = useInboxItems()
-  const { data: habits     = [] } = useHabits()
+  const { mutate: createItem,    isPending: creating    } = useCreateDayItem()
+  const { mutate: createItems,   isPending: creatingMany } = useCreateDayItems()
+  const { mutate: addFromInbox,  isPending: addingInbox  } = useAddInboxToDay()
+  const { mutate: addManyInbox,  isPending: addingInboxMany } = useAddInboxItemsToDay()
+  const { data: treeNodes    = [] } = useTreeNodes()
+  const { data: inboxItems   = [] } = useInboxItems()
+  const { data: habits       = [] } = useHabits()
+  const { data: existingDayItems = [] } = useDayItems(date)
 
-  const isPending = creating || addingInbox
+  const isPending = creating || creatingMany || addingInbox || addingInboxMany
   const unassignedInbox = inboxItems.filter(i => i.state === 'unassigned')
 
-  const filteredNodes = treeNodes
-    .filter(n => !treeSearch || n.title.toLowerCase().includes(treeSearch.toLowerCase()))
-    .sort((a, b) => {
-      const ai = NODE_TYPE_ORDER.indexOf(a.type)
-      const bi = NODE_TYPE_ORDER.indexOf(b.type)
-      return ai !== bi ? ai - bi : a.title.localeCompare(b.title)
+  // treeNodeIds already scheduled today — drives the picker's "already
+  // in today" indicator on parent nodes.
+  const focusedNodeIds = new Set(
+    existingDayItems.filter(i => i.treeNodeId).map(i => i.treeNodeId as string)
+  )
+
+  function toggleTreeNode(id: string) {
+    setTreeNodeIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
     })
+  }
+  function toggleInboxItem(id: string) {
+    setInboxIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function toggleHabit(id: string) {
+    setHabitIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   useEffect(() => {
-    setTreeNodeId(null)
-    setInboxId(null)
-    setHabitId(null)
+    setTreeNodeIds(new Set())
+    setInboxIds(new Set())
+    setHabitIds(new Set())
     setTitle('')
     setHasTime(false)
     setStartTime('')
@@ -88,9 +111,9 @@ export default function DayItemForm({ date, onClose }: Props) {
   function isValid(): boolean {
     if (validateTimeRange(hasTime, startTime, endTime)) return false
     if (source === 'standalone') return title.trim().length > 0
-    if (source === 'tree')       return treeNodeId !== null
-    if (source === 'inbox')      return inboxId !== null
-    if (source === 'habit')      return habitId !== null
+    if (source === 'tree')       return treeNodeIds.size > 0
+    if (source === 'inbox')      return inboxIds.size > 0
+    if (source === 'habit')      return habitIds.size > 0
     return false
   }
 
@@ -100,48 +123,63 @@ export default function DayItemForm({ date, onClose }: Props) {
     if (timeError) { setError(timeError); return }
     if (!isValid()) return
     setError(null)
+    const onError = (e: unknown) => setError((e as Error).message)
+    const sharedStartTime = hasTime && startTime ? startTime : null
+    const sharedEndTime   = hasTime && endTime   ? endTime   : null
 
     if (source === 'standalone') {
       createItem({
         date, source: 'standalone',
         title:     title.trim(),
-        startTime: hasTime && startTime ? startTime : null,
-        endTime:   hasTime && endTime   ? endTime   : null,
+        startTime: sharedStartTime,
+        endTime:   sharedEndTime,
         priority,
         colour,
-      }, { onSuccess: onClose, onError: e => setError((e as Error).message) })
+      }, { onSuccess: onClose, onError })
 
     } else if (source === 'tree') {
-      createItem({
-        date, source: 'tree',
-        treeNodeId,
-        startTime: hasTime && startTime ? startTime : null,
-        endTime:   hasTime && endTime   ? endTime   : null,
-        priority,
-        colour,
-      }, { onSuccess: onClose, onError: e => setError((e as Error).message) })
+      createItems(
+        Array.from(treeNodeIds).map(id => ({
+          date, source: 'tree' as const,
+          treeNodeId: id,
+          startTime: sharedStartTime,
+          endTime:   sharedEndTime,
+          priority, colour,
+        })),
+        { onSuccess: onClose, onError },
+      )
 
     } else if (source === 'inbox') {
-      addFromInbox(
-        { inboxItemId: inboxId!, date, priority, colour },
-        { onSuccess: onClose, onError: e => setError((e as Error).message) }
+      addManyInbox(
+        { inboxItemIds: Array.from(inboxIds), date, priority, colour },
+        { onSuccess: onClose, onError },
       )
 
     } else if (source === 'habit') {
-      createItem({
-        date, source: 'habit',
-        habitId,
-        startTime: hasTime && startTime ? startTime : null,
-        endTime:   hasTime && endTime   ? endTime   : null,
-        priority,
-        colour,
-      }, { onSuccess: onClose, onError: e => setError((e as Error).message) })
+      createItems(
+        Array.from(habitIds).map(id => ({
+          date, source: 'habit' as const,
+          habitId: id,
+          startTime: sharedStartTime,
+          endTime:   sharedEndTime,
+          priority, colour,
+        })),
+        { onSuccess: onClose, onError },
+      )
     }
   }
 
   function handleBackdrop(e: React.MouseEvent) {
     if (e.target === e.currentTarget) onClose()
   }
+
+  const selectedCount =
+    source === 'tree'  ? treeNodeIds.size :
+    source === 'inbox' ? inboxIds.size    :
+    source === 'habit' ? habitIds.size    : 0
+  const addLabel = isPending
+    ? '…'
+    : selectedCount > 0 ? `Add ${selectedCount} item${selectedCount > 1 ? 's' : ''}` : 'Add to day'
 
   return (
     <div className={styles.backdrop} onClick={handleBackdrop}>
@@ -198,21 +236,14 @@ export default function DayItemForm({ date, onClose }: Props) {
         {source === 'tree' && (
           <div className={styles.body}>
             <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="di-tree-search">GOAL TREE NODE</label>
-              <input
-                id="di-tree-search"
-                className={styles.input}
-                placeholder="Search nodes…"
-                value={treeSearch}
-                onChange={e => setTreeSearch(e.target.value)}
-                autoFocus
+              <span className={styles.fieldLabel}>GOAL TREE NODES</span>
+              <TreeNodePicker
+                nodes={treeNodes}
+                selectedIds={treeNodeIds}
+                onToggleSelect={toggleTreeNode}
+                focusedNodeIds={focusedNodeIds}
+                focusLabel="today"
               />
-            </div>
-            <div className={styles.nodeList}>
-              {filteredNodes.length === 0 && <p className={styles.emptyHint}>No nodes found.</p>}
-              {filteredNodes.map(n => (
-                <NodeRow key={n.id} node={n} selected={treeNodeId === n.id} onSelect={() => setTreeNodeId(n.id)} />
-              ))}
             </div>
             <TimeSection hasTime={hasTime} setHasTime={setHasTime}
               startTime={startTime} setStartTime={setStartTime}
@@ -230,19 +261,27 @@ export default function DayItemForm({ date, onClose }: Props) {
 
         {source === 'inbox' && (
           <div className={styles.body}>
-            <p className={styles.fieldLabel}>UNASSIGNED INBOX ITEMS</p>
+            <div className={styles.pickerHeaderRow}>
+              <p className={styles.fieldLabel}>UNASSIGNED INBOX ITEMS</p>
+              {inboxIds.size > 0 && <span className={styles.selectedCount}>{inboxIds.size} selected</span>}
+            </div>
             <div className={styles.nodeList}>
               {unassignedInbox.length === 0 && <p className={styles.emptyHint}>No unassigned inbox items.</p>}
-              {unassignedInbox.map(item => (
-                <button
-                  key={item.id}
-                  className={`${styles.inboxRow}${inboxId === item.id ? ' ' + styles.inboxRowSelected : ''}`}
-                  onClick={() => setInboxId(item.id)}
-                >
-                  <span className={styles.inboxDot} />
-                  <span className={styles.inboxContent}>{item.content}</span>
-                </button>
-              ))}
+              {unassignedInbox.map(item => {
+                const selected = inboxIds.has(item.id)
+                return (
+                  <button
+                    key={item.id}
+                    className={`${styles.inboxRow}${selected ? ' ' + styles.inboxRowSelected : ''}`}
+                    onClick={() => toggleInboxItem(item.id)}
+                  >
+                    <span className={`${styles.checkbox}${selected ? ' ' + styles.checkboxChecked : ''}`}>
+                      {selected ? '✓' : ''}
+                    </span>
+                    <span className={styles.inboxContent}>{item.content}</span>
+                  </button>
+                )
+              })}
             </div>
             <div className={styles.field}>
               <span className={styles.fieldLabel}>PRIORITY</span>
@@ -257,20 +296,29 @@ export default function DayItemForm({ date, onClose }: Props) {
 
         {source === 'habit' && (
           <div className={styles.body}>
-            <p className={styles.fieldLabel}>HABITS</p>
+            <div className={styles.pickerHeaderRow}>
+              <p className={styles.fieldLabel}>HABITS</p>
+              {habitIds.size > 0 && <span className={styles.selectedCount}>{habitIds.size} selected</span>}
+            </div>
             <div className={styles.nodeList}>
               {habits.length === 0 && <p className={styles.emptyHint}>No habits yet — add one from the Habits tab.</p>}
-              {habits.map(h => (
-                <button
-                  key={h.id}
-                  className={`${styles.nodeRow}${habitId === h.id ? ' ' + styles.nodeRowSelected : ''}`}
-                  onClick={() => setHabitId(h.id)}
-                >
-                  <span className={styles.nodeTypeDot} style={{ background: h.mode === 'build' ? 'var(--ns-ok)' : 'var(--ns-project-accent)' }} />
-                  <span className={styles.nodeTitle}>{h.name}</span>
-                  <span className={styles.nodeType}>{h.mode}</span>
-                </button>
-              ))}
+              {habits.map(h => {
+                const selected = habitIds.has(h.id)
+                return (
+                  <button
+                    key={h.id}
+                    className={`${styles.nodeRow}${selected ? ' ' + styles.nodeRowSelected : ''}`}
+                    onClick={() => toggleHabit(h.id)}
+                  >
+                    <span className={`${styles.checkbox}${selected ? ' ' + styles.checkboxChecked : ''}`}>
+                      {selected ? '✓' : ''}
+                    </span>
+                    <span className={styles.nodeTypeDot} style={{ background: h.mode === 'build' ? 'var(--ns-ok)' : 'var(--ns-project-accent)' }} />
+                    <span className={styles.nodeTitle}>{h.name}</span>
+                    <span className={styles.nodeType}>{h.mode}</span>
+                  </button>
+                )
+              })}
             </div>
             <TimeSection hasTime={hasTime} setHasTime={setHasTime}
               startTime={startTime} setStartTime={setStartTime}
@@ -295,7 +343,7 @@ export default function DayItemForm({ date, onClose }: Props) {
             onClick={handleSubmit}
             disabled={!isValid() || isPending}
           >
-            {isPending ? '…' : 'Add to day'}
+            {addLabel}
           </button>
         </div>
 
@@ -415,22 +463,5 @@ export function PriorityPicker({ priority, onChange }: PriorityPickerProps) {
         )
       })}
     </div>
-  )
-}
-
-// ── NodeRow ────────────────────────────────────────────────────────────────────
-
-interface NodeRowProps { node: TreeNode; selected: boolean; onSelect: () => void }
-
-function NodeRow({ node, selected, onSelect }: NodeRowProps) {
-  return (
-    <button
-      className={`${styles.nodeRow}${selected ? ' ' + styles.nodeRowSelected : ''}`}
-      onClick={onSelect}
-    >
-      <span className={styles.nodeTypeDot} style={{ background: `var(--ns-${node.type}-accent)` }} />
-      <span className={styles.nodeTitle}>{node.title}</span>
-      <span className={styles.nodeType}>{node.type}</span>
-    </button>
   )
 }

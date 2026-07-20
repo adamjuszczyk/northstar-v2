@@ -19,6 +19,7 @@ import DayListMode      from './DayListMode'
 import DayItemForm      from './DayItemForm'
 import DayItemEditForm  from './DayItemEditForm'
 import FocusReminder    from './FocusReminder'
+import WeekPoolPanel    from './WeekPoolPanel'
 import JournalSection   from './JournalSection'
 import styles from './DayView.module.css'
 
@@ -231,6 +232,9 @@ export default function DayView({ date, onDateChange }: Props) {
 
         {/* Week / month focus reminder */}
         <FocusReminder date={date} />
+
+        {/* Weekly pool — pull ns_week_focus items into today, visible in both modes */}
+        {!errorMsg && !isLoading && <WeekPoolPanel date={date} />}
 
         {/* Content */}
         {errorMsg ? (

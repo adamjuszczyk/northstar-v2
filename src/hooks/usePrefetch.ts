@@ -45,7 +45,7 @@ export function usePrefetch() {
 async function prefetchDayItems(userId: string, date: string) {
   const { data } = await supabase
     .from('ns_day_items')
-    .select('id, user_id, date, source, title, tree_node_id, inbox_item_id, habit_id, start_time, end_time, is_complete, priority, colour, position, counter_current, counter_target, created_at, updated_at')
+    .select('id, user_id, date, source, title, tree_node_id, inbox_item_id, habit_id, start_time, end_time, is_complete, priority, colour, position, counter_current, counter_target, origin_week_focus_id, origin_month_focus_id, created_at, updated_at')
     .eq('user_id', userId)
     .eq('date', date)
   if (!data) return
@@ -66,6 +66,8 @@ async function prefetchDayItems(userId: string, date: string) {
     position:    r.position,
     counterCurrent: r.counter_current ?? 0,
     counterTarget:  r.counter_target ?? null,
+    originWeekFocusId:  r.origin_week_focus_id  ?? null,
+    originMonthFocusId: r.origin_month_focus_id ?? null,
     createdAt:   r.created_at,
     updatedAt:   r.updated_at,
   })))

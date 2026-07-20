@@ -1,12 +1,14 @@
 import { useState, type CSSProperties } from 'react'
 import { format, parseISO, addDays, endOfMonth, getDay, isToday } from 'date-fns'
-import { useMonthFocus, useCreateMonthFocus, useToggleMonthFocus, useDeleteMonthFocus } from '../../hooks/useMonthFocus'
+import { useMonthFocus, useCreateMonthFocus, useCreateMonthFocusMany, useToggleMonthFocus, useDeleteMonthFocus } from '../../hooks/useMonthFocus'
 import type { MonthFocusItem } from '../../hooks/useMonthFocus'
+import { usePullMonthFocusToDay } from '../../hooks/useDayItems'
 import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
 import { useHabits } from '../../hooks/useHabits'
 import { useSettings } from '../../hooks/useSettings'
+import { monthStart as computeMonthStart, todayISO } from '../../lib/dates'
 import FocusItemForm from '../planner/FocusItemForm'
 import styles from './MonthView.module.css'
 
@@ -95,14 +97,27 @@ interface FocusRowProps {
   onToggle:     () => void
   onDelete:     () => void
   isPending:    boolean
+  /** When provided, renders the Feature 3/5 pulled-day indicator + pull action
+   *  (used only by the standalone "Tasks this month" section). */
+  pulledDates?: string[]
+  onPull?:      () => void
+  canPull?:     boolean
 }
 
-function FocusRow({ item, displayTitle, onToggle, onDelete, isPending }: FocusRowProps) {
+function FocusRow({
+  item, displayTitle, onToggle, onDelete, isPending, pulledDates, onPull, canPull,
+}: FocusRowProps) {
   const sourceLabel =
     item.source === 'tree'  ? '✦ GOAL TREE'  :
     item.source === 'inbox' ? '⌵ FROM INBOX' :
     item.source === 'habit' ? '◆ HABIT'      :
                                '• STANDALONE'
+
+  const showPullControls = pulledDates !== undefined
+  const isPulled = (pulledDates?.length ?? 0) > 0
+  const dayLabels = (pulledDates ?? [])
+    .map(d => format(parseISO(d), 'EEE d').toUpperCase())
+    .join(', ')
 
   return (
     <div className={`${styles.focusRow}${item.isComplete ? ' ' + styles.focusRowDone : ''}`}>
@@ -120,12 +135,63 @@ function FocusRow({ item, displayTitle, onToggle, onDelete, isPending }: FocusRo
         </span>
         <span className={styles.focusSource}>{sourceLabel}</span>
       </div>
+      {showPullControls && (
+        isPulled ? (
+          <span className={styles.pulledTag}>→ {dayLabels}</span>
+        ) : (
+          <button
+            className={styles.pullBtn}
+            onClick={onPull}
+            disabled={isPending || !canPull}
+            title={canPull ? undefined : "Today isn't in this month"}
+          >
+            + Pull to today
+          </button>
+        )
+      )}
       <button
         className={styles.deleteBtn}
         onClick={onDelete}
         disabled={isPending}
         aria-label="Remove"
       >✕</button>
+    </div>
+  )
+}
+
+// ── Standalone task quick-add ───────────────────────────────────────────────────
+
+interface QuickAddProps {
+  placeholder: string
+  onAdd:       (title: string) => void
+  isPending:   boolean
+}
+
+function TaskQuickAdd({ placeholder, onAdd, isPending }: QuickAddProps) {
+  const [value, setValue] = useState('')
+
+  function submit() {
+    const trimmed = value.trim()
+    if (!trimmed || isPending) return
+    onAdd(trimmed)
+    setValue('')
+  }
+
+  return (
+    <div className={styles.quickAddRow}>
+      <input
+        className={styles.quickAddInput}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') submit() }}
+        disabled={isPending}
+      />
+      <button
+        className={styles.quickAddBtn}
+        onClick={submit}
+        disabled={isPending || !value.trim()}
+      >+ Add</button>
     </div>
   )
 }
@@ -151,10 +217,12 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
   const { data: inboxItems = [] } = useInboxItems()
   const { data: habits     = [] } = useHabits()
 
-  const { mutate: createFocus, isPending: creating } = useCreateMonthFocus()
+  const { mutate: createFocus,     isPending: creating     } = useCreateMonthFocus()
+  const { mutate: createFocusMany, isPending: creatingMany } = useCreateMonthFocusMany()
   const { mutate: toggleFocus, isPending: toggling  } = useToggleMonthFocus()
   const { mutate: deleteFocus, isPending: deleting  } = useDeleteMonthFocus()
-  const isPending = creating || toggling || deleting
+  const { mutate: pullToDay,   isPending: pulling    } = usePullMonthFocusToDay()
+  const isPending = creating || creatingMany || toggling || deleting || pulling
 
   const nodeMap  = new Map(treeNodes.map(n => [n.id, n]))
   const inboxMap = new Map(inboxItems.map(i => [i.id, i]))
@@ -164,6 +232,21 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
 
   const isLoading = loadingItems || loadingFocus
 
+  // Features 3/5: standalone tasks live in their own "Tasks this month"
+  // section, separate from tree/inbox/habit items in "Monthly focus".
+  const treeFocusItems = focusItems.filter(i => i.source !== 'standalone')
+  const taskItems      = focusItems.filter(i => i.source === 'standalone')
+
+  // focusId → dates it's been pulled to this month (origin_month_focus_id link).
+  const pulledMap = new Map<string, string[]>()
+  for (const item of rawItems) {
+    if (!item.originMonthFocusId) continue
+    const list = pulledMap.get(item.originMonthFocusId)
+    if (list) list.push(item.date)
+    else pulledMap.set(item.originMonthFocusId, [item.date])
+  }
+  const todayInThisMonth = computeMonthStart(todayISO()) === monthStart
+
   function displayTitle(item: MonthFocusItem): string {
     if (item.title) return item.title
     if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? '(untitled)'
@@ -172,12 +255,39 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
     return '(untitled)'
   }
 
-  function handleSave(input: { source: 'standalone' | 'tree'; title?: string; treeNodeId?: string }) {
+  function handleSaveStandalone(title: string) {
     createFocus(
-      { monthStart, source: input.source, title: input.title, treeNodeId: input.treeNodeId },
-      { onSuccess: () => setFormOpen(false) }
+      { monthStart, source: 'standalone', title },
+      { onSuccess: () => setFormOpen(false) },
     )
   }
+
+  function handleSaveTree(treeNodeIds: string[]) {
+    createFocusMany(
+      { monthStart, treeNodeIds },
+      { onSuccess: () => setFormOpen(false) },
+    )
+  }
+
+  function handleAddTask(title: string) {
+    createFocus({ monthStart, source: 'standalone', title })
+  }
+
+  function handlePullTask(item: MonthFocusItem) {
+    pullToDay({
+      monthFocusId: item.id,
+      date:         todayISO(),
+      source:       item.source,
+      title:        item.title,
+      treeNodeId:   item.treeNodeId,
+      inboxItemId:  item.inboxItemId,
+      habitId:      item.habitId,
+    })
+  }
+
+  const focusedNodeIds = new Set(
+    focusItems.filter(i => i.treeNodeId).map(i => i.treeNodeId as string)
+  )
 
   return (
     <div className={styles.page}>
@@ -211,23 +321,23 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
         )}
       </div>
 
-      {/* Monthly focus list */}
+      {/* Monthly focus list — tree/inbox/habit items pulled into the month */}
       <div className={styles.focusSection}>
         <div className={styles.focusHeader}>
           <span className={styles.focusDot} />
           <span className={styles.focusSectionTitle}>MONTHLY FOCUS</span>
-          <span className={styles.focusCount}>· {focusItems.length}</span>
+          <span className={styles.focusCount}>· {treeFocusItems.length}</span>
           <button className={styles.addBtn} onClick={() => setFormOpen(true)}>+ Add</button>
         </div>
 
-        {focusItems.length === 0 && !isLoading && (
+        {treeFocusItems.length === 0 && !isLoading && (
           <p className={styles.emptyHint}>
-            Nothing flagged for this month — pull from your tree or add a task.
+            Nothing flagged for this month — pull from your tree.
           </p>
         )}
 
         <div className={styles.focusList}>
-          {focusItems.map(item => (
+          {treeFocusItems.map(item => (
             <FocusRow
               key={item.id}
               item={item}
@@ -246,12 +356,56 @@ export default function MonthView({ monthStart, onDaySelect }: Props) {
         </div>
       </div>
 
+      {/* Tasks this month — standalone, title-only, no tree link (Feature 5) */}
+      <div className={styles.focusSection}>
+        <div className={styles.focusHeader}>
+          <span className={styles.focusDot} />
+          <span className={styles.focusSectionTitle}>TASKS THIS MONTH</span>
+          <span className={styles.focusCount}>· {taskItems.length}</span>
+        </div>
+
+        <TaskQuickAdd
+          placeholder="Add a task for this month…"
+          onAdd={handleAddTask}
+          isPending={creating}
+        />
+
+        {taskItems.length === 0 && !isLoading && (
+          <p className={styles.emptyHint}>No standalone tasks yet.</p>
+        )}
+
+        <div className={styles.focusList}>
+          {taskItems.map(item => (
+            <FocusRow
+              key={item.id}
+              item={item}
+              displayTitle={displayTitle(item)}
+              isPending={isPending}
+              pulledDates={pulledMap.get(item.id) ?? []}
+              canPull={todayInThisMonth}
+              onPull={() => handlePullTask(item)}
+              onToggle={() => toggleFocus({
+                id: item.id, monthStart, source: item.source,
+                treeNodeId: item.treeNodeId, isComplete: !item.isComplete,
+              })}
+              onDelete={() => {
+                if (!window.confirm(`Remove "${displayTitle(item)}" from this month?`)) return
+                deleteFocus({ id: item.id, monthStart, source: item.source, inboxItemId: item.inboxItemId })
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       {formOpen && (
         <FocusItemForm
           label="ADD MONTHLY FOCUS"
           onClose={() => setFormOpen(false)}
-          onSave={handleSave}
-          isSaving={creating}
+          onSaveStandalone={handleSaveStandalone}
+          onSaveTree={handleSaveTree}
+          isSaving={creating || creatingMany}
+          focusedNodeIds={focusedNodeIds}
+          focusLabel="this month"
         />
       )}
     </div>

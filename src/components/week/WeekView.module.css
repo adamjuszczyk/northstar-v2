@@ -305,6 +305,81 @@
   color: var(--ns-text-lo);
 }
 
+/* ── Pull-to-today (Features 3/4) ─────────────────────────────────────────── */
+
+.pulledTag {
+  flex-shrink: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-sm);
+  color: var(--ns-ok);
+  white-space: nowrap;
+}
+
+.pullBtn {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-accent-rgb), .35);
+  background: rgba(var(--ns-accent-rgb), .1);
+  color: var(--ns-accent);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .14s, border-color .14s;
+}
+.pullBtn:hover:not(:disabled) {
+  background: rgba(var(--ns-accent-rgb), .18);
+  border-color: rgba(var(--ns-accent-rgb), .6);
+}
+.pullBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Standalone task quick-add ────────────────────────────────────────────── */
+
+.quickAddRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.quickAddInput {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-input);
+  color: var(--ns-text-hi);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-base);
+  outline: none;
+  transition: border-color .14s;
+}
+.quickAddInput::placeholder { color: var(--ns-text-lo); }
+.quickAddInput:focus { border-color: rgba(var(--ns-accent-rgb), .45); }
+
+.quickAddBtn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid rgba(var(--ns-accent-rgb), .4);
+  background: rgba(var(--ns-accent-rgb), .1);
+  color: var(--ns-accent);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background .14s, border-color .14s;
+}
+.quickAddBtn:hover:not(:disabled) {
+  background: rgba(var(--ns-accent-rgb), .18);
+  border-color: rgba(var(--ns-accent-rgb), .65);
+}
+.quickAddBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .deleteBtn {
   width: 20px;
   height: 20px;

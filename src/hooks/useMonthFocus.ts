@@ -102,6 +102,32 @@ export function useCreateMonthFocus() {
   })
 }
 
+/** Bulk insert — one row per selected tree node, single round trip. */
+export function useCreateMonthFocusMany() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ monthStart, treeNodeIds }: { monthStart: string; treeNodeIds: string[] }) => {
+      if (!user) throw new Error('Not authenticated')
+      if (treeNodeIds.length === 0) return
+      const { error } = await supabase.from('ns_month_focus').insert(
+        treeNodeIds.map(id => ({
+          user_id:      user.id,
+          month_start:  monthStart,
+          source:       'tree',
+          tree_node_id: id,
+          is_complete:  false,
+          position:     0,
+        })),
+      )
+      if (error) throw error
+    },
+    onSuccess: (_d, input) => {
+      qc.invalidateQueries({ queryKey: ['ns_month_focus', input.monthStart] })
+    },
+  })
+}
+
 export function useToggleMonthFocus() {
   const { user } = useAuth()
   const qc = useQueryClient()

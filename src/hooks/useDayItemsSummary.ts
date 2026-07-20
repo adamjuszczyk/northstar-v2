@@ -10,9 +10,12 @@ export interface DayItemSummaryRow {
   title:       string | null
   treeNodeId:  string | null
   inboxItemId: string | null
+  habitId:     string | null
   priority:    'high' | 'medium' | 'low'
   isComplete:  boolean
-  source:      'standalone' | 'tree' | 'inbox'
+  source:      'standalone' | 'tree' | 'inbox' | 'habit'
+  originWeekFocusId:  string | null
+  originMonthFocusId: string | null
 }
 
 function normP(p: unknown): 'high' | 'medium' | 'low' {
@@ -37,9 +40,12 @@ export function useRangeDayItems(startDate: string, endDate: string) {
             title:       r.title,
             treeNodeId:  r.treeNodeId,
             inboxItemId: r.inboxItemId,
+            habitId:     r.habitId ?? null,
             priority:    normP(r.priority),
             isComplete:  r.isComplete,
-            source:      r.source as 'standalone' | 'tree' | 'inbox',
+            source:      r.source as 'standalone' | 'tree' | 'inbox' | 'habit',
+            originWeekFocusId:  r.originWeekFocusId  ?? null,
+            originMonthFocusId: r.originMonthFocusId ?? null,
           }))
           .sort((a, b) => a.date === b.date
             ? (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99')
@@ -47,7 +53,7 @@ export function useRangeDayItems(startDate: string, endDate: string) {
       }
       const { data, error } = await supabase
         .from('ns_day_items')
-        .select('id, date, start_time, title, tree_node_id, inbox_item_id, priority, is_complete, source')
+        .select('id, date, start_time, title, tree_node_id, inbox_item_id, habit_id, priority, is_complete, source, origin_week_focus_id, origin_month_focus_id')
         .eq('user_id', user!.id)
         .gte('date', startDate)
         .lte('date', endDate)
@@ -61,9 +67,12 @@ export function useRangeDayItems(startDate: string, endDate: string) {
         title:       r.title        as string | null,
         treeNodeId:  r.tree_node_id  as string | null,
         inboxItemId: r.inbox_item_id as string | null,
+        habitId:     (r.habit_id as string | null) ?? null,
         priority:    normP(r.priority),
         isComplete:  r.is_complete  as boolean,
-        source:      r.source      as 'standalone' | 'tree' | 'inbox',
+        source:      r.source      as 'standalone' | 'tree' | 'inbox' | 'habit',
+        originWeekFocusId:  (r.origin_week_focus_id as string | null)  ?? null,
+        originMonthFocusId: (r.origin_month_focus_id as string | null) ?? null,
       }))
     },
     networkMode: 'always',

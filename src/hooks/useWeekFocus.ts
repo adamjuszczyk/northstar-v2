@@ -103,6 +103,32 @@ export function useCreateWeekFocus() {
   })
 }
 
+/** Bulk insert — one row per selected tree node, single round trip. */
+export function useCreateWeekFocusMany() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ weekStart, treeNodeIds }: { weekStart: string; treeNodeIds: string[] }) => {
+      if (!user) throw new Error('Not authenticated')
+      if (treeNodeIds.length === 0) return
+      const { error } = await supabase.from('ns_week_focus').insert(
+        treeNodeIds.map(id => ({
+          user_id:      user.id,
+          week_start:   weekStart,
+          source:       'tree',
+          tree_node_id: id,
+          is_complete:  false,
+          position:     0,
+        })),
+      )
+      if (error) throw error
+    },
+    onSuccess: (_d, input) => {
+      qc.invalidateQueries({ queryKey: ['ns_week_focus', input.weekStart] })
+    },
+  })
+}
+
 export function useToggleWeekFocus() {
   const { user } = useAuth()
   const qc = useQueryClient()

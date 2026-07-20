@@ -29,6 +29,10 @@ export interface RawDayItem {
   position:     number
   counterCurrent: number         // x_per_day habit progress ("0 / 2") — 0 for non-counter items
   counterTarget:  number | null  // non-null marks this item as a counter item
+  /** Set when this item was "pulled" from a week/month focus pool (Features 3-5)
+   *  — links back to the exact ns_week_focus / ns_month_focus row it came from. */
+  originWeekFocusId:  string | null
+  originMonthFocusId: string | null
   createdAt:    string
   updatedAt:    string
 }
@@ -73,6 +77,8 @@ function row2raw(r: Record<string, unknown>): RawDayItem {
     position:    r.position      as number,
     counterCurrent: (r.counter_current as number | null) ?? 0,
     counterTarget:  (r.counter_target as number | null) ?? null,
+    originWeekFocusId:  (r.origin_week_focus_id as string | null) ?? null,
+    originMonthFocusId: (r.origin_month_focus_id as string | null) ?? null,
     createdAt:   r.created_at    as string,
     updatedAt:   r.updated_at    as string,
   }
@@ -111,6 +117,8 @@ export function useDayItems(date: string) {
           position:    r.position,
           counterCurrent: r.counterCurrent ?? 0,
           counterTarget:  r.counterTarget ?? null,
+          originWeekFocusId:  r.originWeekFocusId  ?? null,
+          originMonthFocusId: r.originMonthFocusId ?? null,
           createdAt:   r.createdAt,
           updatedAt:   r.updatedAt,
         }))
@@ -182,6 +190,38 @@ export function useCreateDayItem() {
   })
 }
 
+/** Bulk insert — one row per input, single round trip. Used by multi-select
+ *  pickers (tree/habit tabs) so N selections create N day items in one call. */
+export function useCreateDayItems() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (inputs: CreateDayItemInput[]) => {
+      if (!user) throw new Error('Not authenticated')
+      if (inputs.length === 0) return
+      const { error } = await supabase
+        .from('ns_day_items')
+        .insert(inputs.map(input => ({
+          user_id:       user.id,
+          date:          input.date,
+          source:        input.source,
+          title:         input.title         ?? null,
+          tree_node_id:  input.treeNodeId    ?? null,
+          inbox_item_id: input.inboxItemId   ?? null,
+          habit_id:      input.habitId       ?? null,
+          start_time:    input.startTime     ?? null,
+          end_time:      input.endTime       ?? null,
+          priority:      input.priority      ?? 'medium',
+          colour:        input.colour        ?? null,
+          is_complete:   false,
+          position:      0,
+        })))
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ns_day_items'] }),
+  })
+}
+
 export function useAddInboxToDay() {
   const { user } = useAuth()
   const qc = useQueryClient()
@@ -211,6 +251,144 @@ export function useAddInboxToDay() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
+      qc.invalidateQueries({ queryKey: ['ns_inbox'] })
+    },
+  })
+}
+
+/** Bulk version of useAddInboxToDay — one insert covering every selected
+ *  inbox item, plus a single `in()` update marking all of them scheduled. */
+export function useAddInboxItemsToDay() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ inboxItemIds, date, priority, colour }: {
+      inboxItemIds: string[]
+      date: string
+      priority?: DayItemPriority
+      colour?:   string | null
+    }) => {
+      if (!user) throw new Error('Not authenticated')
+      if (inboxItemIds.length === 0) return
+      const { error: e1 } = await supabase
+        .from('ns_day_items')
+        .insert(inboxItemIds.map(id => ({
+          user_id: user.id, date,
+          source: 'inbox', inbox_item_id: id,
+          is_complete: false, position: 0,
+          priority: priority ?? 'medium',
+          colour: colour ?? null,
+        })))
+      if (e1) throw e1
+      const { error: e2 } = await supabase
+        .from('ns_inbox_items')
+        .update({ state: 'scheduled', updated_at: new Date().toISOString() })
+        .in('id', inboxItemIds)
+        .eq('user_id', user.id)
+      if (e2) throw e2
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ns_day_items'] })
+      qc.invalidateQueries({ queryKey: ['ns_inbox'] })
+    },
+  })
+}
+
+// ── Pull-from-pool (Features 3-5) ───────────────────────────────────────────
+
+export interface PullWeekFocusInput {
+  weekFocusId:  string
+  date:         string
+  source:       DayItemSource
+  title?:       string | null
+  treeNodeId?:  string | null
+  inboxItemId?: string | null
+  habitId?:     string | null
+}
+
+/** Pulls a ns_week_focus item into a specific day — creates a ns_day_items
+ *  row matching the focus item's source, linked back via origin_week_focus_id
+ *  so the pool panel can compute "available vs pulled" uniformly across every
+ *  source, including standalone tasks that have no other reference id. */
+export function usePullWeekFocusToDay() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: PullWeekFocusInput) => {
+      if (!user) throw new Error('Not authenticated')
+      const { error: e1 } = await supabase.from('ns_day_items').insert({
+        user_id:       user.id,
+        date:          input.date,
+        source:        input.source,
+        title:         input.title         ?? null,
+        tree_node_id:  input.treeNodeId    ?? null,
+        inbox_item_id: input.inboxItemId   ?? null,
+        habit_id:      input.habitId       ?? null,
+        origin_week_focus_id: input.weekFocusId,
+        is_complete:   false,
+        position:      0,
+        priority:      'medium',
+      })
+      if (e1) throw e1
+      if (input.source === 'inbox' && input.inboxItemId) {
+        const { error: e2 } = await supabase
+          .from('ns_inbox_items')
+          .update({ state: 'scheduled', updated_at: new Date().toISOString() })
+          .eq('id', input.inboxItemId).eq('user_id', user.id)
+        if (e2) throw e2
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ns_day_items'] })
+      qc.invalidateQueries({ queryKey: ['ns_day_items_range'] })
+      qc.invalidateQueries({ queryKey: ['ns_inbox'] })
+    },
+  })
+}
+
+export interface PullMonthFocusInput {
+  monthFocusId: string
+  date:         string
+  source:       DayItemSource
+  title?:       string | null
+  treeNodeId?:  string | null
+  inboxItemId?: string | null
+  habitId?:     string | null
+}
+
+/** Month equivalent of usePullWeekFocusToDay — used by the "Tasks this
+ *  month" pool's own pull-to-today action (Feature 5). */
+export function usePullMonthFocusToDay() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: PullMonthFocusInput) => {
+      if (!user) throw new Error('Not authenticated')
+      const { error: e1 } = await supabase.from('ns_day_items').insert({
+        user_id:       user.id,
+        date:          input.date,
+        source:        input.source,
+        title:         input.title         ?? null,
+        tree_node_id:  input.treeNodeId    ?? null,
+        inbox_item_id: input.inboxItemId   ?? null,
+        habit_id:      input.habitId       ?? null,
+        origin_month_focus_id: input.monthFocusId,
+        is_complete:   false,
+        position:      0,
+        priority:      'medium',
+      })
+      if (e1) throw e1
+      if (input.source === 'inbox' && input.inboxItemId) {
+        const { error: e2 } = await supabase
+          .from('ns_inbox_items')
+          .update({ state: 'scheduled', updated_at: new Date().toISOString() })
+          .eq('id', input.inboxItemId).eq('user_id', user.id)
+        if (e2) throw e2
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ns_day_items'] })
+      qc.invalidateQueries({ queryKey: ['ns_day_items_range'] })
       qc.invalidateQueries({ queryKey: ['ns_inbox'] })
     },
   })

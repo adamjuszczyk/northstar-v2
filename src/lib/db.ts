@@ -19,6 +19,8 @@ export interface CachedDayItem {
   position:    number
   counterCurrent: number
   counterTarget:  number | null
+  originWeekFocusId:  string | null
+  originMonthFocusId: string | null
   createdAt:   string
   updatedAt:   string
 }
@@ -130,6 +132,11 @@ class NorthstarDB extends Dexie {
     this.version(6).stores({
       // counterCurrent/counterTarget added to CachedDayItem — no new indexes,
       // just a schema version bump per project convention.
+      dayItems: 'id, userId, date, [userId+date]',
+    })
+    this.version(7).stores({
+      // originWeekFocusId/originMonthFocusId added to CachedDayItem — no new
+      // indexes, just a schema version bump per project convention.
       dayItems: 'id, userId, date, [userId+date]',
     })
   }

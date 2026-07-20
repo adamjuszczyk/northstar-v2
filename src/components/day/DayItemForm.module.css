@@ -187,6 +187,42 @@
 }
 .timeInput:focus { border-color: rgba(var(--ns-gold-rgb), .45); }
 
+/* ── Multi-select checkbox (inbox/habit rows) ────────────────────────────── */
+
+.pickerHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ns-space-2);
+}
+
+.selectedCount {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-mono);
+  color: var(--ns-gold);
+  white-space: nowrap;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  border: 1.5px solid var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-gold);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
+  transition: border-color 0.14s, background 0.14s;
+}
+.checkboxChecked {
+  border-color: rgba(var(--ns-gold-rgb), .7);
+  background: rgba(var(--ns-gold-rgb), .18);
+}
+
 /* ── Node list (tree/inbox) ──────────────────────────────────────────────── */
 
 .nodeList {

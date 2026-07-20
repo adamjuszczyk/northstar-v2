@@ -1,50 +1,36 @@
 import { useState, useEffect } from 'react'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
-import type { TreeNode, NodeType } from '../../types'
+import TreeNodePicker from '../pickers/TreeNodePicker'
 import styles from './FocusItemForm.module.css'
 
-const NODE_TYPE_ORDER: NodeType[] = ['vision', 'goal', 'project', 'task']
-
-const SOURCE_LABELS: Record<NodeType, string> = {
-  vision:  '◈ vision',
-  goal:    '◆ goal',
-  project: '▸ project',
-  task:    '· task',
-}
-
 interface Props {
-  label:       string            // e.g. "ADD WEEKLY FOCUS" or "ADD MONTHLY FOCUS"
-  onClose:     () => void
-  onSave: (input: {
-    source:      'standalone' | 'tree'
-    title?:      string
-    treeNodeId?: string
-  }) => void
-  isSaving: boolean
+  label:           string            // e.g. "ADD WEEKLY FOCUS" or "ADD MONTHLY FOCUS"
+  onClose:         () => void
+  onSaveStandalone: (title: string) => void
+  onSaveTree:       (treeNodeIds: string[]) => void
+  isSaving:        boolean
+  /** treeNodeIds already flagged for the current week/month — drives the
+   *  picker's "already in focus" indicator on parent nodes. */
+  focusedNodeIds?: Set<string>
+  /** Used in the picker's indicator tooltip, e.g. "this week" / "this month". */
+  focusLabel?:     string
 }
 
-export default function FocusItemForm({ label, onClose, onSave, isSaving }: Props) {
-  const [tab,        setTab]        = useState<'standalone' | 'tree'>('standalone')
-  const [title,      setTitle]      = useState('')
-  const [treeNodeId, setTreeNodeId] = useState<string | null>(null)
-  const [search,     setSearch]     = useState('')
-  const [error,      setError]      = useState<string | null>(null)
+export default function FocusItemForm({
+  label, onClose, onSaveStandalone, onSaveTree, isSaving, focusedNodeIds, focusLabel,
+}: Props) {
+  const [tab,         setTab]         = useState<'standalone' | 'tree'>('standalone')
+  const [title,       setTitle]       = useState('')
+  const [treeNodeIds, setTreeNodeIds] = useState<Set<string>>(new Set())
+  const [error,       setError]       = useState<string | null>(null)
 
   const { data: treeNodes = [] } = useTreeNodes()
 
-  const filteredNodes = treeNodes
-    .filter(n => n.status !== 'complete')
-    .filter(n => !search || n.title.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      const ai = NODE_TYPE_ORDER.indexOf(a.type)
-      const bi = NODE_TYPE_ORDER.indexOf(b.type)
-      return ai !== bi ? ai - bi : a.title.localeCompare(b.title)
-    })
+  const activeNodes = treeNodes.filter(n => n.status !== 'complete')
 
   useEffect(() => {
     setTitle('')
-    setTreeNodeId(null)
-    setSearch('')
+    setTreeNodeIds(new Set())
     setError(null)
   }, [tab])
 
@@ -54,19 +40,33 @@ export default function FocusItemForm({ label, onClose, onSave, isSaving }: Prop
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  function toggleTreeNode(id: string) {
+    setTreeNodeIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
   function isValid() {
-    return tab === 'standalone' ? title.trim().length > 0 : treeNodeId !== null
+    return tab === 'standalone' ? title.trim().length > 0 : treeNodeIds.size > 0
   }
 
   function handleSubmit() {
     if (!isValid() || isSaving) return
     setError(null)
     if (tab === 'standalone') {
-      onSave({ source: 'standalone', title: title.trim() })
+      onSaveStandalone(title.trim())
     } else {
-      onSave({ source: 'tree', treeNodeId: treeNodeId! })
+      onSaveTree(Array.from(treeNodeIds))
     }
   }
+
+  const addLabel = isSaving
+    ? '…'
+    : tab === 'tree' && treeNodeIds.size > 0
+      ? `Add ${treeNodeIds.size} item${treeNodeIds.size > 1 ? 's' : ''}`
+      : 'Add'
 
   return (
     <div className={styles.backdrop} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -105,28 +105,15 @@ export default function FocusItemForm({ label, onClose, onSave, isSaving }: Prop
 
         {tab === 'tree' && (
           <div className={styles.body}>
-            <label className={styles.fieldLabel} htmlFor="fi-search">GOAL TREE NODE</label>
-            <input
-              id="fi-search"
-              className={styles.input}
-              placeholder="Search nodes…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              autoFocus
+            <label className={styles.fieldLabel}>GOAL TREE NODES</label>
+            <TreeNodePicker
+              nodes={activeNodes}
+              selectedIds={treeNodeIds}
+              onToggleSelect={toggleTreeNode}
+              focusedNodeIds={focusedNodeIds}
+              focusLabel={focusLabel}
+              emptyHint="No active nodes found."
             />
-            <div className={styles.nodeList}>
-              {filteredNodes.length === 0 && (
-                <p className={styles.emptyHint}>No active nodes found.</p>
-              )}
-              {filteredNodes.map(n => (
-                <NodeRow
-                  key={n.id}
-                  node={n}
-                  selected={treeNodeId === n.id}
-                  onSelect={() => setTreeNodeId(n.id)}
-                />
-              ))}
-            </div>
           </div>
         )}
 
@@ -141,31 +128,11 @@ export default function FocusItemForm({ label, onClose, onSave, isSaving }: Prop
             onClick={handleSubmit}
             disabled={!isValid() || isSaving}
           >
-            {isSaving ? '…' : 'Add'}
+            {addLabel}
           </button>
         </div>
 
       </div>
     </div>
-  )
-}
-
-// ── Shared node picker row ─────────────────────────────────────────────────────
-
-interface NodeRowProps { node: TreeNode; selected: boolean; onSelect: () => void }
-
-function NodeRow({ node, selected, onSelect }: NodeRowProps) {
-  return (
-    <button
-      className={`${styles.nodeRow}${selected ? ' ' + styles.nodeRowSelected : ''}`}
-      onClick={onSelect}
-    >
-      <span
-        className={styles.nodeTypeDot}
-        style={{ background: `var(--ns-${node.type}-accent)` }}
-      />
-      <span className={styles.nodeTitle}>{node.title}</span>
-      <span className={styles.nodeType}>{SOURCE_LABELS[node.type]}</span>
-    </button>
   )
 }

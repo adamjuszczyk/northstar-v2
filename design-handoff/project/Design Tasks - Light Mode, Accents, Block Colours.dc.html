@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; background:#05060A; }
+    button{ font:inherit; color:inherit; background:none; border:none; cursor:pointer; }
+    @keyframes nsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(246,200,122,.5);} 70%{ box-shadow:0 0 0 5px rgba(246,200,122,0);} }
+  </style>
+</helmet>
+<div style="min-height:100vh; padding:60px; background:radial-gradient(58% 44% at 24% -2%, rgba(246,200,122,.09), transparent 60%), radial-gradient(46% 38% at 90% 4%, rgba(143,166,203,.08), transparent 62%), #05060A; font-family:'Space Grotesk',sans-serif; color:#ECEFF7;">
+  <div style="position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(circle, rgba(255,255,255,.028) 1px, transparent 1px); background-size:28px 28px; -webkit-mask-image:radial-gradient(80% 80% at 40% 20%, #000 30%, transparent 92%); mask-image:radial-gradient(80% 80% at 40% 20%, #000 30%, transparent 92%);"></div>
+
+  <div style="position:relative; z-index:2; max-width:1000px; margin:0 auto 46px;">
+    <div style="display:flex; align-items:baseline; gap:10px;">
+      <span style="font-size:17px; color:#F6C87A; text-shadow:0 0 12px rgba(246,200,122,.6);">✦</span>
+      <span style="font-weight:700; font-size:15px; letter-spacing:3px;">NORTHSTAR</span>
+      <span style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1px; color:#666D80;">v2 · DESIGN TOKENS</span>
+    </div>
+    <div style="font-family:'Instrument Serif',serif; font-size:44px; line-height:1.02; letter-spacing:-0.5px; margin-top:14px; max-width:760px;">Light theme, accent system &amp; day-view block colours</div>
+    <div style="font-family:'JetBrains Mono'; font-size:11px; letter-spacing:1px; color:#8A93A6; margin-top:12px;">THREE DELIVERABLES · <a href="#1a" style="color:#F6C87A; text-decoration:none;">1a light tokens</a> · <a href="#1b" style="color:#F6C87A; text-decoration:none;">1b accents</a> · <a href="#1c" style="color:#F6C87A; text-decoration:none;">1c block colours</a></div>
+  </div>
+
+  <div style="position:relative; z-index:2; display:flex; flex-wrap:wrap; gap:52px; align-items:flex-start; justify-content:center;">
+
+    <!-- ============ 1a LIGHT MODE ============ -->
+    <section id="1a" style="width:940px; max-width:100%;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:600; letter-spacing:1px; color:#20160A; background:linear-gradient(180deg,#F8D08A,#E9B368); padding:4px 10px; border-radius:8px;">1a</span>
+        <span style="font-family:'JetBrains Mono'; font-size:12px; letter-spacing:2.5px; color:#A9B0C2;">LIGHT MODE — TOKEN SET</span>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:26px; align-items:flex-start;">
+
+        <!-- token table -->
+        <div style="flex:1 1 520px; min-width:480px; border-radius:18px; border:1px solid rgba(255,255,255,.08); background:linear-gradient(180deg, rgba(13,16,24,.7), rgba(10,12,19,.5)); overflow:hidden;">
+          <div style="display:grid; grid-template-columns:1.5fr 1.1fr 1.1fr 2fr; gap:0; padding:13px 18px; border-bottom:1px solid rgba(255,255,255,.08); font-family:'JetBrains Mono'; font-size:9.5px; letter-spacing:1.5px; color:#666D80;">
+            <span>TOKEN</span><span>LIGHT</span><span style="opacity:.7;">DARK (REF)</span><span>ROLE</span>
+          </div>
+          <sc-for list="{{ tokens }}" as="tk" hint-placeholder-count="15">
+            <div style="{{ tk.rowStyle }}">
+              <span style="font-family:'JetBrains Mono'; font-size:11px; color:#DDE3EE; display:flex; align-items:center; gap:7px;">{{ tk.name }}<sc-if value="{{ tk.constant }}" hint-placeholder-val="{{ false }}"><span style="font-size:8px; letter-spacing:1px; color:#F6C87A; border:1px solid rgba(246,200,122,.4); border-radius:5px; padding:1px 5px;">CONST</span></sc-if></span>
+              <span style="display:flex; align-items:center; gap:7px; min-width:0;"><span style="{{ tk.lightChip }}"></span><span style="font-family:'JetBrains Mono'; font-size:9.5px; color:#9AA3B2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ tk.light }}</span></span>
+              <span style="display:flex; align-items:center; gap:7px; min-width:0; opacity:.6;"><span style="{{ tk.darkChip }}"></span><span style="font-family:'JetBrains Mono'; font-size:9.5px; color:#9AA3B2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ tk.dark }}</span></span>
+              <span style="font-family:'Space Grotesk'; font-size:11.5px; color:#8A93A6; align-self:center;">{{ tk.role }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- light-mode day mockup -->
+        <div style="flex:0 0 366px; max-width:100%;">
+          <div style="font-family:'JetBrains Mono'; font-size:9.5px; letter-spacing:2px; color:#666D80; margin-bottom:10px; text-align:center;">DAY VIEW · LIGHT MODE</div>
+          <div style="border-radius:24px; padding:20px 18px; background:radial-gradient(70% 40% at 30% 0%, #FBEFD7, #F1E8D6); box-shadow:0 30px 70px -28px rgba(60,45,20,.6), inset 0 0 0 1px rgba(120,90,40,.08);">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px;">
+              <div>
+                <div style="font-family:'JetBrains Mono'; font-size:9px; letter-spacing:2.5px; color:#B27F26; margin-bottom:3px;">TODAY · WED</div>
+                <div style="font-family:'Instrument Serif',serif; font-size:26px; line-height:1; letter-spacing:-0.5px; color:#241F17;">9 July 2026</div>
+              </div>
+              <div style="display:flex; padding:3px; border-radius:10px; border:1px solid #E1D2B6; background:#FFFDF6;">
+                <span style="font-family:'JetBrains Mono'; font-size:11px; padding:6px 10px; border-radius:8px; background:linear-gradient(180deg,#F6C87A,#E3A94E); color:#3A2A0C; box-shadow:0 3px 9px -3px rgba(178,127,38,.6);">▦</span>
+                <span style="font-family:'JetBrains Mono'; font-size:11px; padding:6px 10px; color:#8A7C64;">☰</span>
+              </div>
+            </div>
+            <div style="{{ lightDayInner }}">
+              <sc-for list="{{ lightHours }}" as="h" hint-placeholder-count="6">
+                <div><div style="{{ h.line }}"></div><div style="{{ h.label }}">{{ h.txt }}</div></div>
+              </sc-for>
+              <div style="{{ lightRail }}"></div>
+              <div style="{{ lightPast }}"></div>
+              <sc-for list="{{ lightAnchored }}" as="ev" hint-placeholder-count="3">
+                <div>
+                  <div style="{{ ev.dot }}"></div>
+                  <div style="{{ ev.card }}">
+                    <span style="{{ ev.time }}">{{ ev.timeTxt }}</span>
+                    <span style="{{ ev.title }}">{{ ev.titleTxt }}</span>
+                    <span style="flex:1;"></span>
+                    <sc-if value="{{ ev.done }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono'; font-size:10px; color:#3E9A67;">✓</span></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="{{ lightNowLine }}"></div>
+              <div style="{{ lightNowDot }}"></div>
+              <div style="{{ lightNowLabel }}">NOW · 11:45</div>
+            </div>
+            <div style="margin-top:6px; padding:13px 14px; border-radius:15px; background:#FFFDF6; border:1px solid #EADCC4; box-shadow:0 12px 30px -22px rgba(60,45,20,.5);">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:11px;">
+                <span style="width:7px; height:7px; border-radius:50%; border:1.5px solid #4E71A6;"></span>
+                <span style="font-family:'JetBrains Mono'; font-size:9px; font-weight:600; letter-spacing:2px; color:#6E6455;">FLOATING POOL</span>
+                <span style="font-family:'JetBrains Mono'; font-size:9px; color:#A2957E;">· 1/3 done</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <sc-for list="{{ lightFloating }}" as="t" hint-placeholder-count="3">
+                  <div style="{{ t.card }}">
+                    <span style="{{ t.check }}">{{ t.checkTxt }}</span>
+                    <div style="min-width:0;">
+                      <div style="{{ t.title }}">{{ t.titleTxt }}</div>
+                      <div style="{{ t.tag }}">{{ t.tagTxt }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ 1b ACCENTS ============ -->
+    <section id="1b" style="width:786px; max-width:100%;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:600; letter-spacing:1px; color:#20160A; background:linear-gradient(180deg,#F8D08A,#E9B368); padding:4px 10px; border-radius:8px;">1b</span>
+        <span style="font-family:'JetBrains Mono'; font-size:12px; letter-spacing:2.5px; color:#A9B0C2;">ACCENT SYSTEM</span>
+      </div>
+      <div style="font-family:'Space Grotesk'; font-size:13px; color:#8A93A6; margin-bottom:22px; max-width:560px;">Each accent ships with a matched <span style="font-family:'JetBrains Mono'; font-size:11px; color:#DDE3EE;">--accent-muted</span> (same hue, 16% alpha) that updates in lockstep — so fills, hovers and active states never mismatch. Verified legible on both themes.</div>
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px;">
+        <sc-for list="{{ accents }}" as="a" hint-placeholder-count="6">
+          <div style="border-radius:16px; border:1px solid rgba(255,255,255,.08); background:linear-gradient(180deg, rgba(15,18,27,.7), rgba(10,12,19,.5)); padding:16px; display:flex; flex-direction:column; gap:13px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="{{ a.swatch }}"></span>
+              <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:7px;"><span style="font-family:'Space Grotesk'; font-weight:600; font-size:15px; color:#ECEFF7;">{{ a.name }}</span><sc-if value="{{ a.isDefault }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono'; font-size:8px; letter-spacing:1px; color:#F6C87A; border:1px solid rgba(246,200,122,.4); border-radius:5px; padding:1px 5px;">DEFAULT</span></sc-if></div>
+                <div style="font-family:'JetBrains Mono'; font-size:10px; color:#8A93A6; margin-top:2px;">{{ a.hex }}</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <div style="flex:1; border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,.06);">
+                <div style="{{ a.accentBar }}">accent</div>
+                <div style="{{ a.mutedBar }}">muted · {{ a.mutedLabel }}</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <div style="{{ a.onDark }}"><span style="{{ a.onDarkChip }}"></span>on dark</div>
+              <div style="{{ a.onLight }}"><span style="{{ a.onLightChip }}"></span>on light</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- ============ 1c BLOCK COLOURS ============ -->
+    <section id="1c" style="width:940px; max-width:100%;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:600; letter-spacing:1px; color:#20160A; background:linear-gradient(180deg,#F8D08A,#E9B368); padding:4px 10px; border-radius:8px;">1c</span>
+        <span style="font-family:'JetBrains Mono'; font-size:12px; letter-spacing:2.5px; color:#A9B0C2;">DAY-VIEW BLOCK COLOURS</span>
+      </div>
+      <div style="font-family:'Space Grotesk'; font-size:13px; color:#8A93A6; margin-bottom:22px; max-width:620px;">Cosmetic colour tags for at-a-glance grouping — independent of priority (still gold/grey). A curated 10-swatch palette tuned to read on both themes.</div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:26px; align-items:flex-start;">
+
+        <!-- day view with coloured items -->
+        <div style="flex:1 1 480px; min-width:420px; border-radius:20px; border:1px solid rgba(255,255,255,.07); background:linear-gradient(180deg, rgba(13,16,24,.7), rgba(10,12,19,.5)); overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:10px; padding:15px 20px; border-bottom:1px solid rgba(255,255,255,.06);">
+            <span style="width:9px; height:9px; border-radius:3px; background:#F6C87A; box-shadow:0 0 8px rgba(246,200,122,.6);"></span>
+            <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:600; letter-spacing:2.5px; color:#A9B0C2;">WEDNESDAY 9 JULY</span>
+            <span style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1px; color:#666D80;">· COLOUR-TAGGED</span>
+          </div>
+          <div style="padding:18px 20px; display:flex; flex-direction:column; gap:11px;">
+            <sc-for list="{{ colouredItems }}" as="it" hint-placeholder-count="6">
+              <div style="{{ it.card }}">
+                <span style="{{ it.dot }}"></span>
+                <span style="{{ it.time }}">{{ it.timeTxt }}</span>
+                <span style="{{ it.title }}">{{ it.titleTxt }}</span>
+                <span style="flex:1;"></span>
+                <span style="{{ it.colourName }}">{{ it.colourTxt }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- colour picker popover -->
+        <div style="flex:0 0 300px; max-width:100%;">
+          <div style="font-family:'JetBrains Mono'; font-size:9.5px; letter-spacing:2px; color:#666D80; margin-bottom:10px;">EDITING · “COFFEE WITH SAM”</div>
+          <div style="border-radius:18px; border:1px solid rgba(246,200,122,.28); background:linear-gradient(158deg, rgba(30,28,22,.9), rgba(13,15,22,.94)); box-shadow:0 30px 70px -26px rgba(0,0,0,.9); padding:18px; backdrop-filter:blur(10px);">
+            <input value="Coffee with Sam" style="width:100%; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:10px 12px; color:#EDEFF6; font-family:'Space Grotesk'; font-size:14px; outline:none;" />
+            <div style="display:flex; align-items:center; gap:8px; margin:16px 0 12px;">
+              <span style="font-family:'JetBrains Mono'; font-size:9.5px; font-weight:600; letter-spacing:2px; color:#8A93A6;">BLOCK COLOUR</span>
+              <span style="flex:1; height:1px; background:rgba(255,255,255,.08);"></span>
+              <span style="font-family:'JetBrains Mono'; font-size:9.5px; color:#8FC69A;">Sage</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:11px;">
+              <sc-for list="{{ palette }}" as="p" hint-placeholder-count="10">
+                <div style="{{ p.wrap }}" title="{{ p.name }}"><span style="{{ p.dot }}"><sc-if value="{{ p.selected }}" hint-placeholder-val="{{ false }}"><span style="color:#0A0C13; font-size:11px; font-weight:700;">✓</span></sc-if></span></div>
+              </sc-for>
+            </div>
+            <div style="display:flex; gap:9px; margin-top:18px;">
+              <button style="flex:1; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.1); color:#A9B0C2; font-size:12px;">Cancel</button>
+              <button style="flex:1; padding:10px; border-radius:10px; background:linear-gradient(180deg,#F8D08A,#E9B368); color:#20160A; font-weight:600; font-size:12px; box-shadow:0 6px 16px -6px rgba(246,200,122,.6);">Save</button>
+            </div>
+          </div>
+
+          <div style="margin-top:20px; display:flex; flex-wrap:wrap; gap:8px;">
+            <sc-for list="{{ palette }}" as="p" hint-placeholder-count="10">
+              <span style="display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono'; font-size:9px; letter-spacing:.5px; color:#8A93A6; border:1px solid rgba(255,255,255,.08); border-radius:7px; padding:4px 8px;"><span style="{{ p.legendDot }}"></span>{{ p.name }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  rgba(hex,a){ const v=parseInt(hex.slice(1),16); return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`; }
+
+  renderVals(){
+    const mono="'JetBrains Mono',monospace", grotesk="'Space Grotesk',sans-serif";
+    const rgba=this.rgba.bind(this);
+    const chip=(c)=>({ width:'16px', height:'16px', flex:'0 0 auto', borderRadius:'5px', background:c, border:'1px solid rgba(255,255,255,.18)', boxShadow:'inset 0 0 0 1px rgba(0,0,0,.15)' });
+
+    // ---------- TASK 1: light tokens ----------
+    const T=[
+      ['--ns-base','#F1E8D6','#080A11','App background — warm parchment',false],
+      ['--ns-surface','#FAF3E6','#0C0F19','Panels & cards — soft cream',false],
+      ['--ns-surface-raised','#FFFDF6','#12151E','Elevated cards, popovers',false],
+      ['--ns-text-primary','#241F17','#ECEFF7','Titles — warm near-black',false],
+      ['--ns-text-secondary','#6E6455','#A9B0C2','Body copy, labels',false],
+      ['--ns-text-muted','#A2957E','#666D80','Timestamps, captions',false],
+      ['--ns-border','#E6D8BF','rgba(255,255,255,.07)','Hairlines, dividers',false],
+      ['--ns-accent','#B27F26','#F6C87A','Interactive gold — legible on base',false],
+      ['--ns-accent-muted','rgba(178,127,38,.15)','rgba(246,200,122,.14)','Accent fills, hover, active',false],
+      ['--ns-gold','#F6C87A','#F6C87A','Brand glow hue — NOW line, markers, halos',true],
+      ['--ns-steel','#4E71A6','#8FA6CB','Secondary accent',false],
+      ['--ns-ok','#3E9A67','#84D2A6','Complete / success',false],
+      ['--ns-danger','#C24E38','#E8836F','Overdue / destructive',false],
+      ['--ns-glow','rgba(230,169,69,.14)','rgba(246,200,122,.11)','Ambient celestial glow',false],
+      ['--ns-grid','rgba(90,60,10,.05)','rgba(255,255,255,.03)','Dot-grid texture',false]
+    ];
+    const solid=(v)=> v.startsWith('rgba') ? v : v;
+    const tokens=T.map((r,i)=>({
+      name:r[0], light:r[1], dark:r[2], role:r[3], constant:r[4],
+      rowStyle:{ display:'grid', gridTemplateColumns:'1.5fr 1.1fr 1.1fr 2fr', gap:'0', padding:'9px 18px', alignItems:'center', borderBottom: i<T.length-1?'1px solid rgba(255,255,255,.04)':'none', background: i%2? 'rgba(255,255,255,.012)':'transparent' },
+      lightChip:{ ...chip(r[1]), background:r[1].startsWith('rgba')?`linear-gradient(#F1E8D6,#F1E8D6), ${r[1]}`:r[1], backgroundBlendMode:'normal' },
+      darkChip:{ ...chip(r[2]), background:r[2].startsWith('rgba')?`linear-gradient(#0C0F19,#0C0F19)`:r[2] }
+    }));
+
+    // light day mockup
+    const L={ base:'#F1E8D6', surf:'#FAF3E6', raised:'#FFFDF6', tp:'#241F17', ts:'#6E6455', tm:'#A2957E', border:'#E6D8BF', accent:'#B27F26', gold:'#F6C87A', steel:'#4E71A6', ok:'#3E9A67' };
+    const LS=6, LE=16, LPX=34, LTOP=8, LNOW=11.75;
+    const ly=(t)=>LTOP+(t-LS)*LPX;
+    const lightDayInner={ position:'relative', height:(LTOP+(LE-LS)*LPX+16)+'px', marginBottom:'4px' };
+    const lightHours=[]; for(let h=LS;h<=LE;h+=2){ const top=ly(h); lightHours.push({ txt:String(h).padStart(2,'0'),
+      line:{ position:'absolute', left:'38px', right:'2px', top:top+'px', height:'1px', background:'rgba(90,60,10,.09)' },
+      label:{ position:'absolute', left:'0', width:'30px', top:(top-6)+'px', textAlign:'right', fontFamily:mono, fontSize:'9px', color:'#B0A488' } }); }
+    const lightRail={ position:'absolute', left:'38px', top:(LTOP-5)+'px', height:((LE-LS)*LPX+10)+'px', width:'2px', borderRadius:'2px', background:`linear-gradient(180deg, ${rgba(L.gold,.6)}, ${rgba(L.steel,.35)})` };
+    const lNowY=ly(LNOW);
+    const lightPast={ position:'absolute', left:'40px', right:'2px', top:(LTOP-5)+'px', height:(lNowY-(LTOP-5))+'px', background:'rgba(120,90,40,.06)', borderRadius:'7px', pointerEvents:'none' };
+    const lAnchoredRaw=[ ['gym',7,'07:00','Gym',true], ['lunch',12.5,'12:30','Lunch with Marcus',false], ['client',15,'15:00','Client call',false] ];
+    const lightAnchored=lAnchoredRaw.map(e=>{ const top=ly(e[1]); const past=e[1]<LNOW; const dim=e[4]||past; return {
+      done:e[4], timeTxt:e[2], titleTxt:e[3],
+      dot:{ position:'absolute', left:'34px', top:(top-4)+'px', width:'9px', height:'9px', borderRadius:'50%', background:e[4]?L.ok:(dim?rgba(L.accent,.5):L.gold), boxShadow:dim?'none':`0 0 7px ${rgba(L.gold,.8)}`, zIndex:3, border:'2px solid #F6EEDD' },
+      card:{ position:'absolute', left:'54px', right:'2px', top:top+'px', display:'flex', alignItems:'center', gap:'8px', padding:'7px 11px', borderRadius:'10px', background: dim?'#F6EFE0':'#FFFDF6', border:`1px solid ${dim?'#E6D8BF':rgba(L.accent,.4)}`, boxShadow: dim?'none':`0 8px 20px -14px ${rgba(L.accent,.5)}`, opacity:e[4]?0.65:(past?0.7:1), zIndex:2 },
+      time:{ fontFamily:mono, fontSize:'10px', fontWeight:600, letterSpacing:'.5px', color:dim?L.tm:L.accent },
+      title:{ fontFamily:grotesk, fontWeight:600, fontSize:'12.5px', color:e[4]?rgba(L.tp,.5):L.tp, textDecoration:e[4]?'line-through':'none', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' } }; });
+    const lightNowLine={ position:'absolute', left:'33px', right:'2px', top:lNowY+'px', height:'0', borderTop:`1.5px solid ${L.gold}`, boxShadow:`0 0 8px ${rgba(L.gold,.7)}`, zIndex:4 };
+    const lightNowDot={ position:'absolute', left:'34px', top:(lNowY-4)+'px', width:'9px', height:'9px', borderRadius:'50%', background:L.gold, boxShadow:`0 0 9px ${rgba(L.gold,.9)}`, zIndex:5, animation:'nsPulse 2.2s ease-in-out infinite' };
+    const lightNowLabel={ position:'absolute', left:'48px', top:(lNowY-22)+'px', fontFamily:mono, fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:L.accent, zIndex:6 };
+
+    const lFloatRaw=[ ['Deep work — Atlas','✦ GOAL TREE',L.accent,false], ['Reply to emails','• STANDALONE','#8A7C64',false], ['Research car insurance','⌵ FROM INBOX',L.steel,false] ];
+    const lightFloating=lFloatRaw.map(f=>({ titleTxt:f[0], tagTxt:f[1], checkTxt:'',
+      card:{ display:'flex', gap:'10px', alignItems:'center', padding:'9px 11px', borderRadius:'10px', background:L.surf, border:`1px solid #EADCC4`, borderLeft:`3px solid ${f[2]}` },
+      check:{ width:'17px', height:'17px', flex:'0 0 auto', borderRadius:'5px', border:`1.5px solid ${rgba(f[2],.6)}`, display:'inline-block' },
+      title:{ fontFamily:grotesk, fontWeight:500, fontSize:'12.5px', color:L.tp },
+      tag:{ fontFamily:mono, fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:f[2], marginTop:'3px' } }));
+
+    // ---------- TASK 2: accents ----------
+    const accRaw=[ ['Gold','#F6C87A',true], ['Warm Amber','#E8913C',false], ['Steel Blue','#7FA0D4',false], ['Soft Violet','#B49BEA',false], ['Sage Green','#8FC69A',false], ['Rose','#E79BAC',false] ];
+    const accents=accRaw.map(a=>{ const c=a[1]; const mutedLabel=rgba(c,.16); return {
+      name:a[0], hex:c, isDefault:a[2], mutedLabel,
+      swatch:{ width:'44px', height:'44px', borderRadius:'12px', flex:'0 0 auto', background:c, boxShadow:`0 6px 18px -6px ${rgba(c,.8)}, inset 0 0 0 1px rgba(255,255,255,.2)` },
+      accentBar:{ background:c, color:'#1a1206', fontFamily:mono, fontSize:'10px', letterSpacing:'1px', padding:'8px 10px', fontWeight:600 },
+      mutedBar:{ background:`linear-gradient(#12151E,#12151E) padding-box`, backgroundColor:'#12151E', color:c, fontFamily:mono, fontSize:'9px', letterSpacing:'.5px', padding:'8px 10px', position:'relative' },
+      onDark:{ flex:1, display:'flex', alignItems:'center', gap:'7px', background:'#0C0F19', border:'1px solid rgba(255,255,255,.07)', borderRadius:'8px', padding:'7px 9px', fontFamily:mono, fontSize:'9px', color:'#8A93A6' },
+      onDarkChip:{ width:'13px', height:'13px', borderRadius:'4px', background:c, boxShadow:`0 0 7px ${rgba(c,.7)}` },
+      onLight:{ flex:1, display:'flex', alignItems:'center', gap:'7px', background:'#F5EEDF', border:'1px solid #E6D8BF', borderRadius:'8px', padding:'7px 9px', fontFamily:mono, fontSize:'9px', color:'#8A7C64' },
+      onLightChip:{ width:'13px', height:'13px', borderRadius:'4px', background:c, boxShadow:`0 1px 4px ${rgba(c,.6)}` } }; });
+    // fix muted bar to actually show translucency over dark
+    accents.forEach(a=>{ a.mutedBar={ background:'#12151E', color:a.hex, fontFamily:mono, fontSize:'9px', letterSpacing:'.5px', padding:'8px 10px', boxShadow:`inset 0 0 0 999px ${a.mutedLabel}` }; });
+
+    // ---------- TASK 3: block colours ----------
+    const palRaw=[ ['Gold','#F6C87A'], ['Amber','#E8913C'], ['Coral','#E87A64'], ['Rose','#E79BAC'], ['Violet','#B49BEA'], ['Indigo','#8C9CE8'], ['Steel','#7FA0D4'], ['Teal','#5FC4BC'], ['Sage','#8FC69A'], ['Slate','#9AA3B2'] ];
+    const selectedName='Sage';
+    const palette=palRaw.map(p=>{ const sel=p[0]===selectedName; return {
+      name:p[0],
+      wrap:{ display:'grid', placeItems:'center', padding:'2px' },
+      dot:{ width:'30px', height:'30px', borderRadius:'50%', background:p[1], display:'grid', placeItems:'center', cursor:'pointer', boxShadow: sel?`0 0 0 2px #0A0C13, 0 0 0 4px ${p[1]}, 0 0 12px ${rgba(p[1],.7)}`:`inset 0 0 0 1px rgba(255,255,255,.25)` },
+      legendDot:{ width:'9px', height:'9px', borderRadius:'50%', background:p[1] },
+      selected:sel }; });
+
+    const itemRaw=[
+      ['anchor','07:00','Gym','Gold','#F6C87A'],
+      ['anchor','12:30','Lunch with Marcus','Sage','#8FC69A'],
+      ['anchor','15:00','Client call','Steel','#7FA0D4'],
+      ['float','—','Deep work — Atlas architecture','Indigo','#8C9CE8'],
+      ['float','—','Pick up dry cleaning','Slate','#9AA3B2'],
+      ['float','—','Coffee with Sam','Sage','#8FC69A']
+    ];
+    const colouredItems=itemRaw.map(it=>{ const c=it[4]; const isFloat=it[0]==='float'; return {
+      timeTxt:it[1], titleTxt:it[2], colourTxt:it[3],
+      card:{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 14px', borderRadius:'12px', background:'rgba(18,21,30,.62)', border:'1px solid rgba(255,255,255,.06)', borderLeft:`3px solid ${c}`, boxShadow:`-6px 0 20px -14px ${rgba(c,.8)}` },
+      dot:{ width:'11px', height:'11px', borderRadius:'50%', flex:'0 0 auto', background:c, boxShadow:`0 0 9px ${rgba(c,.7)}` },
+      time:{ fontFamily:mono, fontSize:'10.5px', fontWeight:600, letterSpacing:'.5px', color: isFloat?'#5A6172':'#C6CDDC', width:'40px', flex:'0 0 auto' },
+      title:{ fontFamily:grotesk, fontWeight:500, fontSize:'14px', color:'#ECEFF7' },
+      colourName:{ fontFamily:mono, fontSize:'9px', letterSpacing:'1px', textTransform:'uppercase', color:rgba(c,.95), border:`1px solid ${rgba(c,.35)}`, borderRadius:'6px', padding:'3px 7px' } }; });
+
+    return { tokens, lightDayInner, lightHours, lightRail, lightPast, lightAnchored, lightNowLine, lightNowDot, lightNowLabel, lightFloating, accents, palette, colouredItems };
+  }
+}
+</script>
+</body>
+</html>

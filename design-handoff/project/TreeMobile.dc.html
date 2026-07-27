@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg0:#080A11; --bg1:#0C0F19;
+      --gold:#F6C87A; --gold-soft:#DEC28C; --steel:#8FA6CB; --grey:#7E8AA2; --ok:#84D2A6;
+      --text-hi:#ECEFF7; --text-mid:#A9B0C2; --text-lo:#666D80;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; background:#05060A; }
+    button{ font:inherit; color:inherit; background:none; border:none; }
+    @keyframes nsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(246,200,122,.5);} 70%{ box-shadow:0 0 0 5px rgba(246,200,122,0);} }
+    @keyframes nsRise { from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:translateY(0);} }
+    .nsScroll::-webkit-scrollbar{ width:0; }
+  </style>
+</helmet>
+<div style="display:flex; justify-content:center; padding:26px; background:radial-gradient(60% 50% at 50% 0%, #14161f, #05060A);">
+  <div style="position:relative; width:400px; height:844px; border-radius:46px; padding:11px; background:linear-gradient(160deg, #23262f, #0c0d12); box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+    <div style="position:relative; width:100%; height:100%; border-radius:37px; overflow:hidden; background:var(--bg0); font-family:'Space Grotesk',sans-serif; color:var(--text-hi);">
+
+      <div style="position:absolute; inset:0; pointer-events:none; background:radial-gradient(70% 34% at 30% 0%, rgba(246,200,122,.13), transparent 60%), radial-gradient(60% 30% at 92% 8%, rgba(143,166,203,.10), transparent 62%);"></div>
+      <div style="position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(circle, rgba(255,255,255,.03) 1px, transparent 1px); background-size:24px 24px; -webkit-mask-image:radial-gradient(80% 70% at 45% 20%, #000 30%, transparent 92%); mask-image:radial-gradient(80% 70% at 45% 20%, #000 30%, transparent 92%);"></div>
+
+      <div style="position:absolute; top:0; left:0; right:0; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:14px 22px 8px; font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.5px; color:var(--text-hi);">
+        <span>9:41</span>
+        <span style="display:flex; gap:5px; align-items:center; opacity:.85;">▂▄▆ &nbsp;⌵ &nbsp;▓</span>
+      </div>
+
+      <div style="position:relative; z-index:5; padding:44px 20px 12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:baseline; gap:8px;">
+            <span style="font-size:14px; color:var(--gold); text-shadow:0 0 10px rgba(246,200,122,.6);">✦</span>
+            <span style="font-weight:700; font-size:13px; letter-spacing:2.5px;">NORTHSTAR</span>
+          </div>
+          <span style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1px; color:var(--text-lo);"><span style="color:var(--gold);">2</span> visions</span>
+        </div>
+        <div style="font-family:'Instrument Serif',serif; font-size:29px; line-height:1; letter-spacing:-0.5px; margin-top:12px;">The Tree</div>
+      </div>
+
+      <div class="nsScroll" style="position:absolute; top:118px; left:0; right:0; bottom:0; z-index:4; overflow-y:auto; padding:6px 18px 40px;">
+        {{ tree }}
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:452,&quot;height&quot;:896}}">
+class Component extends DCLogic {
+  C = { vision:'#F6C87A', visionText:'#F8EAD0', goal:'#DEC28C', goalText:'#ECE4D3', project:'#8FA6CB', projectText:'#D2DAE8', task:'#7E8AA2', taskText:'#B4BCCE', ok:'#84D2A6', textLo:'#666D80' };
+
+  state = { collapsed: { v2:true, g2:true }, done: { t1:true, p4:true } };
+
+  rgba(hex,a){ const v=parseInt(hex.slice(1),16); return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`; }
+  count(n){ const k=(n&&n.children)||[]; return k.reduce((s,c)=>s+1+this.count(c),0); }
+  toggle(id){ this.setState(s=>({ collapsed:{ ...s.collapsed, [id]:!s.collapsed[id] } })); }
+  toggleDone(id){ this.setState(s=>({ done:{ ...s.done, [id]:!s.done[id] } })); }
+
+  renderNode(node, depth, isLast){
+    const h=React.createElement, C=this.C, rgba=this.rgba.bind(this);
+    const mono="'JetBrains Mono',monospace", grotesk="'Space Grotesk',sans-serif";
+    const id=node.id, type=node.type||'task';
+    const isVision=type==='vision', isTask=type==='task';
+    const kids=node.children||[], hasKids=kids.length>0;
+    const collapsed=!!this.state.collapsed[id];
+    const done=!!this.state.done[id];
+    const state= done?'done':(node.state||'active');
+    const A=C[type]||C.task, TXT=C[type+'Text']||C.taskText;
+
+    // size hierarchy by type
+    const S = isVision ? { ts:24, tf:"'Instrument Serif',serif", tw:400, pad:'15px 16px', radius:17, badge:11 }
+      : type==='goal' ? { ts:16.5, tf:grotesk, tw:600, pad:'12px 14px', radius:14, badge:9.5 }
+      : type==='project' ? { ts:14.5, tf:grotesk, tw:600, pad:'11px 13px', radius:12, badge:9 }
+      : { ts:14, tf:grotesk, tw:500, pad:'9px 12px', radius:11, badge:8.5 };
+
+    const cardBg = isVision ? 'linear-gradient(150deg, rgba(60,45,20,.6), rgba(15,16,24,.82))'
+      : type==='goal' ? 'linear-gradient(150deg, rgba(42,37,25,.5), rgba(13,15,22,.7))'
+      : type==='project' ? 'linear-gradient(150deg, rgba(23,28,41,.62), rgba(12,14,21,.74))'
+      : 'rgba(17,20,29,.6)';
+    const cardShadow = isVision ? `0 18px 46px -22px ${rgba(A,.55)}, inset 0 1px 0 rgba(255,255,255,.06)` : `0 10px 26px -20px rgba(0,0,0,.8)`;
+
+    // status dot
+    let dot, glyph='';
+    const db={ width:'13px', height:'13px', borderRadius:'50%', flex:'0 0 auto', display:'inline-grid', placeItems:'center', fontSize:'8px', fontFamily:mono, lineHeight:1 };
+    if(done){ dot={ ...db, background:rgba(C.ok,.16), border:`1px solid ${C.ok}`, color:C.ok }; glyph='✓'; }
+    else if(state==='todo'){ dot={ ...db, background:'transparent', border:`1.5px solid ${rgba(A,.5)}` }; }
+    else { dot={ ...db, background:rgba(A,.92), boxShadow:`0 0 8px ${rgba(A,.7)}`, animation:'nsPulse 2.6s ease-in-out infinite' }; }
+
+    const head=[ h('span',{key:'d',style:dot},glyph),
+      h('span',{key:'k',style:{ fontFamily:mono, fontSize:S.badge+'px', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', color:rgba(A,done?.5:.95) }},type),
+      h('span',{key:'sp',style:{flex:1}}) ];
+    if(hasKids){
+      head.push(h('button',{key:'c',onClick:(e)=>{e.stopPropagation();this.toggle(id);},
+        style:{ display:'inline-flex', alignItems:'center', gap:'5px', fontFamily:mono, fontSize:'10px', fontWeight:600, letterSpacing:'.5px', color:rgba(A,.9), padding:'3px 8px', borderRadius:'7px', border:`1px solid ${rgba(A,.28)}`, background:rgba(A,.07), cursor:'pointer' }},
+        collapsed ? ('+'+this.count(node)) : h('span',{style:{ fontSize:'12px', transform:'rotate(0deg)', display:'inline-block' }},'⌄')));
+    }
+
+    const card = h('div',{ key:'card', 'data-id':id,
+      style:{ display:'flex', flexDirection:'column', gap:isVision?'9px':'7px', padding:S.pad, borderRadius:S.radius+'px', background:cardBg, border:`1px solid ${rgba(A, isVision?.42:.24)}`, boxShadow:cardShadow, opacity:done?0.55:1, filter:done?'saturate(.55)':'none', backdropFilter:'blur(6px)', animation:'nsRise .45s ease both', position:'relative', zIndex:2 } },
+      isVision ? h('div',{key:'halo',style:{ position:'absolute', inset:'-30% -20%', borderRadius:'30px', background:`radial-gradient(55% 60% at 30% 35%, ${rgba(A,.28)}, transparent 70%)`, filter:'blur(20px)', zIndex:-1, pointerEvents:'none' }}) : null,
+      h('div',{key:'h',style:{ display:'flex', alignItems:'center', gap:'8px' }}, head),
+      h('div',{key:'t',style:{ fontFamily:S.tf, fontWeight:S.tw, fontSize:S.ts+'px', lineHeight:isVision?1.05:1.25, letterSpacing:isVision?'-0.4px':'-0.1px', color:done?rgba(TXT,.6):TXT, textDecoration:done?'line-through':'none', textWrap:'balance' }}, node.title),
+      (hasKids&&collapsed) ? h('div',{key:'m',style:{ fontFamily:mono, fontSize:'9px', letterSpacing:'1px', color:rgba(A,.6) }}, this.count(node)+' NODES HIDDEN') : null
+    );
+
+    // children with left connector rail
+    let childBlock=null;
+    if(hasKids && !collapsed){
+      const railColor = rgba(A,.4);
+      const rows = kids.map((k,i)=> this.renderNode(k, depth+1, i===kids.length-1));
+      childBlock = h('div',{ key:'kids', style:{ position:'relative', marginLeft:'16px', paddingLeft:'18px', display:'flex', flexDirection:'column', gap:'10px', marginTop:'10px' } },
+        h('div',{ key:'rail', style:{ position:'absolute', left:'0', top:'-4px', bottom:'14px', width:'1.5px', borderRadius:'2px', background:`linear-gradient(180deg, ${railColor}, ${rgba(A,.12)})` } }),
+        rows
+      );
+    }
+
+    // elbow connecting this card to parent rail
+    const elbow = depth>0 ? h('div',{ key:'elbow', style:{ position:'absolute', left:'-18px', top:'22px', width:'16px', height:'1.5px', borderRadius:'2px', background:rgba(A,.4) } }) : null;
+
+    return h('div',{ key:id, style:{ position:'relative' } }, elbow, card, childBlock);
+  }
+
+  renderVals(){
+    const v1={ id:'v1', type:'vision', title:'Own a specific car', state:'active', children:[
+      { id:'g1', type:'goal', title:'Earn money for it', state:'active', children:[
+        { id:'g2', type:'goal', title:'Start a business', state:'active', children:[
+          { id:'p1', type:'project', title:'Develop AI skills', state:'active', children:[
+            { id:'p2', type:'project', title:'Build Atlas', state:'active', children:[
+              { id:'t1', type:'task', title:'Write SPEC.md', state:'done' },
+              { id:'t2', type:'task', title:'Design dashboard layout', state:'todo' } ] },
+            { id:'p3', type:'project', title:'Build Northstar v2', state:'active' },
+            { id:'p4', type:'project', title:'Build Overload', state:'done' } ] } ] } ] } ] };
+    const v2={ id:'v2', type:'vision', title:'Lead a specific lifestyle', state:'active', children:[
+      { id:'g3', type:'goal', title:'Build physical foundation', state:'active', children:[
+        { id:'p5', type:'project', title:'Follow PPL program consistently', state:'active', children:[
+          { id:'t3', type:'task', title:'Log every session', state:'todo' } ] } ] } ] };
+
+    const h=React.createElement;
+    const tree = h('div',{ style:{ display:'flex', flexDirection:'column', gap:'22px' } }, this.renderNode(v1,0,false), this.renderNode(v2,0,true));
+    return { tree };
+  }
+}
+</script>
+</body>
+</html>

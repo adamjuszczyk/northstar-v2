@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg0:#080A11; --bg1:#0C0F19;
+      --gold:#F6C87A; --gold-soft:#DEC28C; --steel:#8FA6CB; --grey:#7E8AA2; --ok:#84D2A6;
+      --text-hi:#ECEFF7; --text-mid:#A9B0C2; --text-lo:#666D80; --line:#222736;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; height:100%; background:var(--bg0); }
+    button{ font:inherit; color:inherit; background:none; border:none; }
+    input{ font:inherit; }
+    @keyframes nsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,255,255,.28);} 70%{ box-shadow:0 0 0 6px rgba(255,255,255,0);} }
+    @keyframes nsPulseGold { 0%,100%{ box-shadow:0 0 0 0 rgba(246,200,122,.5);} 70%{ box-shadow:0 0 0 5px rgba(246,200,122,0);} }
+    @keyframes nsRise { from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
+    ::-webkit-scrollbar{ width:11px; height:11px; }
+    ::-webkit-scrollbar-track{ background:transparent; }
+    ::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.08); border-radius:20px; border:3px solid transparent; background-clip:content-box; }
+    ::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.16); background-clip:content-box; }
+  </style>
+</helmet>
+<div style="position:fixed; inset:0; display:flex; flex-direction:column; background:var(--bg0); color:var(--text-hi); font-family:'Space Grotesk',sans-serif; overflow:hidden;">
+
+  <div style="position:absolute; inset:0; pointer-events:none; background:radial-gradient(62% 46% at 26% -4%, rgba(246,200,122,.10), transparent 60%), radial-gradient(48% 42% at 88% 6%, rgba(143,166,203,.09), transparent 62%);"></div>
+  <div style="position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(circle, rgba(255,255,255,.03) 1px, transparent 1px); background-size:27px 27px; -webkit-mask-image:radial-gradient(80% 80% at 40% 30%, #000 30%, transparent 90%); mask-image:radial-gradient(80% 80% at 40% 30%, #000 30%, transparent 90%);"></div>
+  <div style="position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 240px 40px rgba(0,0,0,.6);"></div>
+
+  <header style="position:relative; z-index:5; display:flex; align-items:center; gap:26px; padding:15px 24px; border-bottom:1px solid rgba(255,255,255,.05); background:linear-gradient(180deg, rgba(10,12,20,.6), rgba(10,12,20,0)); backdrop-filter:blur(4px); flex-wrap:wrap;">
+    <div style="display:flex; align-items:baseline; gap:9px;">
+      <span style="font-size:16px; color:var(--gold); text-shadow:0 0 12px rgba(246,200,122,.6);">✦</span>
+      <span style="font-family:'Space Grotesk'; font-weight:700; font-size:15px; letter-spacing:3px; color:var(--text-hi);">NORTHSTAR</span>
+      <span style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1px; color:var(--text-lo);">v2</span>
+    </div>
+    <nav style="display:flex; align-items:center; gap:4px;">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="5">
+        <span style="{{ item.style }}">{{ item.label }}</span>
+      </sc-for>
+    </nav>
+  </header>
+
+  <div style="position:relative; z-index:4; display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding:22px 26px 18px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <button style="width:30px; height:30px; border-radius:9px; border:1px solid rgba(255,255,255,.09); color:var(--text-mid); font-size:14px; cursor:pointer;">‹</button>
+      <div>
+        <div style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:3px; color:var(--gold); margin-bottom:3px;">TODAY</div>
+        <div style="font-family:'Instrument Serif',serif; font-size:34px; line-height:1; letter-spacing:-0.5px; color:var(--text-hi);">Wednesday 9 July 2026</div>
+      </div>
+      <button style="width:30px; height:30px; border-radius:9px; border:1px solid rgba(255,255,255,.09); color:var(--text-mid); font-size:14px; cursor:pointer;">›</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-family:'JetBrains Mono'; font-size:9.5px; letter-spacing:1.5px; color:var(--text-lo); margin-right:2px;">MODE</span>
+      <div style="display:flex; padding:3px; border-radius:11px; border:1px solid rgba(255,255,255,.09); background:rgba(12,15,23,.6);">
+        <button onClick="{{ onSchedule }}" style="{{ scheduleBtnStyle }}">▦ Schedule</button>
+        <button onClick="{{ onList }}" style="{{ listBtnStyle }}">☰ List</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:relative; z-index:2; flex:1; overflow:auto; padding:0 26px 40px;">
+    <div style="display:flex; flex-wrap:wrap; gap:22px; align-items:flex-start;">
+
+      <div style="flex:1 1 480px; min-width:300px; border-radius:20px; border:1px solid rgba(255,255,255,.07); background:linear-gradient(180deg, rgba(13,16,24,.7), rgba(10,12,19,.55)); box-shadow:0 26px 60px -30px rgba(0,0,0,.8); overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:10px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.06);">
+          <span style="width:9px; height:9px; border-radius:3px; background:var(--gold); box-shadow:0 0 9px rgba(246,200,122,.6);"></span>
+          <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:600; letter-spacing:2.5px; color:var(--text-mid);">TIMELINE</span>
+          <span style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1.5px; color:var(--text-lo);">· ANCHORED · FIXED TIME</span>
+        </div>
+        <div style="position:relative; padding:8px 18px 24px 14px;">
+          <div style="{{ innerStyle }}">
+            <sc-for list="{{ hours }}" as="hr" hint-placeholder-count="15">
+              <div>
+                <div style="{{ hr.lineStyle }}"></div>
+                <div style="{{ hr.labelStyle }}">{{ hr.label }}</div>
+              </div>
+            </sc-for>
+            <div style="{{ railStyle }}"></div>
+            <div style="{{ pastOverlayStyle }}"></div>
+            <sc-for list="{{ anchored }}" as="ev" hint-placeholder-count="3">
+              <div>
+                <div style="{{ ev.tickStyle }}"></div>
+                <div style="{{ ev.dotStyle }}"></div>
+                <div data-id="{{ ev.id }}" style="{{ ev.cardStyle }}" style-hover="{{ ev.cardHover }}">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="{{ ev.timeStyle }}">{{ ev.time }}</span>
+                    <sc-if value="{{ ev.isNext }}" hint-placeholder-val="{{ false }}"><span style="{{ ev.nextBadgeStyle }}">UP NEXT</span></sc-if>
+                    <span style="flex:1;"></span>
+                    <sc-if value="{{ ev.done }}" hint-placeholder-val="{{ false }}"><span style="{{ ev.doneBadgeStyle }}">✓ DONE</span></sc-if>
+                  </div>
+                  <div style="{{ ev.titleStyle }}">{{ ev.title }}</div>
+                </div>
+              </div>
+            </sc-for>
+            <div style="{{ nowLineStyle }}"></div>
+            <div style="{{ nowDotStyle }}"></div>
+            <div style="{{ nowLabelStyle }}">{{ nowLabel }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1 1 300px; min-width:270px; border-radius:20px; border:1px solid rgba(143,166,203,.16); background:linear-gradient(180deg, rgba(16,19,29,.72), rgba(11,13,20,.55)); box-shadow:0 26px 60px -30px rgba(0,0,0,.8);">
+        <div style="padding:16px 20px 14px; border-bottom:1px solid rgba(255,255,255,.06);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+            <span style="width:9px; height:9px; border-radius:50%; border:1.5px solid var(--steel);"></span>
+            <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:600; letter-spacing:2.5px; color:var(--text-mid);">FLOATING POOL</span>
+            <span style="font-family:'JetBrains Mono'; font-size:11px; letter-spacing:1px; color:var(--text-lo);">{{ floatCount }}</span>
+          </div>
+          <div style="font-family:'Space Grotesk'; font-size:12px; color:var(--text-lo); letter-spacing:.2px;">No fixed time — check off as the day goes.</div>
+          <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;">
+            <sc-for list="{{ legend }}" as="lg" hint-placeholder-count="3">
+              <span style="{{ lg.style }}"><span style="{{ lg.dotStyle }}"></span>{{ lg.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:11px; padding:16px 18px 20px;">
+          <sc-for list="{{ floating }}" as="t" hint-placeholder-count="4">
+            <div data-id="{{ t.id }}" style="{{ t.cardStyle }}" style-hover="{{ t.cardHover }}">
+              <button onClick="{{ t.onToggle }}" style="{{ t.checkStyle }}" style-hover="{{ t.checkHover }}">{{ t.check }}</button>
+              <div style="display:flex; flex-direction:column; gap:6px; min-width:0; flex:1;">
+                <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+                  <span style="{{ t.titleStyle }}">{{ t.title }}</span>
+                  <sc-if value="{{ t.showProgress }}" hint-placeholder-val="{{ false }}">
+                    <span style="{{ t.progTagStyle }}"><span style="{{ t.progDotStyle }}"></span>IN PROGRESS</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px;">
+                  <span style="{{ t.tagStyle }}">{{ t.tag }}</span>
+                  <sc-if value="{{ t.hasOrigin }}" hint-placeholder-val="{{ false }}">
+                    <span style="{{ t.originStyle }}">↳ {{ t.origin }}</span>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  C = { gold:'#F6C87A', goldSoft:'#DEC28C', steel:'#8FA6CB', grey:'#7E8AA2', ok:'#84D2A6', textHi:'#ECEFF7', textMid:'#A9B0C2', textLo:'#666D80' };
+
+  START = 6; END = 20; PXH = 64; TOPPAD = 18; NOW = 11.75;
+
+  state = { done: { gym:true, f2:true }, mode:'schedule' };
+
+  rgba(hex, a){ const v = parseInt(hex.slice(1),16); return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`; }
+  y(t){ return this.TOPPAD + (t - this.START) * this.PXH; }
+
+  onSchedule = () => this.setState({ mode:'schedule' });
+  onList = () => this.setState({ mode:'list' });
+  toggleDone(id){ this.setState(s => ({ done: { ...s.done, [id]: !s.done[id] } })); }
+
+  renderVals(){
+    const C = this.C, rgba = this.rgba.bind(this), mono = "'JetBrains Mono', monospace", grotesk = "'Space Grotesk', sans-serif";
+    const nowY = this.y(this.NOW);
+    const innerHeight = this.TOPPAD + (this.END - this.START) * this.PXH + 40;
+    const railX = 60, cardLeft = 84, cardRight = 14;
+
+    const innerStyle = { position:'relative', height:innerHeight + 'px' };
+
+    // hour grid
+    const hours = [];
+    for (let h = this.START; h <= this.END; h++){
+      const top = this.y(h);
+      hours.push({
+        label: String(h).padStart(2,'0'),
+        lineStyle: { position:'absolute', left:(railX+4)+'px', right:cardRight+'px', top:top+'px', height:'1px', background:'rgba(255,255,255,.045)' },
+        labelStyle: { position:'absolute', left:'0', width:(railX-14)+'px', top:(top-7)+'px', textAlign:'right', fontFamily:mono, fontSize:'10.5px', letterSpacing:'.5px', color:rgba(C.textLo, h % 2 === 0 ? .95 : .5) }
+      });
+    }
+
+    // rail
+    const railStyle = { position:'absolute', left:railX+'px', top:(this.TOPPAD-8)+'px', height:((this.END-this.START)*this.PXH+16)+'px', width:'2px', borderRadius:'2px', background:`linear-gradient(180deg, ${rgba(C.gold,.35)}, ${rgba(C.steel,.18)})` };
+
+    // past overlay
+    const pastOverlayStyle = { position:'absolute', left:(railX+4)+'px', right:cardRight+'px', top:(this.TOPPAD-8)+'px', height:(nowY-(this.TOPPAD-8))+'px', background:'linear-gradient(180deg, rgba(8,10,17,.55), rgba(8,10,17,.38))', borderRadius:'10px', pointerEvents:'none' };
+
+    // anchored
+    const A = C.gold;
+    const rawAnchored = [
+      { id:'gym', t:7, dur:1, time:'07:00', title:'Gym' },
+      { id:'lunch', t:12.5, dur:1, time:'12:30', title:'Lunch with Marcus', isNext:true },
+      { id:'client', t:15, dur:0.75, time:'15:00', title:'Client call' }
+    ];
+    const anchored = rawAnchored.map(ev => {
+      const done = !!this.state.done[ev.id];
+      const top = this.y(ev.t), h = ev.dur * this.PXH;
+      const past = (ev.t + ev.dur) <= this.NOW;
+      const dim = done || past;
+      return {
+        id: ev.id, time: ev.time, title: ev.title, done, isNext: ev.isNext && !done,
+        tickStyle: { position:'absolute', left:(railX+3)+'px', width:(cardLeft-railX-6)+'px', top:top+'px', height:'1px', background: rgba(A, dim?.3:.6) },
+        dotStyle: { position:'absolute', left:(railX-4)+'px', top:(top-5)+'px', width:'10px', height:'10px', borderRadius:'50%', background: done?rgba(C.ok,.9):(dim?rgba(A,.4):A), border:`2px solid ${C.bg0||'#0A0C13'}`, boxShadow: dim?'none':`0 0 10px ${rgba(A,.8)}`, zIndex:3 },
+        cardStyle: { position:'absolute', left:cardLeft+'px', right:cardRight+'px', top:top+'px', minHeight:(h-8)+'px', display:'flex', flexDirection:'column', gap:'5px', padding:'10px 14px', borderRadius:'12px',
+          background: dim ? 'linear-gradient(158deg, rgba(28,26,20,.5), rgba(13,15,22,.6))' : 'linear-gradient(158deg, rgba(58,45,22,.55), rgba(15,16,24,.72))',
+          border:`1px solid ${rgba(A, dim?.18:.4)}`, boxShadow: dim?'none':`0 14px 34px -22px ${rgba(A,.5)}`, opacity: past&&!done?0.62:(done?0.6:1), backdropFilter:'blur(6px)', zIndex:2, animation:'nsRise .5s ease both' },
+        cardHover: { borderColor: rgba(A,.6), transform:'translateY(-1px)' },
+        timeStyle: { fontFamily:mono, fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color: rgba(A, dim?.6:.95) },
+        titleStyle: { fontFamily:grotesk, fontWeight:600, fontSize:'15px', letterSpacing:'-0.1px', color: done?rgba(C.textHi,.5):C.textHi, textDecoration: done?'line-through':'none' },
+        nextBadgeStyle: { fontFamily:mono, fontSize:'8.5px', fontWeight:600, letterSpacing:'1.5px', padding:'3px 7px', borderRadius:'6px', background:rgba(A,.16), border:`1px solid ${rgba(A,.5)}`, color:A },
+        doneBadgeStyle: { fontFamily:mono, fontSize:'8.5px', fontWeight:600, letterSpacing:'1.5px', color:rgba(C.ok,.9) }
+      };
+    });
+
+    // now line
+    const nowLineStyle = { position:'absolute', left:(railX-6)+'px', right:cardRight+'px', top:nowY+'px', height:'0', borderTop:`1.5px solid ${C.gold}`, boxShadow:`0 0 14px ${rgba(C.gold,.7)}`, zIndex:4, pointerEvents:'none' };
+    const nowDotStyle = { position:'absolute', left:(railX-5)+'px', top:(nowY-6)+'px', width:'12px', height:'12px', borderRadius:'50%', background:C.gold, boxShadow:`0 0 12px ${rgba(C.gold,.9)}`, animation:'nsPulseGold 2.2s ease-in-out infinite', zIndex:5 };
+    const nowLabelStyle = { position:'absolute', left:(railX+8)+'px', top:(nowY-26)+'px', fontFamily:mono, fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:C.gold, textShadow:`0 0 10px ${rgba(C.gold,.6)}`, zIndex:6 };
+    const nowLabel = 'NOW · 11:45';
+
+    // floating pool
+    const prov = {
+      goal:  { accent:C.gold,  tag:'✦ GOAL TREE' },
+      standalone: { accent:C.grey, tag:'• STANDALONE' },
+      inbox: { accent:C.steel, tag:'⌵ FROM INBOX', dashed:true }
+    };
+    const rawFloating = [
+      { id:'f1', title:'Deep work — Atlas architecture', source:'goal', origin:'Build Atlas', progress:true },
+      { id:'f2', title:'Write Northstar v2 spec', source:'goal', origin:'Build Northstar v2' },
+      { id:'f3', title:'Reply to emails', source:'standalone' },
+      { id:'f4', title:'Research car insurance', source:'inbox' }
+    ];
+    const floating = rawFloating.map(t => {
+      const done = !!this.state.done[t.id];
+      const p = prov[t.source];
+      const acc = p.accent;
+      return {
+        id: t.id, title: t.title, tag: p.tag, hasOrigin: !!t.origin, origin: t.origin || '',
+        showProgress: !!t.progress && !done,
+        check: done ? '✓' : '',
+        onToggle: () => this.toggleDone(t.id),
+        cardStyle: { display:'flex', gap:'12px', padding:'13px 15px', borderRadius:'13px',
+          background: done?'rgba(13,16,24,.4)':'rgba(18,21,30,.62)',
+          border: p.dashed ? `1px dashed ${rgba(acc,.42)}` : `1px solid ${rgba(acc,.22)}`,
+          borderLeft: `3px solid ${rgba(acc, done?.3:.85)}`,
+          opacity: done?0.6:1, backdropFilter:'blur(5px)', animation:'nsRise .5s ease both' },
+        cardHover: { borderColor: rgba(acc,.5), borderLeftColor: rgba(acc, done?.4:1), background:'rgba(22,26,36,.66)' },
+        checkStyle: { width:'20px', height:'20px', flex:'0 0 auto', marginTop:'1px', borderRadius:'6px', padding:0,
+          border: done?`1px solid ${C.ok}`:`1.5px solid ${rgba(acc,.55)}`, background: done?rgba(C.ok,.16):'transparent',
+          color:C.ok, display:'grid', placeItems:'center', cursor:'pointer', fontSize:'12px', lineHeight:1 },
+        checkHover: { borderColor: done?C.ok:rgba(acc,.95) },
+        titleStyle: { fontFamily:grotesk, fontWeight:500, fontSize:'14.5px', letterSpacing:'-0.1px', color: done?rgba(C.textHi,.5):C.textHi, textDecoration: done?'line-through':'none' },
+        tagStyle: { fontFamily:mono, fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color: rgba(acc, done?.6:.95) },
+        originStyle: { fontFamily:mono, fontSize:'9px', letterSpacing:'.5px', color:rgba(C.textLo,.9) },
+        progTagStyle: { display:'inline-flex', alignItems:'center', gap:'5px', fontFamily:mono, fontSize:'8.5px', fontWeight:600, letterSpacing:'1.5px', padding:'2px 7px', borderRadius:'6px', background:rgba(C.gold,.14), border:`1px solid ${rgba(C.gold,.4)}`, color:C.gold },
+        progDotStyle: { width:'6px', height:'6px', borderRadius:'50%', background:C.gold, boxShadow:`0 0 6px ${rgba(C.gold,.9)}`, animation:'nsPulseGold 2.2s ease-in-out infinite' }
+      };
+    });
+
+    // legend
+    const legItem = (label, color, dashed) => ({ label, style:{ display:'inline-flex', alignItems:'center', gap:'6px', fontFamily:mono, fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', padding:'4px 8px', borderRadius:'7px', border:'1px solid rgba(255,255,255,.08)', color:C.textMid }, dotStyle:{ width:'8px', height:'8px', borderRadius:'2px', background: dashed?'transparent':color, border: dashed?`1.5px solid ${color}`:'none' } });
+    const legend = [ legItem('GOAL TREE', C.gold, false), legItem('STANDALONE', C.grey, false), legItem('INBOX', C.steel, true) ];
+
+    // nav + mode toggle
+    const navItem = (label, active) => ({ label, style:{ fontFamily:"'Space Grotesk'", fontSize:'13px', fontWeight:500, letterSpacing:'.3px', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', color: active?'var(--text-hi)':'var(--text-lo)', background: active?'rgba(246,200,122,.1)':'transparent', boxShadow: active?'inset 0 -2px 0 var(--gold)':'none' } });
+    const nav = [ navItem('Tree',false), navItem('Today',true), navItem('Planner',false), navItem('Inbox',false), navItem('Settings',false) ];
+
+    const modeBtn = (active) => ({ fontFamily:mono, fontSize:'11px', fontWeight:600, letterSpacing:'1px', padding:'7px 14px', borderRadius:'8px', cursor:'pointer',
+      color: active?'#20160A':'var(--text-mid)', background: active?'linear-gradient(180deg, #F8D08A, #E9B368)':'transparent', boxShadow: active?`0 4px 14px -4px ${rgba(C.gold,.7)}`:'none' });
+
+    return {
+      nav, innerStyle, hours, railStyle, pastOverlayStyle, anchored,
+      nowLineStyle, nowDotStyle, nowLabelStyle, nowLabel,
+      floating, legend, floatCount: '· ' + rawFloating.length,
+      onSchedule: this.onSchedule, onList: this.onList,
+      scheduleBtnStyle: modeBtn(this.state.mode==='schedule'), listBtnStyle: modeBtn(this.state.mode==='list')
+    };
+  }
+}
+</script>
+</body>
+</html>

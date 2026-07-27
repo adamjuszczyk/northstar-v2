@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg0:#080A11; --gold:#F6C87A; --gold-soft:#DEC28C; --steel:#8FA6CB; --grey:#7E8AA2; --ok:#84D2A6;
+      --text-hi:#ECEFF7; --text-mid:#A9B0C2; --text-lo:#666D80;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; background:#05060A; }
+    button{ font:inherit; color:inherit; background:none; border:none; text-align:left; }
+    @keyframes nsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(246,200,122,.5);} 70%{ box-shadow:0 0 0 5px rgba(246,200,122,0);} }
+    @keyframes nsRise { from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:translateY(0);} }
+    @keyframes nsExpand { from{ opacity:0; } to{ opacity:1; } }
+    .nsScroll::-webkit-scrollbar{ width:0; }
+  </style>
+</helmet>
+<div style="display:flex; justify-content:center; padding:26px; background:radial-gradient(60% 50% at 50% 0%, #14161f, #05060A);">
+  <div style="position:relative; width:400px; height:844px; border-radius:46px; padding:11px; background:linear-gradient(160deg, #23262f, #0c0d12); box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 1px rgba(255,255,255,.05);">
+    <div style="position:relative; width:100%; height:100%; border-radius:37px; overflow:hidden; background:var(--bg0); font-family:'Space Grotesk',sans-serif; color:var(--text-hi);">
+
+      <div style="position:absolute; inset:0; pointer-events:none; background:radial-gradient(70% 32% at 28% 0%, rgba(246,200,122,.12), transparent 60%), radial-gradient(60% 30% at 92% 8%, rgba(143,166,203,.10), transparent 62%);"></div>
+      <div style="position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(circle, rgba(255,255,255,.03) 1px, transparent 1px); background-size:24px 24px; -webkit-mask-image:radial-gradient(80% 70% at 45% 20%, #000 30%, transparent 92%); mask-image:radial-gradient(80% 70% at 45% 20%, #000 30%, transparent 92%);"></div>
+
+      <div style="position:absolute; top:0; left:0; right:0; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:14px 22px 8px; font-family:'JetBrains Mono'; font-size:11px; letter-spacing:.5px;">
+        <span>9:41</span>
+        <span style="display:flex; gap:5px; align-items:center; opacity:.85;">▂▄▆ &nbsp;⌵ &nbsp;▓</span>
+      </div>
+
+      <div style="position:relative; z-index:5; padding:44px 20px 10px;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:'JetBrains Mono'; font-size:9px; letter-spacing:2.5px; color:var(--gold); margin-bottom:3px;">TODAY · WED</div>
+            <div style="font-family:'Instrument Serif',serif; font-size:27px; line-height:1; letter-spacing:-0.5px;">9 July 2026</div>
+          </div>
+          <div style="display:flex; padding:3px; border-radius:10px; border:1px solid rgba(255,255,255,.1); background:rgba(12,15,23,.6);">
+            <button onClick="{{ onSchedule }}" style="{{ schedStyle }}">▦</button>
+            <button onClick="{{ onList }}" style="{{ listStyle }}">☰</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nsScroll" style="position:absolute; top:104px; left:0; right:0; bottom:0; z-index:4; overflow-y:auto; padding:8px 18px 40px;">
+
+        <div style="display:flex; align-items:center; gap:8px; padding:2px 2px 10px;">
+          <span style="width:7px; height:7px; border-radius:2px; background:var(--gold); box-shadow:0 0 8px rgba(246,200,122,.6);"></span>
+          <span style="font-family:'JetBrains Mono'; font-size:9.5px; font-weight:600; letter-spacing:2px; color:var(--text-mid);">TIMELINE</span>
+          <span style="font-family:'JetBrains Mono'; font-size:9px; letter-spacing:1px; color:var(--text-lo);">· FIXED TIME</span>
+        </div>
+
+        <div style="{{ innerStyle }}">
+          <sc-for list="{{ hours }}" as="hr" hint-placeholder-count="8">
+            <div>
+              <div style="{{ hr.lineStyle }}"></div>
+              <div style="{{ hr.labelStyle }}">{{ hr.label }}</div>
+            </div>
+          </sc-for>
+          <div style="{{ railStyle }}"></div>
+          <div style="{{ pastStyle }}"></div>
+          <sc-for list="{{ anchored }}" as="ev" hint-placeholder-count="3">
+            <div>
+              <div style="{{ ev.dotStyle }}"></div>
+              <button onClick="{{ ev.onTap }}" data-id="{{ ev.id }}" style="{{ ev.cardStyle }}">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="{{ ev.timeStyle }}">{{ ev.time }}</span>
+                  <span style="{{ ev.titleStyle }}">{{ ev.title }}</span>
+                  <span style="flex:1;"></span>
+                  <sc-if value="{{ ev.done }}" hint-placeholder-val="{{ false }}"><span style="{{ ev.checkStyle }}">✓</span></sc-if>
+                </div>
+                <sc-if value="{{ ev.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="{{ ev.detailStyle }}">
+                    <span style="{{ ev.metaStyle }}">{{ ev.meta }}</span>
+                    <div style="{{ ev.actionsStyle }}">
+                      <span style="{{ ev.actionStyle }}">Reschedule</span>
+                      <span style="{{ ev.actionStyle }}">Complete</span>
+                    </div>
+                  </div>
+                </sc-if>
+              </button>
+            </div>
+          </sc-for>
+          <div style="{{ nowLineStyle }}"></div>
+          <div style="{{ nowDotStyle }}"></div>
+        </div>
+
+        <button onClick="{{ onTogglePool }}" style="{{ poolHeadStyle }}">
+          <span style="width:7px; height:7px; border-radius:50%; border:1.5px solid var(--steel);"></span>
+          <span style="font-family:'JetBrains Mono'; font-size:9.5px; font-weight:600; letter-spacing:2px; color:var(--text-mid);">FLOATING POOL</span>
+          <span style="font-family:'JetBrains Mono'; font-size:9.5px; letter-spacing:1px; color:var(--text-lo);">{{ poolMeta }}</span>
+          <span style="flex:1;"></span>
+          <span style="{{ poolChevStyle }}">⌄</span>
+        </button>
+
+        <sc-if value="{{ poolOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; flex-direction:column; gap:8px; padding-top:2px;">
+            <sc-for list="{{ floating }}" as="t" hint-placeholder-count="4">
+              <button onClick="{{ t.onTap }}" data-id="{{ t.id }}" style="{{ t.cardStyle }}">
+                <div style="display:flex; align-items:center; gap:11px;">
+                  <span onClick="{{ t.onToggle }}" style="{{ t.checkStyle }}">{{ t.check }}</span>
+                  <span style="{{ t.titleStyle }}">{{ t.title }}</span>
+                  <span style="flex:1;"></span>
+                  <sc-if value="{{ t.showProg }}" hint-placeholder-val="{{ false }}"><span style="{{ t.progDot }}"></span></sc-if>
+                </div>
+                <sc-if value="{{ t.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="{{ t.detailStyle }}">
+                    <span style="{{ t.tagStyle }}">{{ t.tag }}</span>
+                    <sc-if value="{{ t.hasOrigin }}" hint-placeholder-val="{{ false }}"><span style="{{ t.originStyle }}">↳ {{ t.origin }}</span></sc-if>
+                  </div>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:452,&quot;height&quot;:896}}">
+class Component extends DCLogic {
+  C = { gold:'#F6C87A', steel:'#8FA6CB', grey:'#7E8AA2', ok:'#84D2A6', textHi:'#ECEFF7', textMid:'#A9B0C2', textLo:'#666D80' };
+  START=6; END=18; PXH=42; TOPPAD=10; NOW=11.75;
+
+  state = { mode:'schedule', poolOpen:true, done:{ gym:true, f2:true }, openEv:null, openTask:null };
+
+  rgba(hex,a){ const v=parseInt(hex.slice(1),16); return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`; }
+  y(t){ return this.TOPPAD + (t-this.START)*this.PXH; }
+
+  onSchedule=()=>this.setState({mode:'schedule'});
+  onList=()=>this.setState({mode:'list'});
+  onTogglePool=()=>this.setState(s=>({poolOpen:!s.poolOpen}));
+  tapEv(id){ this.setState(s=>({ openEv: s.openEv===id?null:id })); }
+  tapTask(id){ this.setState(s=>({ openTask: s.openTask===id?null:id })); }
+  toggleDone(id,e){ if(e&&e.stopPropagation) e.stopPropagation(); this.setState(s=>({ done:{ ...s.done, [id]:!s.done[id] } })); }
+
+  renderVals(){
+    const C=this.C, rgba=this.rgba.bind(this), mono="'JetBrains Mono',monospace", grotesk="'Space Grotesk',sans-serif";
+    const nowY=this.y(this.NOW);
+    const innerHeight=this.TOPPAD+(this.END-this.START)*this.PXH+20;
+    const railX=42, cardLeft=58, cardRight=2;
+
+    const innerStyle={ position:'relative', height:innerHeight+'px', marginBottom:'20px' };
+
+    const hours=[];
+    for(let h=this.START;h<=this.END;h+=2){
+      const top=this.y(h);
+      hours.push({ label:String(h).padStart(2,'0'),
+        lineStyle:{ position:'absolute', left:(railX+2)+'px', right:cardRight+'px', top:top+'px', height:'1px', background:'rgba(255,255,255,.045)' },
+        labelStyle:{ position:'absolute', left:'0', width:(railX-10)+'px', top:(top-6)+'px', textAlign:'right', fontFamily:mono, fontSize:'9.5px', letterSpacing:'.5px', color:rgba(C.textLo,.85) } });
+    }
+
+    const railStyle={ position:'absolute', left:railX+'px', top:(this.TOPPAD-6)+'px', height:((this.END-this.START)*this.PXH+12)+'px', width:'2px', borderRadius:'2px', background:`linear-gradient(180deg, ${rgba(C.gold,.35)}, ${rgba(C.steel,.18)})` };
+    const pastStyle={ position:'absolute', left:(railX+2)+'px', right:cardRight+'px', top:(this.TOPPAD-6)+'px', height:(nowY-(this.TOPPAD-6))+'px', background:'linear-gradient(180deg, rgba(8,10,17,.5), rgba(8,10,17,.32))', borderRadius:'8px', pointerEvents:'none' };
+
+    const A=C.gold;
+    const raw=[ { id:'gym', t:7, time:'07:00', title:'Gym', meta:'Push day · 60 min' },
+      { id:'lunch', t:12.5, time:'12:30', title:'Lunch with Marcus', meta:'The Terrace · 60 min', next:true },
+      { id:'client', t:15, time:'15:00', title:'Client call', meta:'Zoom · 45 min' } ];
+    const anchored=raw.map(ev=>{
+      const done=!!this.state.done[ev.id]; const top=this.y(ev.t); const past=ev.t<this.NOW; const dim=done||past;
+      const open=this.state.openEv===ev.id;
+      return { id:ev.id, time:ev.time, title:ev.title, done, open, meta:ev.meta, onTap:()=>this.tapEv(ev.id),
+        dotStyle:{ position:'absolute', left:(railX-4)+'px', top:(top-4)+'px', width:'9px', height:'9px', borderRadius:'50%', background:done?rgba(C.ok,.9):(dim?rgba(A,.4):A), boxShadow:dim?'none':`0 0 8px ${rgba(A,.8)}`, zIndex:3 },
+        cardStyle:{ position:'absolute', left:cardLeft+'px', right:cardRight+'px', top:top+'px', display:'flex', flexDirection:'column', gap:'8px', padding:'8px 11px', borderRadius:'11px', cursor:'pointer',
+          background: dim?'linear-gradient(150deg, rgba(28,26,20,.5), rgba(13,15,22,.62))':'linear-gradient(150deg, rgba(58,45,22,.55), rgba(15,16,24,.74))',
+          border:`1px solid ${rgba(A, dim?.18:.4)}`, boxShadow: dim?'none':`0 12px 28px -20px ${rgba(A,.55)}`, opacity: past&&!done?0.6:(done?0.55:1), backdropFilter:'blur(6px)', zIndex:2, animation:'nsRise .45s ease both' },
+        timeStyle:{ fontFamily:mono, fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:rgba(A, dim?.6:.95), flex:'0 0 auto' },
+        titleStyle:{ fontFamily:grotesk, fontWeight:600, fontSize:'13.5px', letterSpacing:'-0.1px', color:done?rgba(C.textHi,.5):C.textHi, textDecoration:done?'line-through':'none', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+        checkStyle:{ fontFamily:mono, fontSize:'10px', color:C.ok },
+        detailStyle:{ display:'flex', flexDirection:'column', gap:'8px', animation:'nsExpand .25s ease both', borderTop:'1px solid rgba(255,255,255,.07)', paddingTop:'8px' },
+        metaStyle:{ fontFamily:mono, fontSize:'9.5px', letterSpacing:'.5px', color:rgba(C.textMid,.9) },
+        actionsStyle:{ display:'flex', gap:'7px' },
+        actionStyle:{ fontFamily:mono, fontSize:'9px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'5px 9px', borderRadius:'7px', border:`1px solid ${rgba(A,.3)}`, background:rgba(A,.08), color:rgba(A,.95) } };
+    });
+
+    const nowLineStyle={ position:'absolute', left:(railX-5)+'px', right:cardRight+'px', top:nowY+'px', height:'0', borderTop:`1.5px solid ${C.gold}`, boxShadow:`0 0 10px ${rgba(C.gold,.7)}`, zIndex:4, pointerEvents:'none' };
+    const nowDotStyle={ position:'absolute', left:(railX-4)+'px', top:(nowY-4)+'px', width:'9px', height:'9px', borderRadius:'50%', background:C.gold, boxShadow:`0 0 10px ${rgba(C.gold,.9)}`, animation:'nsPulse 2.2s ease-in-out infinite', zIndex:5 };
+
+    // pool
+    const prov={ goal:{ acc:C.gold, tag:'✦ GOAL TREE' }, standalone:{ acc:C.grey, tag:'• STANDALONE' }, inbox:{ acc:C.steel, tag:'⌵ FROM INBOX', dashed:true } };
+    const rawF=[ { id:'f1', title:'Deep work — Atlas architecture', source:'goal', origin:'Build Atlas', prog:true },
+      { id:'f2', title:'Write Northstar v2 spec', source:'goal', origin:'Build Northstar v2' },
+      { id:'f3', title:'Reply to emails', source:'standalone' },
+      { id:'f4', title:'Research car insurance', source:'inbox' } ];
+    const doneCount=rawF.filter(t=>this.state.done[t.id]).length;
+    const floating=rawF.map(t=>{
+      const done=!!this.state.done[t.id]; const p=prov[t.source]; const acc=p.acc; const open=this.state.openTask===t.id;
+      return { id:t.id, title:t.title, tag:p.tag, hasOrigin:!!t.origin, origin:t.origin||'', open, showProg:!!t.prog&&!done, check:done?'✓':'',
+        onTap:()=>this.tapTask(t.id), onToggle:(e)=>this.toggleDone(t.id,e),
+        cardStyle:{ display:'flex', flexDirection:'column', gap:'8px', padding:'11px 13px', borderRadius:'12px', cursor:'pointer', width:'100%',
+          background: done?'rgba(13,16,24,.4)':'rgba(18,21,30,.62)', border: p.dashed?`1px dashed ${rgba(acc,.4)}`:`1px solid ${rgba(acc,.2)}`, borderLeft:`3px solid ${rgba(acc, done?.3:.85)}`, opacity:done?0.58:1, backdropFilter:'blur(5px)', animation:'nsRise .45s ease both' },
+        checkStyle:{ width:'18px', height:'18px', flex:'0 0 auto', borderRadius:'6px', border:done?`1px solid ${C.ok}`:`1.5px solid ${rgba(acc,.55)}`, background:done?rgba(C.ok,.16):'transparent', color:C.ok, display:'inline-grid', placeItems:'center', cursor:'pointer', fontSize:'11px' },
+        titleStyle:{ fontFamily:grotesk, fontWeight:500, fontSize:'13.5px', letterSpacing:'-0.1px', color:done?rgba(C.textHi,.5):C.textHi, textDecoration:done?'line-through':'none', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+        progDot:{ width:'7px', height:'7px', borderRadius:'50%', flex:'0 0 auto', background:C.gold, boxShadow:`0 0 6px ${rgba(C.gold,.9)}`, animation:'nsPulse 2.2s ease-in-out infinite' },
+        detailStyle:{ display:'flex', alignItems:'center', gap:'9px', flexWrap:'wrap', animation:'nsExpand .25s ease both', borderTop:'1px solid rgba(255,255,255,.07)', paddingTop:'8px' },
+        tagStyle:{ fontFamily:mono, fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:rgba(acc,.95) },
+        originStyle:{ fontFamily:mono, fontSize:'9px', letterSpacing:'.5px', color:rgba(C.textLo,.9) } };
+    });
+
+    const poolHeadStyle={ display:'flex', alignItems:'center', gap:'8px', width:'100%', padding:'11px 12px', marginBottom:'10px', borderRadius:'12px', border:'1px solid rgba(143,166,203,.18)', background:'rgba(16,19,29,.6)', cursor:'pointer' };
+    const poolChevStyle={ fontFamily:mono, fontSize:'13px', color:C.steel, transform:this.state.poolOpen?'rotate(0deg)':'rotate(-90deg)', transition:'transform .25s' };
+    const poolMeta=`· ${doneCount}/${rawF.length} done`;
+
+    const modeBtn=(active)=>({ fontFamily:mono, fontSize:'12px', padding:'6px 11px', borderRadius:'8px', cursor:'pointer', color:active?'#20160A':'var(--text-mid)', background:active?'linear-gradient(180deg,#F8D08A,#E9B368)':'transparent', boxShadow:active?`0 4px 12px -4px ${rgba(C.gold,.7)}`:'none' });
+
+    return { innerStyle, hours, railStyle, pastStyle, anchored, nowLineStyle, nowDotStyle,
+      floating, poolOpen:this.state.poolOpen, onTogglePool:this.onTogglePool, poolHeadStyle, poolChevStyle, poolMeta,
+      onSchedule:this.onSchedule, onList:this.onList, schedStyle:modeBtn(this.state.mode==='schedule'), listStyle:modeBtn(this.state.mode==='list') };
+  }
+}
+</script>
+</body>
+</html>

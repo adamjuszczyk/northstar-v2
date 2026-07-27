@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg0:#080A11; --bg1:#0C0F19;
+      --gold:#F6C87A; --gold-soft:#DEC28C; --steel:#8FA6CB; --grey:#7E8AA2; --ok:#84D2A6;
+      --text-hi:#ECEFF7; --text-mid:#A9B0C2; --text-lo:#666D80; --line:#222736;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; height:100%; background:var(--bg0); }
+    button{ font:inherit; color:inherit; background:none; border:none; }
+    input{ font:inherit; }
+    @keyframes nsPulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,255,255,.28);} 70%{ box-shadow:0 0 0 6px rgba(255,255,255,0);} }
+    @keyframes nsRise { from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
+    ::-webkit-scrollbar{ width:11px; height:11px; }
+    ::-webkit-scrollbar-track{ background:transparent; }
+    ::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.08); border-radius:20px; border:3px solid transparent; background-clip:content-box; }
+    ::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.16); background-clip:content-box; }
+  </style>
+</helmet>
+<div style="position:fixed; inset:0; display:flex; flex-direction:column; background:var(--bg0); color:var(--text-hi); font-family:'Space Grotesk',sans-serif; overflow:hidden;">
+
+  <div style="position:absolute; inset:0; pointer-events:none; background:radial-gradient(62% 46% at 26% -4%, rgba(246,200,122,.11), transparent 60%), radial-gradient(48% 42% at 88% 6%, rgba(143,166,203,.09), transparent 62%);"></div>
+  <div style="position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(circle, rgba(255,255,255,.032) 1px, transparent 1px); background-size:27px 27px; -webkit-mask-image:radial-gradient(80% 80% at 40% 30%, #000 30%, transparent 90%); mask-image:radial-gradient(80% 80% at 40% 30%, #000 30%, transparent 90%);"></div>
+  <div style="position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 240px 40px rgba(0,0,0,.65);"></div>
+
+  <header style="position:relative; z-index:5; display:flex; align-items:center; gap:26px; padding:16px 26px; border-bottom:1px solid rgba(255,255,255,.05); background:linear-gradient(180deg, rgba(10,12,20,.6), rgba(10,12,20,0)); backdrop-filter:blur(4px);">
+    <div style="display:flex; align-items:baseline; gap:9px;">
+      <span style="font-size:16px; color:var(--gold); text-shadow:0 0 12px rgba(246,200,122,.6);">✦</span>
+      <span style="font-family:'Space Grotesk'; font-weight:700; font-size:15px; letter-spacing:3px; color:var(--text-hi);">NORTHSTAR</span>
+      <span style="font-family:'JetBrains Mono'; font-size:10px; letter-spacing:1px; color:var(--text-lo);">v2</span>
+    </div>
+    <nav style="display:flex; align-items:center; gap:4px;">
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="5">
+        <span style="{{ item.style }}">{{ item.label }}</span>
+      </sc-for>
+    </nav>
+    <span style="flex:1;"></span>
+    <div style="display:flex; align-items:center; gap:16px; font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:1px; color:var(--text-lo);">
+      <span><span style="color:var(--gold);">2</span> visions</span>
+      <span style="opacity:.4;">·</span>
+      <span><span style="color:var(--text-mid);">14</span> nodes</span>
+    </div>
+  </header>
+
+  <div style="position:relative; z-index:2; flex:1; overflow:auto;">
+    <div ref="{{ stageRef }}" style="position:relative; min-width:max-content; min-height:100%; padding:70px 120px 120px 74px;">
+      {{ connectorSvg }}
+      <div ref="{{ nodesRef }}" style="position:relative; z-index:2; display:flex; flex-direction:column; gap:88px; width:max-content;">
+        {{ tree }}
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; left:24px; bottom:22px; z-index:6; display:flex; flex-direction:column; gap:12px; padding:16px 18px; border-radius:15px; border:1px solid rgba(255,255,255,.07); background:rgba(11,13,21,.78); backdrop-filter:blur(10px); box-shadow:0 22px 50px -24px rgba(0,0,0,.9);">
+    <div style="display:flex; gap:22px;">
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono'; font-size:9px; letter-spacing:2px; color:var(--text-lo);">TYPE</div>
+        <div style="display:flex; flex-direction:column; gap:7px; font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:.5px; color:var(--text-mid);">
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:13px; height:13px; border-radius:4px; background:var(--gold); box-shadow:0 0 9px rgba(246,200,122,.6);"></span>Vision</div>
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:11px; height:11px; border-radius:4px; background:var(--gold-soft);"></span>Goal</div>
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--steel);"></span>Project</div>
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:7px; height:7px; border-radius:2px; background:var(--grey);"></span>Task</div>
+        </div>
+      </div>
+      <div style="width:1px; background:rgba(255,255,255,.07);"></div>
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono'; font-size:9px; letter-spacing:2px; color:var(--text-lo);">STATE</div>
+        <div style="display:flex; flex-direction:column; gap:7px; font-family:'JetBrains Mono'; font-size:10.5px; letter-spacing:.5px; color:var(--text-mid);">
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:50%; border:1.5px solid rgba(255,255,255,.4);"></span>Not started</div>
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:50%; background:var(--gold); box-shadow:0 0 9px rgba(246,200,122,.7);"></span>In progress</div>
+          <div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:50%; border:1px solid var(--ok); background:rgba(132,210,166,.18); color:var(--ok); display:grid; place-items:center; font-size:8px;">✓</span>Complete</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; right:26px; bottom:24px; z-index:6; font-family:'JetBrains Mono'; font-size:9.5px; letter-spacing:1.5px; color:var(--text-lo);">SCROLL TO EXPLORE THE TREE →</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  C = { visionA:'#F6C87A', visionText:'#F8EAD0', goalA:'#DEC28C', goalText:'#ECE4D3', projectA:'#8FA6CB', projectText:'#D2DAE8', taskA:'#7E8AA2', taskText:'#B4BCCE', ok:'#84D2A6' };
+  WID = { vision:2.7, goal:2.1, project:1.7, task:1.5, add:1.6 };
+
+  state = {
+    collapsed: { v2:true },
+    done: { t1:true, p4:true },
+    addOpen: { p3:true },
+    paths: [], svgW: 0, svgH: 0
+  };
+
+  rgba(hex, a){ const v = parseInt(hex.slice(1),16); return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`; }
+  COL(t){ return this.C[t+'A'] || this.C.visionA; }
+  countDesc(n){ const k=(n&&n.children)||[]; return k.reduce((s,c)=>s+1+this.countDesc(c),0); }
+  doneDesc(n){ const k=(n&&n.children)||[]; return k.reduce((s,c)=>s+(this.state.done[c.id]?1:0)+this.doneDesc(c),0); }
+
+  toggleCollapse(id){ this.setState(s => ({ collapsed: { ...s.collapsed, [id]: !s.collapsed[id] } })); }
+  toggleDone(id){ this.setState(s => ({ done: { ...s.done, [id]: !s.done[id] } })); }
+  toggleAdd(id){ this.setState(s => ({ addOpen: { ...s.addOpen, [id]: !s.addOpen[id] } })); }
+
+  stageRef = (el) => { this.stage = el; };
+  nodesRef = (el) => { this.nodesEl = el; };
+
+  componentDidMount(){
+    this.schedule = () => { if (this._raf) return; this._raf = requestAnimationFrame(() => { this._raf=null; this.computeConnectors(); }); };
+    this.ro = new ResizeObserver(this.schedule);
+    if (this.stage) this.ro.observe(this.stage);
+    if (this.nodesEl) this.ro.observe(this.nodesEl);
+    this.mo = new MutationObserver(this.schedule);
+    if (this.nodesEl) this.mo.observe(this.nodesEl, { childList:true, subtree:true, attributes:true, attributeFilter:['data-state','style'] });
+    window.addEventListener('resize', this.schedule);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(this.schedule);
+    this.schedule();
+    this._t1 = setTimeout(this.schedule, 300);
+    this._t2 = setTimeout(this.schedule, 900);
+  }
+  componentWillUnmount(){
+    if (this.ro) this.ro.disconnect();
+    if (this.mo) this.mo.disconnect();
+    window.removeEventListener('resize', this.schedule);
+    clearTimeout(this._t1); clearTimeout(this._t2);
+  }
+
+  computeConnectors(){
+    const stage=this.stage, nodes=this.nodesEl; if(!stage||!nodes) return;
+    const base = stage.getBoundingClientRect();
+    const els = nodes.querySelectorAll('[data-node-id]');
+    const map = {};
+    els.forEach(el => { const r=el.getBoundingClientRect(); map[el.dataset.nodeId]={ x:r.left-base.left, y:r.top-base.top, w:r.width, h:r.height, type:el.dataset.type, state:el.dataset.state, dashed:el.dataset.dashed==='1' }; });
+    const paths = [];
+    els.forEach(el => {
+      const pid = el.dataset.parentId; if(!pid) return;
+      const p = map[pid], c = map[el.dataset.nodeId]; if(!p||!c) return;
+      const x1=p.x+p.w, y1=p.y+p.h/2, x2=c.x, y2=c.y+c.h/2;
+      const dx=Math.max(30,x2-x1); const c1x=x1+dx*0.55, c2x=x2-dx*0.55;
+      const d=`M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`;
+      const dashed=c.dashed, doneChild=c.state==='done';
+      paths.push({ d, x1, y1, x2, y2, dashed,
+        fromColor:this.COL(p.type), toColor:dashed?this.C.visionA:this.COL(c.type),
+        fromOp:dashed?0.9:0.85, toOp:dashed?0.45:(doneChild?0.22:0.6),
+        w:this.WID[p.type]||1.6, op:dashed?0.85:(doneChild?0.3:0.62) });
+    });
+    const W=Math.max(stage.scrollWidth,nodes.scrollWidth,base.width);
+    const H=Math.max(stage.scrollHeight,nodes.scrollHeight,base.height);
+    const sig=JSON.stringify(paths)+'|'+W+'x'+H;
+    if(sig===this._sig) return; this._sig=sig;
+    this.setState({ paths, svgW:W, svgH:H });
+  }
+
+  buildSvg(){
+    const { paths, svgW, svgH } = this.state;
+    if (!paths || !paths.length) return null;
+    const h = React.createElement;
+    const defs=[], glow=[], crisp=[];
+    paths.forEach((p,i) => {
+      const gid='nsg'+i;
+      defs.push(h('linearGradient',{ key:gid, id:gid, gradientUnits:'userSpaceOnUse', x1:p.x1, y1:p.y1, x2:p.x2, y2:p.y2 },
+        h('stop',{ offset:'0%', stopColor:p.fromColor, stopOpacity:p.fromOp }),
+        h('stop',{ offset:'100%', stopColor:p.toColor, stopOpacity:p.toOp })));
+      const dash = p.dashed ? { strokeDasharray:'2 8' } : {};
+      glow.push(h('path',{ key:'g'+i, d:p.d, fill:'none', stroke:'url(#'+gid+')', strokeWidth:p.w+5, strokeLinecap:'round', opacity:0.16, filter:'url(#nsCGlow)', ...dash }));
+      crisp.push(h('path',{ key:'c'+i, d:p.d, fill:'none', stroke:'url(#'+gid+')', strokeWidth:p.w, strokeLinecap:'round', opacity:p.op, ...dash }));
+    });
+    defs.push(h('filter',{ key:'flt', id:'nsCGlow', x:'-20%', y:'-20%', width:'140%', height:'140%' }, h('feGaussianBlur',{ stdDeviation:3 })));
+    return h('svg',{ width:svgW, height:svgH, style:{ position:'absolute', left:0, top:0, overflow:'visible', pointerEvents:'none', zIndex:1 } }, h('defs',null,defs), glow, crisp);
+  }
+
+  renderNode(node, parentId, depth){
+    const h = React.createElement, C = this.C, rgba = this.rgba.bind(this);
+    const id = node.id, typeName = node.type || 'task';
+    const isTask = typeName === 'task', isVision = typeName === 'vision', isContainer = !isTask;
+    const kids = node.children || [], hasKids = kids.length > 0;
+    const collapsed = !!this.state.collapsed[id];
+    const addOpen = !!this.state.addOpen[id];
+    const done = !!this.state.done[id];
+    const stateName = done ? 'done' : (node.state || 'active');
+    const A = C[typeName+'A'] || C.taskA, TXT = C[typeName+'Text'] || C.taskText;
+    const grotesk = "'Space Grotesk', sans-serif", mono = "'JetBrains Mono', monospace";
+
+    let card;
+    if (isTask){
+      card = h('div', { key:'card', 'data-node-id':id, 'data-parent-id':parentId, 'data-type':typeName, 'data-state':stateName,
+        style:{ display:'inline-flex', alignItems:'center', gap:'10px', boxSizing:'border-box', padding:'8px 15px 8px 9px', borderRadius:'11px',
+          background: done?'rgba(13,16,24,.4)':'rgba(17,20,29,.58)', border:`1px solid ${rgba(A, done?.14:.26)}`,
+          minWidth:'150px', maxWidth:'280px', backdropFilter:'blur(5px)', WebkitBackdropFilter:'blur(5px)', opacity:done?0.58:1, zIndex:2, animation:'nsRise .5s ease both' } },
+        h('button', { key:'cb', onClick:()=>this.toggleDone(id),
+          style:{ width:'19px', height:'19px', flex:'0 0 auto', borderRadius:'6px', padding:0,
+            border: done?`1px solid ${C.ok}`:`1.5px solid ${rgba(A,.55)}`, background: done?rgba(C.ok,.16):'transparent',
+            color:C.ok, display:'grid', placeItems:'center', cursor:'pointer', fontSize:'11px', lineHeight:1 } }, done?'✓':''),
+        h('span', { key:'t', style:{ fontFamily:grotesk, fontWeight:450, fontSize:'14.5px', letterSpacing:'-0.1px', color: done?rgba(C.taskText,.55):C.taskText, textDecoration: done?'line-through':'none' } }, node.title)
+      );
+    } else {
+      const S = isVision
+        ? { pad:'23px 27px', minW:290, maxW:392, radius:20, ts:38, tf:"'Instrument Serif', serif", tw:400, lh:1.04, ls:'-0.5px', gap:'12px' }
+        : (typeName==='goal'
+          ? { pad:'16px 20px', minW:222, maxW:300, radius:16, ts:20, tf:grotesk, tw:600, lh:1.2, ls:'-0.2px', gap:'8px' }
+          : { pad:'13px 16px', minW:196, maxW:252, radius:13, ts:15.5, tf:grotesk, tw:600, lh:1.25, ls:'-0.1px', gap:'7px' });
+      const cardBg = isVision ? 'linear-gradient(158deg, rgba(60,45,20,.58), rgba(15,16,24,.74))'
+        : (typeName==='goal' ? 'linear-gradient(158deg, rgba(42,37,25,.5), rgba(13,15,22,.68))' : 'linear-gradient(158deg, rgba(23,28,41,.62), rgba(12,14,21,.72))');
+      const cardShadow = isVision ? `0 26px 74px -26px ${rgba(A,.5)}, 0 0 0 1px ${rgba(A,.06)}, inset 0 1px 0 rgba(255,255,255,.06)`
+        : (typeName==='goal' ? `0 18px 46px -26px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04)` : `0 14px 34px -24px rgba(0,0,0,.78), inset 0 1px 0 rgba(255,255,255,.03)`);
+
+      // status dot
+      let dotStyle, dotGlyph='';
+      const dotBase = { width:'15px', height:'15px', borderRadius:'50%', display:'inline-grid', placeItems:'center', fontSize:'9px', fontFamily:mono, flex:'0 0 auto', lineHeight:1 };
+      if (done){ dotStyle={ ...dotBase, background:rgba(C.ok,.16), border:`1px solid ${C.ok}`, color:C.ok }; dotGlyph='✓'; }
+      else if (stateName==='todo'){ dotStyle={ ...dotBase, background:'transparent', border:`1.5px solid ${rgba(A,.5)}` }; }
+      else { dotStyle={ ...dotBase, background:rgba(A,.92), boxShadow:`0 0 10px ${rgba(A,.7)}`, animation:'nsPulse 2.6s ease-in-out infinite' }; }
+
+      const headChildren = [
+        h('span', { key:'dot', style:dotStyle }, dotGlyph),
+        h('span', { key:'k', style:{ fontFamily:mono, fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', textTransform:'uppercase', color:rgba(A, done?.5:.92) } }, typeName),
+        h('span', { key:'sp', style:{ flex:1 } }),
+        h('button', { key:'add', onClick:()=>this.toggleAdd(id),
+          style:{ width:'23px', height:'23px', borderRadius:'7px', border:`1px dashed ${rgba(A, addOpen?.6:.32)}`, background: addOpen?rgba(A,.12):'transparent', color: addOpen?A:rgba(A,.65), fontSize:'15px', display:'grid', placeItems:'center', cursor:'pointer', padding:0, lineHeight:1 } }, '+')
+      ];
+      if (hasKids){
+        headChildren.push(h('button', { key:'chev', onClick:()=>this.toggleCollapse(id),
+          style:{ width:'23px', height:'23px', borderRadius:'7px', border:`1px solid ${rgba(A,.28)}`, background:rgba(A,.06), color:rgba(A,.9), fontSize:'12px', fontFamily:mono, display:'grid', placeItems:'center', cursor:'pointer', padding:0, lineHeight:1, transition:'transform .25s', transform: collapsed?'rotate(-90deg)':'rotate(0deg)' } }, '⌄'));
+      }
+
+      const body = [ h('div', { key:'head', style:{ display:'flex', alignItems:'center', gap:'9px' } }, headChildren),
+        h('div', { key:'title', style:{ fontFamily:S.tf, fontWeight:S.tw, fontSize:S.ts+'px', lineHeight:S.lh, letterSpacing:S.ls, color: done?rgba(TXT,.6):TXT, textWrap:'balance' } }, node.title) ];
+
+      if (isVision){
+        const total=this.countDesc(node), doneN=this.doneDesc(node), pct= total?Math.round(doneN/total*100):0;
+        body.push(h('div', { key:'prog', style:{ display:'flex', alignItems:'center', gap:'11px', marginTop:'2px' } },
+          h('div', { key:'tr', style:{ position:'relative', flex:'0 0 132px', height:'4px', borderRadius:'999px', background:'rgba(255,255,255,.08)', overflow:'hidden' } },
+            h('div', { style:{ position:'absolute', left:0, top:0, bottom:0, width:pct+'%', borderRadius:'999px', background:`linear-gradient(90deg, ${A}, ${rgba(A,.5)})`, boxShadow:`0 0 10px ${rgba(A,.6)}` } })),
+          h('span', { key:'lb', style:{ fontFamily:mono, fontSize:'10px', letterSpacing:'1px', color:rgba(TXT,.55) } }, `${doneN}/${total} done`)));
+      }
+      if (hasKids && collapsed){
+        body.push(h('div', { key:'cm', style:{ fontFamily:mono, fontSize:'10px', letterSpacing:'1.5px', color:rgba(A,.62), marginTop:'2px' } }, `${this.countDesc(node)} nodes hidden`));
+      }
+
+      card = h('div', { key:'card', 'data-node-id':id, 'data-parent-id':parentId, 'data-type':typeName, 'data-state':stateName,
+        style:{ position:'relative', boxSizing:'border-box', display:'flex', flexDirection:'column', gap:S.gap, padding:S.pad, minWidth:S.minW+'px', maxWidth:S.maxW+'px', borderRadius:S.radius+'px',
+          background:cardBg, border:`1px solid ${rgba(A, isVision?.42:(typeName==='goal'?.3:.26))}`, boxShadow:cardShadow,
+          backdropFilter:'blur(7px)', WebkitBackdropFilter:'blur(7px)', opacity:done?0.5:1, filter:done?'saturate(.5)':'none', zIndex:2, animation:'nsRise .55s ease both' } },
+        isVision ? h('div', { key:'halo', style:{ position:'absolute', inset:'-45% -28%', background:`radial-gradient(58% 55% at 32% 42%, ${rgba(A,.3)}, transparent 70%)`, filter:'blur(28px)', zIndex:-1, pointerEvents:'none', borderRadius:'44px' } }) : null,
+        body
+      );
+    }
+
+    // kids column
+    const showKids = !collapsed && (hasKids || addOpen);
+    let kidsCol = null;
+    if (showKids){
+      const kidsAreTasks = hasKids && kids[0] && kids[0].type === 'task';
+      const kidEls = kids.map(k => this.renderNode(k, id, depth+1));
+      if (addOpen){
+        const chip = (label, active) => h('span', { key:label, style:{ fontFamily:mono, fontSize:'9.5px', letterSpacing:'1px', textTransform:'uppercase', padding:'5px 9px', borderRadius:'7px', cursor:'pointer',
+          background: active?rgba(C.projectA,.2):'rgba(255,255,255,.03)', border: active?`1px solid ${rgba(C.projectA,.7)}`:'1px solid rgba(255,255,255,.1)', color: active?'#DCE4F0':'rgba(210,216,230,.65)' } }, label);
+        kidEls.push(h('div', { key:'addcard', 'data-node-id':id+'::add', 'data-parent-id':id, 'data-type':'add', 'data-state':'add', 'data-dashed':'1',
+          style:{ boxSizing:'border-box', display:'flex', flexDirection:'column', gap:'11px', padding:'15px 16px', minWidth:'234px', maxWidth:'260px', borderRadius:'14px',
+            border:`1.5px dashed ${rgba(C.visionA,.55)}`, background:'linear-gradient(158deg, rgba(44,34,16,.5), rgba(13,15,22,.62))', boxShadow:`0 20px 42px -26px ${rgba(C.visionA,.55)}`, zIndex:2, animation:'nsRise .4s ease both' } },
+          h('div', { key:'ak', style:{ fontFamily:mono, fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:C.visionA } }, '✦ NEW NODE'),
+          h('div', { key:'chips', style:{ display:'flex', gap:'6px', flexWrap:'wrap' } }, chip('Vision',false), chip('Goal',false), chip('Project',true), chip('Task',false)),
+          h('input', { key:'in', placeholder:'Name this node…', style:{ background:'rgba(0,0,0,.28)', border:'1px solid rgba(255,255,255,.11)', borderRadius:'9px', padding:'9px 11px', color:'#EDEFF6', fontFamily:grotesk, fontSize:'14px', outline:'none', width:'100%', boxSizing:'border-box' } }),
+          h('div', { key:'hint', style:{ fontFamily:mono, fontSize:'9px', letterSpacing:'1px', color:'rgba(255,255,255,.32)' } }, '↵ add · esc cancel')
+        ));
+      }
+      kidsCol = h('div', { key:'kids', style:{ display:'flex', flexDirection:'column', gap: kidsAreTasks?'13px':'24px', marginLeft:'94px', justifyContent:'center', position:'relative', zIndex:2 } }, kidEls);
+    }
+
+    return h('div', { key:id, style:{ display:'flex', alignItems:'center', width:'max-content' } }, card, kidsCol);
+  }
+
+  renderVals(){
+    const v1 = { id:'v1', type:'vision', title:'Own a specific car', state:'active',
+      children:[ { id:'g1', type:'goal', title:'Earn money for it', state:'active',
+        children:[ { id:'g2', type:'goal', title:'Start a business', state:'active',
+          children:[ { id:'p1', type:'project', title:'Develop AI skills', state:'active',
+            children:[
+              { id:'p2', type:'project', title:'Build Atlas', state:'active',
+                children:[ { id:'t1', type:'task', title:'Write SPEC.md', state:'done' }, { id:'t2', type:'task', title:'Design dashboard layout', state:'todo' } ] },
+              { id:'p3', type:'project', title:'Build Northstar v2', state:'active' },
+              { id:'p4', type:'project', title:'Build Overload', state:'done' }
+            ] } ] } ] } ] };
+    const v2 = { id:'v2', type:'vision', title:'Lead a specific lifestyle', state:'active',
+      children:[ { id:'g3', type:'goal', title:'Build physical foundation', state:'active',
+        children:[ { id:'p5', type:'project', title:'Follow PPL program consistently', state:'active',
+          children:[ { id:'t3', type:'task', title:'Log every session in Overload', state:'todo' } ] } ] } ] };
+
+    const navItem = (label, active) => ({ label, style:{ fontFamily:"'Space Grotesk'", fontSize:'13px', fontWeight:500, letterSpacing:'.3px', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', color: active?'var(--text-hi)':'var(--text-lo)', background: active?'rgba(246,200,122,.1)':'transparent', boxShadow: active?'inset 0 -2px 0 var(--gold)':'none' } });
+    const nav = [ navItem('Tree',true), navItem('Today',false), navItem('Planner',false), navItem('Inbox',false), navItem('Settings',false) ];
+
+    const React_ = React;
+    const tree = React_.createElement(React_.Fragment, null, this.renderNode(v1,'',0), this.renderNode(v2,'',0));
+
+    return { nav, tree, connectorSvg: this.buildSvg(), stageRef: this.stageRef, nodesRef: this.nodesRef };
+  }
+}
+</script>
+</body>
+</html>

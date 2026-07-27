@@ -1,48 +1,75 @@
-# Northstar v2 — Claude Context
+# Northstar v3 — Claude Context
 *Read this first. Then read SPEC.md, TASKS.md, AUDIT.md.*
+*(`SPEC-v2.md` / `TASKS-v2.md` are the frozen v2 snapshots — history only,
+not the source of truth. Don't plan against them.)*
 
 ---
 
 ## What this app is
-A personal life planning PWA. Goal tree (Vision/Goal/Project/Task, 
-any nesting), Inbox capture, Day/Week/Month planning views, 
-Habit tracking, and a daily journal. Single user, Supabase backend, 
-shared project with Overload v2.
+A personal life planning PWA. Goal tree (Vision/Goal/Project/Task,
+any nesting), Inbox capture, Day/Week/Month planning views, and
+Habit tracking. Single user, Supabase backend, shared project with
+Overload v2.
+
+v3 is a feature deepening of the same product, in the same repo — no
+rebuild. It adds Lines, Blocks, Task Lists with automatic split, and
+Day Templates to make the planner match how a day actually runs;
+declutters the Tree with Sheets; narrows Today to just today; splits
+Inbox into Notes vs Tasks; and adds a Polish/English toggle.
 
 ---
 
-## Current state
+## Where v3 stands
+**Planning complete and approved. No v3 implementation code written yet.**
+
+SPEC.md is v3 product spec. TASKS.md is the v3 technical plan —
+tech stack, file structure, five new tables, nine implementation
+phases, sixteen assumptions. Read it before touching any code; the
+data-model decisions in §3 are not obvious from the spec alone.
+
+**Next session starts at TASKS.md Phase 0** (error boundary), then
+Phase 1 (nav restructure + Goals rename + Goals screen).
+
+---
+
+## Current state — what's actually built (all of it v2)
 **Deployed:** Yes — Vercel (northstar-v2)
 **Auth:** Supabase email/password, same credentials as Overload v2
 
-All core features built and working:
-- Goal tree with horizontal branching connectors, dual mode 
-  (tree + list toggle), drag reparenting with circular reference 
-  detection, node picker fallback, note icon on any node with a 
+All v2 core features built and working:
+- Goal tree with horizontal branching connectors, dual mode
+  (tree + list toggle), drag reparenting with circular reference
+  detection, node picker fallback, note icon on any node with a
   non-empty note (tap to expand inline, no modal)
-- Inbox with capture, schedule, promote to tree, carried-over 
-  section for unfinished day tasks, edit sheet (content-only), 
-  direct completion (checkbox → strikethrough + DONE badge, 
-  moves to PROCESSED, independent of tree/day propagation), 
-  filter bar (All/Unassigned/Scheduled·not done/Promoted/Completed, 
-  component state only), and custom-styled day/week/month pickers 
-  (`src/components/pickers/`) with quick chips (Today/Tomorrow, 
+- Inbox with capture, schedule, promote to tree, carried-over
+  section for unfinished day tasks, edit sheet (content-only),
+  direct completion (checkbox → strikethrough + DONE badge,
+  moves to PROCESSED, independent of tree/day propagation),
+  filter bar (All/Unassigned/Scheduled·not done/Promoted/Completed,
+  component state only), and custom-styled day/week/month pickers
+  (`src/components/pickers/`) with quick chips (Today/Tomorrow,
   This week/Next week, This month/Next month) ahead of the full picker
-- Day view: schedule mode (timeline + floating pool) and list mode, 
-  any date (forward planning), priority colours, custom block colours, 
-  week/month focus reminder widget, daily journal (collapsible), 
+- Day view: schedule mode (timeline + floating pool) and list mode,
+  any date (forward planning), priority colours, custom block colours,
+  week/month focus reminder widget, daily journal (collapsible),
   x_per_day habit counter items ("0 / 2", tap to increment)
-- Week and month views with focus items, correct title resolution 
+- Week and month views with focus items, correct title resolution
   for every source including inbox-scheduled items
-- Habit tracking: build modes (daily/weekly/x_per_week/x_per_day) 
-  and a deliberately minimal reduce mode (name + mode only — no 
-  frequency, no auto-add, no target), trend charts, tree node 
+- Habit tracking: build modes (daily/weekly/x_per_week/x_per_day)
+  and a deliberately minimal reduce mode (name + mode only — no
+  frequency, no auto-add, no target), trend charts, tree node
   linking (build only), auto-add to day/week/month, manual logging
 - Settings: dark/light mode, accent colour switcher, week start
 - PWA: offline inbox capture, offline day item completion, sync queue
-- Mobile: optimised day view (tap to expand items, collapsible pool, 
-  expanded clusters grow to full height instead of inner-scrolling), 
+- Mobile: optimised day view (tap to expand items, collapsible pool,
+  expanded clusters grow to full height instead of inner-scrolling),
   dual-mode tree (tree/list toggle)
+
+**Scheduled for deletion in v3 Phase 6** — don't invest in these:
+`WeekPoolPanel` (the weekly pull panel), `FocusReminder` (week/month
+reminder widget), and `JournalSection` + `useJournalEntry` (the daily
+journal, removed from Today *and* Day view). `ns_journal_entries`
+keeps its rows — the UI goes, the data stays.
 
 ---
 
@@ -51,27 +78,38 @@ All core features built and working:
 - CSS Modules + tokens.css (all colours as CSS custom properties)
 - Supabase JS v2 (auth + database)
 - TanStack Query v5 (server state)
-- Dexie v4 (offline cache, IndexedDB v4)
+- Dexie v4 (offline cache, IndexedDB v7)
 - @dnd-kit (drag and drop — tree reordering and reparenting)
 - date-fns
 - React Router v6
 
+v3 adds exactly one thing: a hand-rolled i18n layer in `src/i18n/`
+(~80 lines, plus `Intl.PluralRules` for Polish's three plural forms).
+Deliberately not `react-i18next` — see TASKS.md §1 for why.
+
 ---
 
 ## Database tables (all ns_ prefixed)
-ns_tree_nodes, ns_inbox_items, ns_day_items, ns_week_focus, 
+Live now: ns_tree_nodes, ns_inbox_items, ns_day_items, ns_week_focus,
 ns_month_focus, ns_journal_entries, ns_habits, ns_habit_entries
 
 RLS enabled and verified on all tables.
 
+Planned for v3 (migrations 11-15, none written yet): ns_lines,
+ns_blocks, ns_tasks, ns_task_steps, ns_day_templates,
+ns_day_template_items, ns_sheets — plus new columns on
+ns_inbox_items (`kind`), ns_day_items (`block_id`, `task_id`), and
+ns_tree_nodes (`sheet_id`). Full DDL in TASKS.md §3.
+
 ---
 
 ## Key files
-- SPEC.md — product source of truth
-- TASKS.md — technical architecture and data models
+- SPEC.md — v3 product source of truth
+- TASKS.md — v3 technical architecture, data models, phase order
+- SPEC-v2.md / TASKS-v2.md — frozen v2 snapshots (history only)
 - AUDIT.md — Fable 5 audit findings, fixed and deferred items
 - tokens.css — all CSS custom properties, single source of truth for colours
-- src/lib/db.ts — Dexie schema (version 7)
+- src/lib/db.ts — Dexie schema (version 7; v3 goes to v11)
 - src/lib/supabase.ts — Supabase client
 - src/components/pickers/ — custom WeekPicker/DayPicker/MonthPicker,
   gold accent + Space Grotesk headers + JetBrains Mono grids, replace
@@ -83,18 +121,58 @@ RLS enabled and verified on all tables.
 ---
 
 ## Active work
-`scripts/migration_10_focus_pool_linking.sql` has been written but
-**NOT YET RUN** — needs `origin_week_focus_id`/`origin_month_focus_id`
-columns on `ns_day_items` before Features 3-5 below actually track
-"pulled" state (the UI degrades gracefully without it: every week/month
-item just shows as permanently available, never pulled). Run it in the
-Supabase SQL editor before relying on the pull/pulled-indicator behaviour.
+
+Session of July 27, 2026 — **v3 technical planning. No code written.**
+- Read SPEC.md (v3) and wrote **TASKS.md** — the v3 technical plan:
+  proposed stack additions, file/folder changes, full data models for
+  Lines, Blocks, Tasks + steps + split occurrences, Day Templates,
+  Sheets, and the Goals rename; nine-phase implementation order with
+  per-phase reasoning; sixteen assumptions.
+- **Committed and pushed all five planning docs (commit `5b2910b`).**
+  They had never been tracked — `git ls-files` showed only CONTEXT.md.
+  SPEC.md/TASKS.md/AUDIT.md were untracked working-tree files, which
+  is how v2's SPEC.md got overwritten with no recoverable copy in git.
+  Recovered from `design-handoff/project/uploads/Northstar-v2-SPEC.md`
+  and snapshotted as `SPEC-v2.md`; v2's TASKS.md copied to
+  `TASKS-v2.md` before being overwritten.
+- **No `v2-final` tag, deliberately.** SPEC.md at `5b2910b` already
+  contains v3 content, so a tag claiming to mark v2 would point at the
+  wrong thing. SPEC.md's intro still says v2 "is preserved permanently
+  at the `v2-final` git tag" — that line is stale and should be
+  reworded to point at `SPEC-v2.md`.
+- `migration_10_focus_pool_linking.sql` **has now been run** —
+  `origin_week_focus_id` / `origin_month_focus_id` exist on
+  ns_day_items. Still needed in v3: retiring `WeekPoolPanel` doesn't
+  make them obsolete, since the replacement Week/Month add-tab uses
+  them for the same "already pulled" computation.
+- Three review questions resolved and locked into TASKS.md:
+  **A9** mobile nav — desktop keeps all nine sidebar items, mobile
+  shows five (Today / Day / Inbox / Tree / More) with the rest behind
+  a `MoreSheet`. Watch: "More" must read as active on the five routes
+  hidden behind it, which `NavLink`'s `isActive` won't do by itself.
+  **A2** journal section — removed entirely, Today *and* Day view.
+  Table and rows kept; UI, hook, and prefetch deleted.
+  **A3** week/month focus reminder — removed entirely, both screens.
+- Approved as written: lazy `ns_tasks`/`ns_task_steps` for Task Lists
+  and Split (`task_id = null` means "behaves exactly as today", task
+  body materialized only on first step-add or first split — no
+  backfill); `sheet_id`-only Sheets with `parent_id` never rewritten;
+  hand-rolled i18n; Phase 0 error boundary; the phase order.
+
+**Biggest known trap in the v3 build** (TASKS.md §3.3): task-linked
+day items leave `title`/`tree_node_id`/`inbox_item_id`/`habit_id`
+null, so every split task will render "Untitled" in the Week and
+Month mini-grids unless `useDayItemsSummary.ts` starts fetching
+`task_id` and `resolveEventTitle` gains a task branch — in the *same*
+commit as migration 13. This exact failure mode has already shipped
+twice (inbox items, July 12; habit items, July 20).
 
 Session of July 20, 2026 — planning UX overhaul, 6 features, typechecked
 (zero errors, `npm run build` clean) but **NOT browser-verified** —
 Adam chose to skip live verification this session (no login credentials
 available to the agent, and it will never enter a password). Smoke-test
-before trusting this in daily use:
+before trusting this in daily use — but note `WeekPoolPanel` is being
+deleted in v3 Phase 6, so it isn't worth testing:
 - **Tree picker redesign** (`src/components/pickers/TreeNodePicker.tsx`,
   new shared component) — replaces every flat tree-node list used for
   "add to day/week/month" with an indented expandable list by default
@@ -118,7 +196,7 @@ before trusting this in daily use:
   listing every `ns_week_focus` item for the current week (tree/inbox/
   habit/standalone, all sources). Available items show a pull button;
   pulled items show which day(s) they went to. Collapsed by default if
-  empty, expanded if it has items.
+  empty, expanded if it has items. **→ deleted in v3 Phase 6.**
 - **Tasks this week / this month** — new standalone-only sections below
   the existing WEEKLY FOCUS / MONTHLY FOCUS lists in `WeekView.tsx` and
   `MonthView.tsx` (`ns_week_focus`/`ns_month_focus` rows with
@@ -132,7 +210,7 @@ before trusting this in daily use:
   every pull sets a direct FK link: `ns_day_items.origin_week_focus_id`
   / `origin_month_focus_id` → the exact focus row it came from. One
   uniform "available vs pulled" computation across every source.
-  Confirmed with Adam before writing the migration.
+  Confirmed with Adam before writing the migration. v3 keeps this.
 - **Bonus fix while in the area:** `WeekView.tsx`'s 7-day mini-grid was
   showing "Untitled" for habit-sourced day items (flagged as known-but-
   deferred in the previous session's notes) — `resolveEventTitle` was
@@ -171,22 +249,29 @@ Session of July 12, 2026 — 3 fixes + 6 features + 1 follow-up fix, all typeche
   tables first so an item still scheduled elsewhere isn't wrongly
   reverted. Live-verified on both the day and week delete paths.
 
-Next: run migration_10, smoke-test all 6 features from the July 20
-session live (tree picker, multi-select, weekly pool, week/month task
-pools), then use in real life and collect feedback.
+**Next:** await final approval on TASKS.md, then start Phase 0
+(error boundary) and Phase 1 (nav restructure, Goals rename, Goals
+screen). Phase 1 also includes the manual Atlas check — verify
+Atlas's integration points still resolve after the Day/Week/Month
+route split; the `/planner?tab=…&date=…` redirect shim covers URLs
+but not any widget importing a component path or reading the tables
+directly.
 
 ---
 
 ## Known issues
 See AUDIT.md deferred section for full list.
 Most critical deferred items:
-- A6: no error boundary (white screen on render throw) — hit this
-  directly during this session (an uninitialized picker value crashed
-  through a raw `parseISO('')`); fixed the crash's cause, but the
-  underlying gap (any render throw anywhere still white-screens) is
-  still open.
+- A6: no error boundary (white screen on render throw) — **being
+  closed in v3 Phase 0.** Hit this directly during the July 20 session
+  (an uninitialized picker value crashed through a raw `parseISO('')`).
 - E3: scheduling to past allowed (no min date on inbox picker)
-- P3: 698KB single JS chunk (no code splitting)
+- P3: 698KB single JS chunk (no code splitting) — gets worse with v3's
+  nine routes; `React.lazy` noted in TASKS.md but not scheduled.
+
+Still untracked in git and worth committing (they're the only copies):
+`design-handoff/` — including the v2 spec source and the design HTML —
+plus `.env.example` and `scripts/gen-icons.mjs`.
 
 ---
 
@@ -194,8 +279,11 @@ Most critical deferred items:
 - All colours via CSS custom properties only — no hardcoded hex anywhere
 - Server state in TanStack Query only — never in component state
 - All Supabase tables prefixed ns_
-- Dexie version must be bumped when schema changes
+- Dexie version must be bumped when schema changes, and every new
+  store must be added to `clearAllCaches()` — a store missing there
+  is a real cross-account data leak on sign-out, not a cosmetic gap
 - Mobile changes inside breakpoints only — never touch desktop layout
+- Planning docs are tracked in git now — keep them that way
 
 ---
 

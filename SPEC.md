@@ -1,6 +1,6 @@
 # Northstar v3 — SPEC.md
 
-*Product source of truth for v3. Supersedes the v2 SPEC.md — the old version is preserved permanently at the `v2-final` git tag, so nothing is lost by overwriting. This document restates what's carried forward from v2 plus everything new in v3, so it stands alone; Claude Code shouldn't need to go digging through tag history to understand the product.*
+*Product source of truth for v3. Supersedes the v2 SPEC.md — the old version is preserved at `SPEC-v2.md` in the repo root, not a git tag. This document restates what's carried forward from v2 plus everything new in v3, so it stands alone; nobody should need to go digging through another file to understand the product from here.*
 
 ---
 

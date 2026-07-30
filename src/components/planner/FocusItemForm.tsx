@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
+import { useT } from '../../i18n'
 import TreeNodePicker from '../pickers/TreeNodePicker'
 import styles from './FocusItemForm.module.css'
 
@@ -25,6 +26,7 @@ export default function FocusItemForm({
   const [error,       setError]       = useState<string | null>(null)
 
   const { data: treeNodes = [] } = useTreeNodes()
+  const t = useT()
 
   const activeNodes = treeNodes.filter(n => n.status !== 'complete')
 
@@ -63,10 +65,10 @@ export default function FocusItemForm({
   }
 
   const addLabel = isSaving
-    ? '…'
+    ? t('common.pendingEllipsis')
     : tab === 'tree' && treeNodeIds.size > 0
-      ? `Add ${treeNodeIds.size} item${treeNodeIds.size > 1 ? 's' : ''}`
-      : 'Add'
+      ? t('common.addItemsCount', { n: treeNodeIds.size, count: treeNodeIds.size })
+      : t('common.add')
 
   return (
     <div className={styles.backdrop} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -74,27 +76,27 @@ export default function FocusItemForm({
 
         <div className={styles.header}>
           <span className={styles.headerLabel}>✦ {label}</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label={t('common.close')}>✕</button>
         </div>
 
         <div className={styles.tabs}>
           <button
             className={`${styles.tab}${tab === 'standalone' ? ' ' + styles.tabActive : ''}`}
             onClick={() => setTab('standalone')}
-          >+ New task</button>
+          >{t('planner.tabNewTask')}</button>
           <button
             className={`${styles.tab}${tab === 'tree' ? ' ' + styles.tabActive : ''}`}
             onClick={() => setTab('tree')}
-          >✦ From tree</button>
+          >{t('day.tabFromTree')}</button>
         </div>
 
         {tab === 'standalone' && (
           <div className={styles.body}>
-            <label className={styles.fieldLabel} htmlFor="fi-title">TASK</label>
+            <label className={styles.fieldLabel} htmlFor="fi-title">{t('planner.taskFieldLabel')}</label>
             <input
               id="fi-title"
               className={styles.input}
-              placeholder="What are you focusing on?"
+              placeholder={t('planner.focusPlaceholder')}
               value={title}
               onChange={e => setTitle(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
@@ -105,14 +107,14 @@ export default function FocusItemForm({
 
         {tab === 'tree' && (
           <div className={styles.body}>
-            <label className={styles.fieldLabel}>GOAL TREE NODES</label>
+            <label className={styles.fieldLabel}>{t('day.goalTreeNodesLabel')}</label>
             <TreeNodePicker
               nodes={activeNodes}
               selectedIds={treeNodeIds}
               onToggleSelect={toggleTreeNode}
               focusedNodeIds={focusedNodeIds}
               focusLabel={focusLabel}
-              emptyHint="No active nodes found."
+              emptyHint={t('planner.noActiveNodes')}
             />
           </div>
         )}
@@ -121,7 +123,7 @@ export default function FocusItemForm({
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose} disabled={isSaving}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             className={styles.saveBtn}

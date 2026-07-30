@@ -1,12 +1,3 @@
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* ── Top bar ────────────────────────────────────────────────────────────────── */
-
 .topBar {
   flex-shrink: 0;
   display: flex;
@@ -16,40 +7,6 @@
   border-bottom: 1px solid var(--ns-border-faint);
   background: var(--ns-surface-header);
   flex-wrap: wrap;
-}
-
-/* ── Tab switcher ───────────────────────────────────────────────────────────── */
-
-.tabs {
-  display: flex;
-  gap: 2px;
-  background: var(--ns-border-subtle);
-  border-radius: var(--ns-radius-md);
-  padding: 3px;
-  border: 1px solid var(--ns-border-faint);
-}
-
-.tab {
-  padding: 5px 12px;
-  border-radius: calc(var(--ns-radius-md) - 2px);
-  border: none;
-  background: transparent;
-  color: var(--ns-text-lo);
-  font-family: var(--ns-font-mono);
-  font-size: 9.5px;
-  font-weight: var(--ns-fw-semibold);
-  letter-spacing: var(--ns-ls-caps);
-  cursor: pointer;
-  transition: background .12s, color .12s;
-}
-.tab:hover:not(.tabActive) {
-  color: var(--ns-text-mid);
-  background: var(--ns-border-subtle);
-}
-.tabActive {
-  background: rgba(var(--ns-accent-rgb), .12);
-  color: var(--ns-accent);
-  box-shadow: 0 0 0 1px rgba(var(--ns-accent-rgb), .2);
 }
 
 /* ── Date navigation ────────────────────────────────────────────────────────── */
@@ -118,14 +75,4 @@
 }
 .todayBtnActive {
   opacity: .35;
-}
-
-/* ── View area ──────────────────────────────────────────────────────────────── */
-
-.viewArea {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
 }

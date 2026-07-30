@@ -1,0 +1,110 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--ns-scrim);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: ns-fade-in .18s ease;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--ns-radius-3xl) var(--ns-radius-3xl) 0 0;
+  background: var(--ns-surface-raised);
+  border: 1px solid var(--ns-border-mid);
+  border-bottom: none;
+  box-shadow: var(--ns-shadow-modal);
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: ns-rise .2s ease both;
+}
+
+.handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ns-border-mid);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--ns-border-faint);
+  flex-shrink: 0;
+}
+
+.headerLabel {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-caps);
+  color: var(--ns-gold);
+}
+
+.closeBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-soft);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-size: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.list {
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  border-radius: var(--ns-radius-lg);
+  text-decoration: none;
+  color: var(--ns-text-mid);
+  min-height: 44px;
+  transition: background .12s, color .12s;
+}
+.row:hover {
+  background: var(--ns-border-subtle);
+}
+.rowActive {
+  background: var(--ns-nav-active-bg);
+  color: var(--ns-text-hi);
+}
+
+.icon {
+  font-size: var(--ns-text-md);
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.rowActive .icon {
+  color: var(--ns-accent);
+}
+
+.label {
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-base);
+  font-weight: var(--ns-fw-medium);
+  letter-spacing: var(--ns-ls-sm);
+}

@@ -15,6 +15,7 @@ interface TreeNodeRow {
   notes: string | null
   status: NodeStatus
   position: number
+  sheet_id: string | null
   created_at: string
   updated_at: string
 }
@@ -29,6 +30,14 @@ function fromRow(r: TreeNodeRow): TreeNode {
     notes:     r.notes,
     status:    r.status,
     position:  r.position,
+    // ?? null (not a direct read) so this degrades correctly whether
+    // migration_17 hasn't been run yet (column absent from `select('*')`
+    // entirely, so r.sheet_id is undefined here, not null) or has been run
+    // and the row genuinely has no sheet — both mean "lives in the main
+    // tree." Direct assignment would leave sheetId literally `undefined`
+    // pre-migration, which fails TreeView's `sheetId === null` filter and
+    // makes every node vanish from the canvas.
+    sheetId:   r.sheet_id ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }
@@ -54,6 +63,7 @@ export function useTreeNodes() {
           notes:     null,
           status:    r.status as NodeStatus,
           position:  r.position,
+          sheetId:   r.sheetId ?? null,
           createdAt: r.updatedAt,
           updatedAt: r.updatedAt,
         }))
@@ -79,6 +89,12 @@ export interface CreateNodeInput {
   title:     string
   notes?:    string | null
   position?: number
+  /** null = main tree. A new child inherits its parent's sheetId; a new
+   *  root takes whichever canvas (main tree or a Sheet tab) it was added
+   *  from — see TreeView's handleAddChild / "+ Vision" for how each caller
+   *  resolves this. Required, not defaulted, so no call site can forget it
+   *  and silently create a node invisible in the canvas it was added from. */
+  sheetId:   string | null
 }
 
 export function useCreateNode() {
@@ -86,17 +102,28 @@ export function useCreateNode() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: CreateNodeInput) => {
+      const payload: Record<string, unknown> = {
+        user_id:   user!.id,
+        parent_id: input.parentId,
+        type:      input.type,
+        title:     input.title,
+        notes:     input.notes ?? null,
+        status:    'not_started' as NodeStatus,
+        position:  input.position ?? 0,
+      }
+      // Only written when actually non-null. Omitting it is exactly
+      // equivalent to `sheet_id: null` once the column exists (no default
+      // clause means Postgres leaves an unspecified column null) — but
+      // unlike an explicit null, omitting it also works before
+      // migration_17 has been run, when the column doesn't exist at all
+      // yet. The overwhelming majority of node creation has nothing to do
+      // with Sheets and must keep working through that gap; a genuinely
+      // non-null sheetId can only ever occur once a real Sheet exists,
+      // which itself requires the migration to already be live.
+      if (input.sheetId) payload.sheet_id = input.sheetId
       const { data, error } = await supabase
         .from('ns_tree_nodes')
-        .insert({
-          user_id:   user!.id,
-          parent_id: input.parentId,
-          type:      input.type,
-          title:     input.title,
-          notes:     input.notes ?? null,
-          status:    'not_started' as NodeStatus,
-          position:  input.position ?? 0,
-        })
+        .insert(payload)
         .select()
         .single()
       if (error) throw error
@@ -150,6 +177,14 @@ export interface MoveNodeInput {
   id:       string
   parentId: string | null
   position: number
+  /** Only Sheets-aware callers (MoveToPicker's cross-canvas candidate list)
+   *  need this — TreeView's own in-canvas drag-and-drop never crosses a
+   *  sheet boundary (every rendered drop target already shares the active
+   *  canvas's sheetId), so it omits this and sheet_id is left untouched.
+   *  When provided, syncs the moved node's sheet_id to match — reparenting
+   *  under a node pulls the moved node into that node's sheet (or back to
+   *  the main tree); omitted means "leave sheet_id exactly as it is." */
+  sheetId?: string | null
 }
 
 /**
@@ -157,15 +192,23 @@ export interface MoveNodeInput {
  * only structural field in this adjacency list). Used by both the drag-and-
  * drop handler and the "Move to…" picker so they stay behaviourally
  * identical. One Supabase update, one invalidation.
+ *
+ * parent_id is the only thing this ever changes structurally — sheet_id is
+ * synced only when a caller explicitly asks (see MoveNodeInput.sheetId).
+ * Sheets themselves never rewrite parent_id at all (see useSheets.ts).
  */
 export function useMoveNode() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, parentId, position }: MoveNodeInput) => {
+    mutationFn: async ({ id, parentId, position, sheetId }: MoveNodeInput) => {
+      const patch: Record<string, unknown> = {
+        parent_id: parentId, position, updated_at: new Date().toISOString(),
+      }
+      if (sheetId !== undefined) patch.sheet_id = sheetId
       const { error } = await supabase
         .from('ns_tree_nodes')
-        .update({ parent_id: parentId, position, updated_at: new Date().toISOString() })
+        .update(patch)
         .eq('id', id)
         .eq('user_id', user!.id)
       if (error) throw error
@@ -210,6 +253,55 @@ export function countCompleted(node: TreeNodeWithChildren): number {
   return node.children.reduce((sum, c) => {
     return sum + (c.status === 'complete' ? 1 : 0) + countCompleted(c)
   }, 0)
+}
+
+/** Flattens a built tree into an id → node lookup. Used to find a node's
+ *  UNFILTERED counterpart (built from the full node list, ignoring
+ *  sheet_id) when the tree actually being rendered is sheet-scoped —
+ *  countDescendants/countCompleted must always be called against that
+ *  unfiltered counterpart, never the canvas-filtered node, or a Sheet's
+ *  contents would silently vanish from every rollup indicator that reads
+ *  them (TreeNode's progress bar and collapse message). */
+export function indexById(roots: TreeNodeWithChildren[]): Map<string, TreeNodeWithChildren> {
+  const map = new Map<string, TreeNodeWithChildren>()
+  function walk(n: TreeNodeWithChildren) {
+    map.set(n.id, n)
+    n.children.forEach(walk)
+  }
+  roots.forEach(walk)
+  return map
+}
+
+/**
+ * Every real descendant id of nodeId (children, grandchildren, ...),
+ * walking parent_id links directly over the full, unfiltered flat node
+ * list — independent of sheet_id and of any pre-built (possibly
+ * sheet-filtered) TreeNodeWithChildren tree. This is the single source of
+ * truth for "how much does deleting/moving this node actually affect" —
+ * used by NodeEditor's delete-confirmation count, MoveToPicker's
+ * cycle-prevention candidate exclusion, and useSheets' "launch from node"
+ * (which nodes to stamp with the new sheet_id). Does not include nodeId
+ * itself.
+ */
+export function collectDescendantIds(nodeId: string, allNodes: TreeNode[]): string[] {
+  const childrenByParent = new Map<string, string[]>()
+  for (const n of allNodes) {
+    if (n.parentId) {
+      const arr = childrenByParent.get(n.parentId)
+      if (arr) arr.push(n.id)
+      else childrenByParent.set(n.parentId, [n.id])
+    }
+  }
+  const result: string[] = []
+  const stack = [nodeId]
+  while (stack.length) {
+    const cur = stack.pop()!
+    for (const childId of childrenByParent.get(cur) ?? []) {
+      result.push(childId)
+      stack.push(childId)
+    }
+  }
+  return result
 }
 
 // ── Reparenting utilities ────────────────────────────────────────────────────

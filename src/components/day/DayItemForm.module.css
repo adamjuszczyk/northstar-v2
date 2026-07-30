@@ -92,6 +92,13 @@
   color: var(--ns-gold);
 }
 
+/* ── Week/Month sub-scope toggle ─────────────────────────────────────────── */
+
+.wmScopeRow {
+  display: flex;
+  gap: var(--ns-space-1);
+}
+
 /* ── Body / fields ───────────────────────────────────────────────────────── */
 
 .body {
@@ -263,6 +270,14 @@
   background: rgba(var(--ns-gold-rgb), .08);
   border-color: rgba(var(--ns-gold-rgb), .3);
 }
+.nodeRow:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.nodeRow:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
 
 .nodeTypeDot {
   width: 8px;
@@ -310,6 +325,14 @@
 .inboxRowSelected {
   background: rgba(var(--ns-project-accent-rgb), .1);
   border-color: rgba(var(--ns-project-accent-rgb), .35);
+}
+.inboxRow:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.inboxRow:disabled:hover {
+  background: transparent;
+  border-color: transparent;
 }
 
 .inboxDot {
@@ -422,6 +445,36 @@
   color: var(--ns-task-accent);
 }
 
+/* ── Block picker ────────────────────────────────────────────────────────── */
+
+.blockRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ns-space-2);
+}
+
+.blockBtn {
+  padding: 6px 10px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-faint);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s, color 0.14s;
+}
+.blockBtn:hover {
+  border-color: var(--ns-border-mid);
+  color: var(--ns-text-mid);
+}
+.blockBtnActive {
+  border-color: rgba(var(--ns-gold-rgb), .5);
+  background: rgba(var(--ns-gold-rgb), .11);
+  color: var(--ns-gold);
+}
+
 /* ── Colour picker ───────────────────────────────────────────────────────── */
 
 .optionalLabel {
@@ -529,3 +582,32 @@
 .deleteItemBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .actionsSpacer { flex: 1; }
+
+/* ── Split (SPEC §5.3) ─────────────────────────────────────────────────────── */
+
+.splitBtn {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid rgba(var(--ns-project-accent-rgb), .35);
+  background: rgba(var(--ns-project-accent-rgb), .08);
+  color: var(--ns-project-accent);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.splitBtn:hover:not(:disabled) {
+  background: rgba(var(--ns-project-accent-rgb), .16);
+  border-color: rgba(var(--ns-project-accent-rgb), .6);
+}
+.splitBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.splitHint {
+  margin: 0;
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-xs);
+  color: var(--ns-text-lo);
+  line-height: 1.4;
+}

@@ -1,18 +1,21 @@
 import { useState, useEffect, type CSSProperties } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   useCreateNode, useUpdateNode, useDeleteNode, useTreeNodes,
+  collectDescendantIds,
   type TreeNodeWithChildren,
 } from '../../hooks/useTreeNodes'
+import { useSheets } from '../../hooks/useSheets'
+import { useTaskForRef } from '../../hooks/useTasks'
+import { useAddFirstStepToRef, useAddTaskStep } from '../../hooks/useTaskSteps'
+import TaskStepList from '../day/TaskStepList'
+import SheetForm, { type SheetFormState } from './SheetForm'
 import type { NodeType, NodeStatus } from '../../types'
+import { useT } from '../../i18n'
 import styles from './NodeEditor.module.css'
 
 const TYPES: NodeType[]   = ['vision', 'goal', 'project', 'task']
 const STATUSES: NodeStatus[] = ['not_started', 'in_progress', 'complete']
-const STATUS_LABELS: Record<NodeStatus, string> = {
-  not_started: 'Not started',
-  in_progress: 'In progress',
-  complete:    'Complete',
-}
 
 function suggestChildType(parentType: NodeType | null): NodeType {
   if (!parentType) return 'vision'
@@ -22,7 +25,13 @@ function suggestChildType(parentType: NodeType | null): NodeType {
 }
 
 export type EditorState =
-  | { mode: 'create'; parentId: string | null; parentType?: NodeType; prefillTitle?: string }
+  | {
+      mode: 'create'; parentId: string | null; parentType?: NodeType; prefillTitle?: string
+      /** null = main tree. Resolved by the caller (TreeView), which alone
+       *  knows the active canvas and the anchor-node special case — see
+       *  handleAddChild/handleAddRoot there. */
+      sheetId: string | null
+    }
   | { mode: 'edit';   node: TreeNodeWithChildren }
 
 interface Props {
@@ -34,7 +43,23 @@ interface Props {
 }
 
 export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Props) {
+  const t = useT()
   const isCreate = state.mode === 'create'
+
+  const STATUS_LABELS: Record<NodeStatus, string> = {
+    not_started: t('tree.legendStateNotStarted'),
+    in_progress: t('tree.legendStateInProgress'),
+    complete:    t('tree.legendStateComplete'),
+  }
+
+  function typeLabel(nt: NodeType): string {
+    switch (nt) {
+      case 'vision':  return t('tree.typeVision')
+      case 'goal':    return t('tree.typeGoal')
+      case 'project': return t('tree.typeProject')
+      case 'task':    return t('tree.typeTask')
+    }
+  }
 
   const [type,   setType]   = useState<NodeType>(
     isCreate ? suggestChildType(state.parentType ?? null) : state.node.type
@@ -45,12 +70,42 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
   const [notes,  setNotes]  = useState(isCreate ? '' : (state.node.notes ?? ''))
   const [status, setStatus] = useState<NodeStatus>(isCreate ? 'not_started' : state.node.status)
 
+  // Task Lists & Split (SPEC §5.3) — "creatable everywhere a task can be
+  // created," not only retroactively from Day view. A tree node's task has
+  // no day occurrence at all here — findOrCreateTaskForRef/useTaskForRef
+  // work directly against tree_node_id. Only meaningful for the 'task'
+  // type — Vision/Goal/Project aren't the completable-action leaves SPEC
+  // §5.3 describes.
+  const [pendingSteps, setPendingSteps] = useState<string[]>([])
+  const [pendingStepInput, setPendingStepInput] = useState('')
+  const editNodeId = state.mode === 'edit' ? state.node.id : null
+  const { data: existingTask } = useTaskForRef(
+    editNodeId && type === 'task' ? { source: 'tree', treeNodeId: editNodeId } : null
+  )
+
+  const navigate = useNavigate()
   const { data: allNodes } = useTreeNodes()
+  const { data: sheets = [] } = useSheets()
   const { mutate: createNode, isPending: creating } = useCreateNode()
   const { mutate: updateNode, isPending: updating } = useUpdateNode()
   const { mutate: deleteNode, isPending: deleting } = useDeleteNode()
+  const { mutateAsync: addFirstStepToRefAsync } = useAddFirstStepToRef()
+  const { mutateAsync: addTaskStepAsync } = useAddTaskStep()
+
+  const [sheetFormState, setSheetFormState] = useState<SheetFormState | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const isPending = creating || updating || deleting
+
+  function addPendingStep() {
+    const trimmed = pendingStepInput.trim()
+    if (!trimmed) return
+    setPendingSteps(prev => [...prev, trimmed])
+    setPendingStepInput('')
+  }
+  function removePendingStep(i: number) {
+    setPendingSteps(prev => prev.filter((_, idx) => idx !== i))
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -60,9 +115,10 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  function handleSave() {
+  async function handleSave() {
     const trimmed = title.trim()
     if (!trimmed) return
+    setSaveError(null)
 
     if (isCreate) {
       const parentId = state.parentId ?? null
@@ -71,8 +127,25 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
         parentId, type, title: trimmed,
         notes: notes.trim() || null,
         position: siblings.length,
+        sheetId: state.sheetId,
       }, {
-        onSuccess: (node) => {
+        onError: e => setSaveError((e as Error).message),
+        onSuccess: async (node) => {
+          if (type === 'task' && pendingSteps.length > 0) {
+            try {
+              const ref = { source: 'tree' as const, treeNodeId: node.id }
+              const taskId = await addFirstStepToRefAsync({ ref, content: pendingSteps[0] })
+              for (const content of pendingSteps.slice(1)) {
+                await addTaskStepAsync({ taskId, content })
+              }
+            } catch (e) {
+              // The node itself already saved — closing and re-submitting
+              // would create a duplicate node, so there's nothing left to
+              // retry from this modal. Surface it and let the user re-add
+              // steps from the node's own edit view instead.
+              window.alert(t('tree.stepsSaveError', { title: trimmed, error: (e as Error).message }))
+            }
+          }
           onCreated?.(node.id)
           onClose()
         },
@@ -83,16 +156,19 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
         type, title: trimmed,
         notes:  notes.trim() || null,
         status,
-      }, { onSuccess: onClose })
+      }, { onSuccess: onClose, onError: e => setSaveError((e as Error).message) })
     }
   }
 
   function handleDelete() {
     if (state.mode !== 'edit') return
-    const childCount = countDesc(state.node)
+    // Unfiltered — parent_id cascades through real descendants regardless
+    // of sheet_id, so deleting this node really would delete this many
+    // rows even if some currently live inside an attached Sheet.
+    const childCount = collectDescendantIds(state.node.id, allNodes ?? []).length
     const msg = childCount > 0
-      ? `Delete "${state.node.title}" and its ${childCount} descendant${childCount > 1 ? 's' : ''}?`
-      : `Delete "${state.node.title}"?`
+      ? t('tree.deleteNodeWithDescendantsConfirm', { title: state.node.title, n: childCount, count: childCount })
+      : t('common.deleteConfirm', { title: state.node.title })
     if (!window.confirm(msg)) return
     deleteNode(state.node.id, { onSuccess: onClose })
   }
@@ -112,23 +188,23 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
         {/* Header */}
         <div className={styles.header}>
           <span className={styles.modeLabel}>
-            {isCreate ? '✦ NEW NODE' : '✦ EDIT NODE'}
+            {isCreate ? t('tree.newNodeModeLabel') : t('tree.editNodeModeLabel')}
           </span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label={t('common.close')}>✕</button>
         </div>
 
         {/* Type */}
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>TYPE</span>
+          <span className={styles.fieldLabel}>{t('tree.legendHeadingType')}</span>
           <div className={styles.typeRow}>
-            {TYPES.map(t => (
+            {TYPES.map(nt => (
               <button
-                key={t}
-                style={chipVar(t)}
-                className={`${styles.typeChip}${type === t ? ' ' + styles.typeChipActive : ''}`}
-                onClick={() => setType(t)}
+                key={nt}
+                style={chipVar(nt)}
+                className={`${styles.typeChip}${type === nt ? ' ' + styles.typeChipActive : ''}`}
+                onClick={() => setType(nt)}
               >
-                {t}
+                {typeLabel(nt)}
               </button>
             ))}
           </div>
@@ -136,11 +212,11 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
 
         {/* Title */}
         <div className={styles.field}>
-          <label className={styles.fieldLabel} htmlFor="ns-editor-title">TITLE</label>
+          <label className={styles.fieldLabel} htmlFor="ns-editor-title">{t('day.fieldLabelTitle')}</label>
           <input
             id="ns-editor-title"
             className={styles.titleInput}
-            placeholder="Name this node…"
+            placeholder={t('tree.titlePlaceholder')}
             value={title}
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
@@ -151,22 +227,71 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
         {/* Notes */}
         <div className={styles.field}>
           <label className={styles.fieldLabel} htmlFor="ns-editor-notes">
-            NOTES <span className={styles.optional}>(optional)</span>
+            {t('day.notesLabel')} <span className={styles.optional}>{t('common.optional')}</span>
           </label>
           <textarea
             id="ns-editor-notes"
             className={styles.notesInput}
-            placeholder="Add context…"
+            placeholder={t('tree.notesPlaceholder')}
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={3}
           />
         </div>
 
+        {/* Task Lists & Split (SPEC §5.3) — task nodes only; a Vision/Goal/
+            Project isn't the completable-action leaf this feature is about. */}
+        {type === 'task' && (
+          <div className={styles.field}>
+            {isCreate ? (
+              <>
+                <span className={styles.fieldLabel}>
+                  {t('day.stepsLabel')} <span className={styles.optional}>{t('tree.optionalStepsHint')}</span>
+                </span>
+                {pendingSteps.length > 0 && (
+                  <div className={styles.pendingStepList}>
+                    {pendingSteps.map((s, i) => (
+                      <div key={i} className={styles.pendingStepRow}>
+                        <span className={styles.pendingStepText}>{s}</span>
+                        <button
+                          className={styles.pendingStepRemove}
+                          onClick={() => removePendingStep(i)}
+                          aria-label={t('tree.removeStepAriaLabel')}
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.pendingStepAddRow}>
+                  <input
+                    className={styles.titleInput}
+                    placeholder={pendingSteps.length === 0 ? t('day.turnIntoStepListPlaceholder') : t('day.addAnotherStepPlaceholder')}
+                    value={pendingStepInput}
+                    onChange={e => setPendingStepInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); addPendingStep() }
+                    }}
+                  />
+                  <button
+                    className={styles.saveBtn}
+                    onClick={addPendingStep}
+                    disabled={!pendingStepInput.trim()}
+                  >{t('common.addButtonShort')}</button>
+                </div>
+              </>
+            ) : (
+              <TaskStepList
+                taskId={existingTask?.id ?? null}
+                taskRef={{ source: 'tree', treeNodeId: editNodeId as string }}
+              />
+            )}
+          </div>
+        )}
+
         {/* Status — edit mode only */}
         {!isCreate && (
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>STATUS</span>
+            <span className={styles.fieldLabel}>{t('tree.statusFieldLabel')}</span>
             <div className={styles.statusRow}>
               {STATUSES.map(s => (
                 <button
@@ -181,6 +306,8 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
           </div>
         )}
 
+        {saveError && <p className={styles.error}>{saveError}</p>}
+
         {/* Actions */}
         <div className={styles.actions}>
           {!isCreate && onMoveTo && (
@@ -189,7 +316,20 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
               onClick={() => { if (state.mode === 'edit') onMoveTo(state.node) }}
               disabled={isPending}
             >
-              Move to…
+              {t('tree.moveToButton')}
+            </button>
+          )}
+          {!isCreate && (
+            <button
+              className={styles.sheetBtn}
+              onClick={() => {
+                if (state.mode === 'edit') {
+                  setSheetFormState({ mode: 'createFromNode', nodeId: state.node.id, nodeTitle: state.node.title })
+                }
+              }}
+              disabled={isPending}
+            >
+              {t('tree.createSheetButton')}
             </button>
           )}
           {!isCreate && (
@@ -198,26 +338,37 @@ export default function NodeEditor({ state, onClose, onCreated, onMoveTo }: Prop
               onClick={handleDelete}
               disabled={isPending}
             >
-              Delete
+              {t('common.delete')}
             </button>
           )}
           <span style={{ flex: 1 }} />
           <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             className={styles.saveBtn}
             onClick={handleSave}
             disabled={!title.trim() || isPending}
           >
-            {isCreate ? 'Add node' : 'Save'}
+            {isCreate ? t('tree.addNodeButton') : t('common.save')}
           </button>
         </div>
       </div>
+
+      {/* Create-sheet-from-node modal (SPEC §5.5 path 2) */}
+      {sheetFormState && (
+        <SheetForm
+          state={sheetFormState}
+          allNodes={allNodes ?? []}
+          sheets={sheets}
+          onClose={() => setSheetFormState(null)}
+          onCreated={sheetId => {
+            setSheetFormState(null)
+            onClose()
+            navigate(`/tree?sheet=${sheetId}`)
+          }}
+        />
+      )}
     </div>
   )
-}
-
-function countDesc(node: TreeNodeWithChildren): number {
-  return node.children.reduce((s, c) => s + 1 + countDesc(c), 0)
 }

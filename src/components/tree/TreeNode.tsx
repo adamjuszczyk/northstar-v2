@@ -6,7 +6,8 @@ import {
   countDescendants, countCompleted,
   type TreeNodeWithChildren,
 } from '../../hooks/useTreeNodes'
-import type { NodeType, NodeStatus } from '../../types'
+import type { NodeType, NodeStatus, Sheet } from '../../types'
+import { useT } from '../../i18n'
 import styles from './TreeNode.module.css'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ function StatusDot({
   status:  NodeStatus
   onClick: (e: React.MouseEvent) => void
 }) {
+  const t = useT()
   const stopPtr = (e: React.PointerEvent) => e.stopPropagation()
 
   if (status === 'complete') {
@@ -62,7 +64,7 @@ function StatusDot({
         className={cx(styles.dot, styles.dotDone)}
         onClick={onClick}
         onPointerDown={stopPtr}
-        title="Mark not started"
+        title={t('tree.markNotStarted')}
       >✓</button>
     )
   }
@@ -72,7 +74,7 @@ function StatusDot({
         className={cx(styles.dot, styles.dotActive)}
         onClick={onClick}
         onPointerDown={stopPtr}
-        title="Mark complete"
+        title={t('common.markComplete')}
       />
     )
   }
@@ -81,7 +83,7 @@ function StatusDot({
       className={cx(styles.dot, styles.dotIdle)}
       onClick={onClick}
       onPointerDown={stopPtr}
-      title="Mark in progress"
+      title={t('tree.markInProgress')}
     />
   )
 }
@@ -89,6 +91,7 @@ function StatusDot({
 // ── ProgressBar (vision only) ─────────────────────────────────────────────────
 
 function ProgressBar({ node }: { node: TreeNodeWithChildren }) {
+  const t = useT()
   const total = countDescendants(node)
   const done  = countCompleted(node)
   const pct   = total > 0 ? Math.round(done / total * 100) : 0
@@ -97,7 +100,7 @@ function ProgressBar({ node }: { node: TreeNodeWithChildren }) {
       <div className={styles.progressTrack}>
         <div className={styles.progressFill} style={{ width: `${pct}%` }} />
       </div>
-      <span className={styles.progressLabel}>{done}/{total} done</span>
+      <span className={styles.progressLabel}>{t('day.progressDone', { done, total })}</span>
     </div>
   )
 }
@@ -121,20 +124,34 @@ interface Props {
   /** id of the node to scroll to and briefly highlight, if any (from a
    *  habit card's "tracked as habit" link). */
   focusNodeId:        string | null
+  /** Every rendered node's UNFILTERED (spans every sheet) counterpart,
+   *  keyed by id — descendant/completion counts must always read from
+   *  this, never from `node` itself, or a Sheet's contents would silently
+   *  vanish from their ancestors' rollups the moment they moved (TASKS.md
+   *  §3.5 audit rule). */
+  unfilteredById:      Map<string, TreeNodeWithChildren>
+  /** nodeId → the Sheet anchored to it — drives the "open sheet" indicator
+   *  in place of that node's (now sheet-scoped) subtree. */
+  sheetByAnchorNodeId: Map<string, Sheet>
 }
 
 export default function TreeNode({
   node, parentId, onEdit, onAddChild, onStructureChange, dropTargetId, dropInvalid,
-  habitByNodeId, focusNodeId,
+  habitByNodeId, focusNodeId, unfilteredById, sheetByAnchorNodeId,
 }: Props) {
   const isTask   = node.type === 'task'
   const isVision = node.type === 'vision'
   const isDone   = node.status === 'complete'
+  // The same node, but with its TRUE (unfiltered) descendant tree — used
+  // only for count displays, never for what's actually rendered as children.
+  const countNode = unfilteredById.get(node.id) ?? node
+  const sheet      = sheetByAnchorNodeId.get(node.id) ?? null
 
   const [collapsed, setCollapsed] = useState(false)
   const [noteOpen,  setNoteOpen]  = useState(false)
 
   const navigate = useNavigate()
+  const t = useT()
   const { mutate: updateNode } = useUpdateNode()
   const habitId    = habitByNodeId.get(node.id)
   const isFocused  = focusNodeId === node.id
@@ -148,6 +165,20 @@ export default function TreeNode({
   function onNoteBadgeClick(e: React.MouseEvent) {
     e.stopPropagation()
     setNoteOpen(o => !o)
+  }
+
+  function onSheetBadgeClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (sheet) navigate(`/tree?sheet=${sheet.id}`)
+  }
+
+  function typeLabel(nt: NodeType): string {
+    switch (nt) {
+      case 'vision':  return t('tree.typeVision')
+      case 'goal':    return t('tree.typeGoal')
+      case 'project': return t('tree.typeProject')
+      case 'task':    return t('tree.typeTask')
+    }
   }
 
   // Dragging moves the node (and its whole subtree, rendered inside the same
@@ -206,7 +237,7 @@ export default function TreeNode({
               className={cx(styles.taskCheck, isDone && styles.taskCheckDone)}
               onClick={onCheckboxClick}
               onPointerDown={e => e.stopPropagation()}
-              aria-label={isDone ? 'Mark not started' : 'Mark complete'}
+              aria-label={isDone ? t('tree.markNotStarted') : t('common.markComplete')}
             >
               {isDone ? '✓' : ''}
             </button>
@@ -218,8 +249,8 @@ export default function TreeNode({
                 className={cx(styles.noteBadge, noteOpen && styles.noteBadgeOpen)}
                 onClick={onNoteBadgeClick}
                 onPointerDown={e => e.stopPropagation()}
-                title={noteOpen ? 'Hide note' : 'Show note'}
-                aria-label={noteOpen ? 'Hide note' : 'Show note'}
+                title={noteOpen ? t('habits.hideNoteLabel') : t('tree.showNote')}
+                aria-label={noteOpen ? t('habits.hideNoteLabel') : t('tree.showNote')}
               >▤</button>
             )}
             {habitId && (
@@ -227,9 +258,18 @@ export default function TreeNode({
                 className={styles.habitBadge}
                 onClick={onHabitBadgeClick}
                 onPointerDown={e => e.stopPropagation()}
-                title="Tracked as habit"
-                aria-label="Tracked as habit"
+                title={t('tree.trackedAsHabit')}
+                aria-label={t('tree.trackedAsHabit')}
               >◆</button>
+            )}
+            {sheet && (
+              <button
+                className={styles.sheetBadge}
+                onClick={onSheetBadgeClick}
+                onPointerDown={e => e.stopPropagation()}
+                title={t('tree.openSheet', { name: sheet.name })}
+                aria-label={t('tree.openSheet', { name: sheet.name })}
+              >⧉</button>
             )}
           </div>
           {hasNote && noteOpen && (
@@ -267,14 +307,14 @@ export default function TreeNode({
         {/* Head row */}
         <div className={styles.head}>
           <StatusDot status={node.status} onClick={onDotClick} />
-          <span className={styles.typeLabel}>{node.type}</span>
+          <span className={styles.typeLabel}>{typeLabel(node.type)}</span>
           {hasNote && (
             <button
               className={cx(styles.noteBadge, noteOpen && styles.noteBadgeOpen)}
               onClick={onNoteBadgeClick}
               onPointerDown={e => e.stopPropagation()}
-              title={noteOpen ? 'Hide note' : 'Show note'}
-              aria-label={noteOpen ? 'Hide note' : 'Show note'}
+              title={noteOpen ? t('habits.hideNoteLabel') : t('tree.showNote')}
+              aria-label={noteOpen ? t('habits.hideNoteLabel') : t('tree.showNote')}
             >▤</button>
           )}
           {habitId && (
@@ -282,16 +322,25 @@ export default function TreeNode({
               className={styles.habitBadge}
               onClick={onHabitBadgeClick}
               onPointerDown={e => e.stopPropagation()}
-              title="Tracked as habit"
-              aria-label="Tracked as habit"
+              title={t('tree.trackedAsHabit')}
+              aria-label={t('tree.trackedAsHabit')}
             >◆</button>
+          )}
+          {sheet && (
+            <button
+              className={styles.sheetBadge}
+              onClick={onSheetBadgeClick}
+              onPointerDown={e => e.stopPropagation()}
+              title={t('tree.openSheet', { name: sheet.name })}
+              aria-label={t('tree.openSheet', { name: sheet.name })}
+            >⧉</button>
           )}
           <span className={styles.headSpacer} />
           <button
             className={cx(styles.headBtn, styles.addBtn)}
             onClick={e => { e.stopPropagation(); onAddChild(node.id, node.type) }}
             onPointerDown={e => e.stopPropagation()}
-            aria-label="Add child node"
+            aria-label={t('tree.addChildNode')}
           >
             +
           </button>
@@ -301,7 +350,7 @@ export default function TreeNode({
               style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
               onClick={e => { e.stopPropagation(); setCollapsed(c => !c); onStructureChange() }}
               onPointerDown={e => e.stopPropagation()}
-              aria-label={collapsed ? 'Expand' : 'Collapse'}
+              aria-label={collapsed ? t('pickers.expand') : t('inbox.collapseAriaLabel')}
             >
               ⌄
             </button>
@@ -320,13 +369,15 @@ export default function TreeNode({
           </div>
         )}
 
-        {/* Vision progress bar */}
-        {isVision && !isDone && <ProgressBar node={node} />}
+        {/* Vision progress bar — TRUE (unfiltered) descendant/completion
+            counts, so nodes tucked into a Sheet still count toward it. */}
+        {isVision && !isDone && <ProgressBar node={countNode} />}
 
-        {/* Collapsed message */}
+        {/* Collapsed message — same unfiltered count, for the same reason,
+            and so it never disagrees with the progress bar above it. */}
         {collapsed && hasChildren && (
           <div className={styles.collapseMsg}>
-            {countDescendants(node)} nodes hidden
+            {t('tree.nodesHiddenCount', { n: countDescendants(countNode), count: countDescendants(countNode) })}
           </div>
         )}
       </div>
@@ -346,6 +397,8 @@ export default function TreeNode({
               dropInvalid={dropInvalid}
               habitByNodeId={habitByNodeId}
               focusNodeId={focusNodeId}
+              unfilteredById={unfilteredById}
+              sheetByAnchorNodeId={sheetByAnchorNodeId}
             />
           ))}
         </div>

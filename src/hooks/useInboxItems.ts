@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
 import { enqueue } from '../lib/syncQueue'
 import { useAuth } from './useAuth'
-import type { InboxItem, InboxState } from '../types'
+import type { InboxItem, InboxState, InboxKind } from '../types'
 
 const QK = (uid: string) => ['ns_inbox', uid] as const
 
@@ -14,18 +14,41 @@ const QK = (uid: string) => ['ns_inbox', uid] as const
  * single inbox item can in principle be scheduled to a day AND a week at
  * once). Best-effort: never throws, so a reconciliation failure can't
  * block the delete the user actually asked for.
+ *
+ * Also checks task-linked references: a task materialized from this inbox
+ * item (Task Lists & Split, or the TaskSourceForm Week/Month "add from
+ * inbox" flow) leaves the occurrence's own inbox_item_id null — identity
+ * resolves through task_id instead — so a plain inbox_item_id count alone
+ * would miss it and wrongly revert an item still "spoken for" by a linked
+ * task elsewhere.
  */
 export async function maybeRevertInboxItemState(userId: string, inboxItemId: string): Promise<void> {
   try {
-    const [dayRes, weekRes, monthRes] = await Promise.all([
+    const { data: tasks } = await supabase
+      .from('ns_tasks').select('id')
+      .eq('user_id', userId).eq('source', 'inbox').eq('inbox_item_id', inboxItemId)
+    const taskIds = (tasks ?? []).map(t => t.id as string)
+
+    const checks = [
       supabase.from('ns_day_items').select('id', { count: 'exact', head: true })
         .eq('user_id', userId).eq('inbox_item_id', inboxItemId),
       supabase.from('ns_week_focus').select('id', { count: 'exact', head: true })
         .eq('user_id', userId).eq('inbox_item_id', inboxItemId),
       supabase.from('ns_month_focus').select('id', { count: 'exact', head: true })
         .eq('user_id', userId).eq('inbox_item_id', inboxItemId),
-    ])
-    const stillScheduled = (dayRes.count ?? 0) > 0 || (weekRes.count ?? 0) > 0 || (monthRes.count ?? 0) > 0
+    ]
+    if (taskIds.length > 0) {
+      checks.push(
+        supabase.from('ns_day_items').select('id', { count: 'exact', head: true })
+          .eq('user_id', userId).in('task_id', taskIds),
+        supabase.from('ns_week_focus').select('id', { count: 'exact', head: true })
+          .eq('user_id', userId).in('task_id', taskIds),
+        supabase.from('ns_month_focus').select('id', { count: 'exact', head: true })
+          .eq('user_id', userId).in('task_id', taskIds),
+      )
+    }
+    const results = await Promise.all(checks)
+    const stillScheduled = results.some(r => (r.count ?? 0) > 0)
     if (stillScheduled) return
 
     await supabase
@@ -44,6 +67,7 @@ function row2item(r: Record<string, unknown>): InboxItem {
     id:             r.id             as string,
     userId:         r.user_id        as string,
     content:        r.content        as string,
+    kind:           (r.kind as InboxKind | undefined) ?? 'task',
     state:          r.state          as InboxState,
     promotedNodeId: r.promoted_node_id as string | null,
     carriedOver:    r.carried_over   as boolean,
@@ -69,6 +93,7 @@ export function useInboxItems() {
           id:             r.id,
           userId:         r.userId,
           content:        r.content,
+          kind:           (r.kind as InboxKind | undefined) ?? 'task',
           state:          r.state as InboxState,
           promotedNodeId: r.promotedNodeId,
           carriedOver:    r.carriedOver,
@@ -92,11 +117,16 @@ export function useInboxItems() {
   })
 }
 
+export interface CreateInboxItemInput {
+  content: string
+  kind:    InboxKind
+}
+
 export function useCreateInboxItem() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (content: string): Promise<InboxItem> => {
+    mutationFn: async ({ content, kind }: CreateInboxItemInput): Promise<InboxItem> => {
       if (!user) throw new Error('Not authenticated')
 
       if (!navigator.onLine) {
@@ -104,16 +134,16 @@ export function useCreateInboxItem() {
         const now = new Date().toISOString()
         const id  = crypto.randomUUID()
         const item: InboxItem = {
-          id, userId: user.id, content,
+          id, userId: user.id, content, kind,
           state: 'unassigned', promotedNodeId: null, carriedOver: false, isCompleted: false,
           createdAt: now, updatedAt: now,
         }
         await db.inboxItems.add({
-          id, userId: user.id, content, state: 'unassigned',
+          id, userId: user.id, content, kind, state: 'unassigned',
           promotedNodeId: null, carriedOver: false, isCompleted: false, createdAt: now, updatedAt: now,
         })
         await enqueue('ns_inbox_items', 'insert', {
-          id, user_id: user.id, content, state: 'unassigned',
+          id, user_id: user.id, content, kind, state: 'unassigned',
           promoted_node_id: null, carried_over: false, is_completed: false, created_at: now, updated_at: now,
         }, user.id)
         return item
@@ -121,7 +151,7 @@ export function useCreateInboxItem() {
 
       const { data, error } = await supabase
         .from('ns_inbox_items')
-        .insert({ user_id: user.id, content })
+        .insert({ user_id: user.id, content, kind })
         .select()
         .single()
       if (error) throw error

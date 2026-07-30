@@ -2,10 +2,17 @@ import { useState } from 'react'
 import { addMonths, addDays, format, parseISO, startOfMonth, endOfMonth, getDay, isSameDay, isToday } from 'date-fns'
 import { useSettings } from '../../hooks/useSettings'
 import { toISODate } from '../../lib/dates'
+import { useT, useDateFnsLocale, type Key } from '../../i18n'
 import styles from './DayPicker.module.css'
 
-const DAY_NAMES_MON_FIRST = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-const DAY_NAMES_SUN_FIRST = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+const DAY_NAME_KEYS_MON_FIRST: Key[] = [
+  'common.weekdayMon', 'common.weekdayTue', 'common.weekdayWed', 'common.weekdayThu',
+  'common.weekdayFri', 'common.weekdaySat', 'common.weekdaySun',
+]
+const DAY_NAME_KEYS_SUN_FIRST: Key[] = [
+  'common.weekdaySun', 'common.weekdayMon', 'common.weekdayTue', 'common.weekdayWed',
+  'common.weekdayThu', 'common.weekdayFri', 'common.weekdaySat',
+]
 
 function cx(...cs: (string | false | undefined | null)[]): string {
   return cs.filter(Boolean).join(' ')
@@ -36,11 +43,13 @@ interface Props {
 
 export default function DayPicker({ value, onChange }: Props) {
   const { settings } = useSettings()
+  const t = useT()
+  const dateLocale = useDateFnsLocale()
   const selected = value ? parseISO(value) : null
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(selected ?? new Date()))
 
-  const dayNames = settings.weekStartsOn === 0 ? DAY_NAMES_SUN_FIRST : DAY_NAMES_MON_FIRST
-  const cells    = buildGrid(viewMonth, settings.weekStartsOn)
+  const dayNameKeys = settings.weekStartsOn === 0 ? DAY_NAME_KEYS_SUN_FIRST : DAY_NAME_KEYS_MON_FIRST
+  const cells       = buildGrid(viewMonth, settings.weekStartsOn)
 
   return (
     <div className={styles.picker}>
@@ -49,19 +58,19 @@ export default function DayPicker({ value, onChange }: Props) {
           type="button"
           className={styles.navBtn}
           onClick={() => setViewMonth(m => addMonths(m, -1))}
-          aria-label="Previous month"
+          aria-label={t('pickers.previousMonth')}
         >‹</button>
-        <span className={styles.headerLabel}>{format(viewMonth, 'MMMM yyyy')}</span>
+        <span className={styles.headerLabel}>{format(viewMonth, 'MMMM yyyy', { locale: dateLocale })}</span>
         <button
           type="button"
           className={styles.navBtn}
           onClick={() => setViewMonth(m => addMonths(m, 1))}
-          aria-label="Next month"
+          aria-label={t('inbox.scheduleQuickNextMonth')}
         >›</button>
       </div>
 
       <div className={styles.weekRow}>
-        {dayNames.map(d => <span key={d} className={styles.weekLabel}>{d}</span>)}
+        {dayNameKeys.map(k => <span key={k} className={styles.weekLabel}>{t(k)}</span>)}
       </div>
 
       <div className={styles.grid}>

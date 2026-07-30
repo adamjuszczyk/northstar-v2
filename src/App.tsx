@@ -11,6 +11,10 @@ import { clearAllCaches } from './lib/db'
 import NavBar from './components/nav/NavBar'
 import AuthPage from './pages/AuthPage'
 import TodayPage from './pages/TodayPage'
+import DayPage from './pages/DayPage'
+import WeekPage from './pages/WeekPage'
+import MonthPage from './pages/MonthPage'
+import GoalsPage from './pages/GoalsPage'
 import TreePage from './pages/TreePage'
 import PlannerPage from './pages/PlannerPage'
 import InboxPage from './pages/InboxPage'
@@ -70,6 +74,10 @@ function AuthedApp() {
       <main className={styles.main}>
         <Routes>
           <Route path="/"         element={<TodayPage />} />
+          <Route path="/day"      element={<DayPage />} />
+          <Route path="/week"     element={<WeekPage />} />
+          <Route path="/month"    element={<MonthPage />} />
+          <Route path="/goals"    element={<GoalsPage />} />
           <Route path="/tree"     element={<TreePage />} />
           <Route path="/planner"  element={<PlannerPage />} />
           <Route path="/inbox"    element={<InboxPage />} />

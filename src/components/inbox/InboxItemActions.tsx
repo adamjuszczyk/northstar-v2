@@ -8,6 +8,7 @@ import {
 } from '../../hooks/useInboxItems'
 import { weekStart, monthStart, todayISO, toISODate } from '../../lib/dates'
 import type { InboxItem } from '../../types'
+import { useT } from '../../i18n'
 import WeekPicker from '../pickers/WeekPicker'
 import DayPicker from '../pickers/DayPicker'
 import MonthPicker from '../pickers/MonthPicker'
@@ -15,19 +16,21 @@ import styles from './InboxItemActions.module.css'
 
 type ScheduleTarget = 'day' | 'week' | 'month' | null
 
-const QUICK_OPTIONS: Record<'day' | 'week' | 'month', { label: string; value: () => string }[]> = {
-  day: [
-    { label: 'Today',    value: () => todayISO() },
-    { label: 'Tomorrow', value: () => toISODate(addDays(new Date(), 1)) },
-  ],
-  week: [
-    { label: 'This week', value: () => weekStart(new Date()) },
-    { label: 'Next week', value: () => weekStart(addDays(new Date(), 7)) },
-  ],
-  month: [
-    { label: 'This month', value: () => monthStart(new Date()) },
-    { label: 'Next month', value: () => monthStart(addMonths(new Date(), 1)) },
-  ],
+function getQuickOptions(t: ReturnType<typeof useT>): Record<'day' | 'week' | 'month', { label: string; value: () => string }[]> {
+  return {
+    day: [
+      { label: t('nav.today'),    value: () => todayISO() },
+      { label: t('inbox.scheduleQuickTomorrow'), value: () => toISODate(addDays(new Date(), 1)) },
+    ],
+    week: [
+      { label: t('day.tabThisWeek'), value: () => weekStart(new Date()) },
+      { label: t('inbox.scheduleQuickNextWeek'), value: () => weekStart(addDays(new Date(), 7)) },
+    ],
+    month: [
+      { label: t('day.tabThisMonth'), value: () => monthStart(new Date()) },
+      { label: t('inbox.scheduleQuickNextMonth'), value: () => monthStart(addMonths(new Date(), 1)) },
+    ],
+  }
 }
 
 interface Props {
@@ -38,6 +41,8 @@ interface Props {
 }
 
 export default function InboxItemActions({ item, onPromote, onEdit, onClose }: Props) {
+  const t = useT()
+  const QUICK_OPTIONS = getQuickOptions(t)
   const [scheduleTarget, setScheduleTarget] = useState<ScheduleTarget>(null)
   const [dateValue,      setDateValue]      = useState('')
   // Always a valid Monday key — never empty — so WeekPicker never renders an invalid date.
@@ -97,7 +102,8 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
   }
 
   function handleDelete() {
-    if (!window.confirm(`Delete "${item.content.slice(0, 48)}${item.content.length > 48 ? '…' : ''}"?`)) return
+    const title = `${item.content.slice(0, 48)}${item.content.length > 48 ? '…' : ''}`
+    if (!window.confirm(t('common.deleteConfirm', { title }))) return
     deleteItem(item.id, { onSuccess: onClose })
   }
 
@@ -114,7 +120,7 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
           disabled={isPending}
         >
           <span className={styles.btnIcon}>→</span>
-          Promote to tree
+          {t('inbox.promoteToTree')}
         </button>
         <button
           className={styles.actionBtn}
@@ -123,22 +129,22 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
           disabled={isPending}
         >
           <span className={styles.btnIcon}>✎</span>
-          Edit
+          {t('common.edit')}
         </button>
       </div>
 
       {/* Schedule actions */}
       <div className={styles.scheduleRow}>
-        <span className={styles.scheduleLabel}>SCHEDULE TO</span>
+        <span className={styles.scheduleLabel}>{t('inbox.scheduleToLabel')}</span>
         <div className={styles.scheduleBtns}>
-          {(['day', 'week', 'month'] as const).map(t => (
+          {(['day', 'week', 'month'] as const).map(target => (
             <button
-              key={t}
-              className={`${styles.scheduleChip}${scheduleTarget === t ? ' ' + styles.scheduleChipActive : ''}`}
-              onClick={() => openSchedule(t)}
+              key={target}
+              className={`${styles.scheduleChip}${scheduleTarget === target ? ' ' + styles.scheduleChipActive : ''}`}
+              onClick={() => openSchedule(target)}
               disabled={isPending}
             >
-              {t}
+              {target === 'day' ? t('inbox.scheduleTargetDay') : target === 'week' ? t('inbox.scheduleTargetWeek') : t('inbox.scheduleTargetMonth')}
             </button>
           ))}
         </div>
@@ -185,7 +191,7 @@ export default function InboxItemActions({ item, onPromote, onEdit, onClose }: P
           onClick={handleDelete}
           disabled={isPending}
         >
-          Delete
+          {t('common.delete')}
         </button>
       </div>
     </div>

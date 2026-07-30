@@ -1,10 +1,16 @@
-import { useEffect, useState, useLayoutEffect, useCallback, type CSSProperties } from 'react'
+import { useEffect, useState, useLayoutEffect, useCallback, useMemo, type CSSProperties } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   useToggleDayItem, useDeleteDayItem,
   PXH, TOPPAD, timeToDecimal, timeToY, timeStrToY, nowDecimal,
 } from '../../hooks/useDayItems'
 import type { DayItem, DayItemPriority } from '../../hooks/useDayItems'
+import type { Line } from '../../hooks/useLines'
+import type { Block } from '../../hooks/useBlocks'
+import LineMarker from './LineMarker'
+import BlockCard from './BlockCard'
+import ListBadge from './ListBadge'
+import { useT } from '../../i18n'
 import styles from './DayTimeline.module.css'
 
 const HOURS_START = 0
@@ -78,7 +84,9 @@ interface CardProps {
 }
 
 function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDelete }: CardProps) {
+  const t = useT()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
+  const isListTask = item.stepsTotal >= 2
 
   const top    = timeStrToY(item.startTime!)
   const minH   = itemDurationH(item) * PXH - 8
@@ -122,29 +130,33 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
       >
         <div className={styles.cardRow}>
           <span className={styles.cardTime}>{item.startTime}</span>
-          {isUpNext && <span className={styles.nextBadge}>UP NEXT</span>}
-          {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-          {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {isUpNext && <span className={styles.nextBadge}>{t('day.upNextBadge')}</span>}
+          {item.priority === 'high' && <span className={styles.priBadgeHigh}>{t('day.priorityHigh')}</span>}
+          {item.priority === 'low'  && <span className={styles.priBadgeLow}>{t('day.priorityLow')}</span>}
+          {isListTask && <ListBadge done={item.stepsDone} total={item.stepsTotal} />}
           <span className={styles.cardSpacer} />
           {item.isComplete && (
-            <span className={styles.doneBadge}>✓<span className={styles.doneBadgeLabel}> DONE</span></span>
+            <span className={styles.doneBadge}>✓<span className={styles.doneBadgeLabel}> {t('day.doneBadgeLabel')}</span></span>
           )}
-          {!item.isComplete && (
+          {!item.isComplete && !isListTask && (
             <button
               className={styles.completeBtn}
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); onToggle(item) }}
               disabled={isPending}
-              aria-label="Mark complete"
+              aria-label={t('common.markComplete')}
             >✓</button>
           )}
-          {item.isComplete && (
+          {/* List tasks derive completion from steps — no direct undo either
+              (SPEC §5.3: the ordinary checkbox is disabled outright, not
+              just the complete direction). */}
+          {item.isComplete && !isListTask && (
             <button
               className={styles.undoBtn}
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); onToggle(item) }}
               disabled={isPending}
-              aria-label="Undo complete"
+              aria-label={t('day.undoCompleteAriaLabel')}
             >↩</button>
           )}
           <button
@@ -152,7 +164,7 @@ function AnchoredCard({ item, isPending, isUpNext, now, onEdit, onToggle, onDele
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); onDelete(item) }}
             disabled={isPending}
-            aria-label="Delete"
+            aria-label={t('common.delete')}
           >✕</button>
         </div>
 
@@ -181,7 +193,9 @@ interface ClusterItemRowProps {
 }
 
 function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: ClusterItemRowProps) {
+  const t = useT()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
+  const isListTask = item.stepsTotal >= 2
 
   return (
     <div
@@ -197,25 +211,26 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
       <span className={[styles.clusterExpandedTitle, item.isComplete ? styles.clusterExpandedTitleDone : ''].filter(Boolean).join(' ')}>
         {item.displayTitle}
       </span>
-      {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-      {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+      {isListTask && <ListBadge done={item.stepsDone} total={item.stepsTotal} />}
+      {item.priority === 'high' && <span className={styles.priBadgeHigh}>{t('day.priorityHigh')}</span>}
+      {item.priority === 'low'  && <span className={styles.priBadgeLow}>{t('day.priorityLow')}</span>}
       {item.isComplete && <span className={styles.doneBadge}>✓</span>}
-      {!item.isComplete && (
+      {!item.isComplete && !isListTask && (
         <button
           className={styles.clusterCompleteBtn}
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onToggle(item) }}
           disabled={isPending}
-          aria-label="Mark complete"
+          aria-label={t('common.markComplete')}
         >✓</button>
       )}
-      {item.isComplete && (
+      {item.isComplete && !isListTask && (
         <button
           className={styles.clusterUndoBtn}
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onToggle(item) }}
           disabled={isPending}
-          aria-label="Undo complete"
+          aria-label={t('day.undoCompleteAriaLabel')}
         >↩</button>
       )}
       <button
@@ -223,7 +238,7 @@ function ClusterItemRow({ item, isPending, onEdit, onToggle, onDelete }: Cluster
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onDelete(item) }}
         disabled={isPending}
-        aria-label="Delete"
+        aria-label={t('common.delete')}
       >✕</button>
     </div>
   )
@@ -241,6 +256,7 @@ interface ClusterProps {
 }
 
 function ClusterBlock({ items, now, isPending, onEdit, onToggle, onDelete }: ClusterProps) {
+  const t = useT()
   const [expanded, setExpanded] = useState(false)
 
   const sorted = [...items].sort((a, b) =>
@@ -283,13 +299,13 @@ function ClusterBlock({ items, now, isPending, onEdit, onToggle, onDelete }: Clu
       >
         <div className={styles.clusterHeader}>
           <span className={styles.clusterTime}>{startLabel} – {endLabel}</span>
-          <span className={styles.clusterCount}>{sorted.length} TASKS</span>
+          <span className={styles.clusterCount}>{t('day.clusterTaskCount', { n: sorted.length, count: sorted.length })}</span>
           <span className={styles.clusterChevron}>{expanded ? '▴' : '▾'}</span>
         </div>
 
         {!expanded && (
           <div className={styles.clusterCollapsed}>
-            <span className={styles.clusterTasksLabel}>TASKS:</span>
+            <span className={styles.clusterTasksLabel}>{t('day.tasksLabel')}</span>
             <div className={styles.clusterTaskList}>
               {sorted.map(item => (
                 <div key={item.id} className={styles.clusterTaskItem}>
@@ -324,14 +340,30 @@ function ClusterBlock({ items, now, isPending, onEdit, onToggle, onDelete }: Clu
 // ── Panel ──────────────────────────────────────────────────────────────────────
 
 interface Props {
-  date:      string
-  items:     DayItem[]
-  scrollRef: React.MutableRefObject<HTMLDivElement | null>
-  onEdit:    (item: DayItem) => void
-  dropTime:  string | null
+  date:        string
+  items:       DayItem[]
+  lines:       Line[]
+  blocks:      Block[]
+  blockItems:  DayItem[]     // every item currently assigned to a block (any startTime)
+  scrollRef:   React.MutableRefObject<HTMLDivElement | null>
+  onEdit:      (item: DayItem) => void
+  onEditLine:  (line: Line) => void
+  onEditBlock: (block: Block) => void
+  dropTime:    string | null
+  /** Whether `date` is today's actual calendar date — gates every "now"-
+   *  relative visual (the current-time indicator, the past overlay, and the
+   *  initial auto-scroll target). SPEC §6.2: there's no coherent "now" for
+   *  a day that isn't today, so none of those should render/apply when
+   *  forward-planning or reviewing a different date. The timeline itself
+   *  always renders the full 24 hours regardless — no filtering. */
+  isTodayDate: boolean
 }
 
-export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dropTime }: Props) {
+export default function DayTimeline({
+  date: _date, items, lines, blocks, blockItems, scrollRef, onEdit, onEditLine, onEditBlock, dropTime,
+  isTodayDate,
+}: Props) {
+  const t = useT()
   const [now, setNow] = useState(nowDecimal)
 
   useEffect(() => {
@@ -339,10 +371,18 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
     return () => clearInterval(id)
   }, [])
 
+  // Auto-scroll on mount (SPEC §6.2) — centers "now" in the viewport, but
+  // only for today; any other date has no coherent "now" to center on, so
+  // it opens at the top of the day instead.
   useLayoutEffect(() => {
     if (!scrollRef.current) return
-    const nowY = timeToY(now)
-    scrollRef.current.scrollTop = Math.max(0, nowY - 220)
+    if (isTodayDate) {
+      const nowY = timeToY(now)
+      const containerH = scrollRef.current.clientHeight
+      scrollRef.current.scrollTop = Math.max(0, nowY - containerH / 2)
+    } else {
+      scrollRef.current.scrollTop = 0
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const nowY     = timeToY(now)
@@ -354,11 +394,17 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
   const isPending = toggling || removing
 
   function handleToggle(item: DayItem) {
-    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
+    toggle({
+      id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId,
+      taskId: item.taskId,
+    })
   }
   function handleDelete(item: DayItem) {
-    if (!window.confirm(`Delete "${item.displayTitle}"?`)) return
-    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId })
+    if (!window.confirm(t('common.deleteConfirm', { title: item.displayTitle }))) return
+    remove(
+      { id: item.id, source: item.source, inboxItemId: item.inboxItemId, taskId: item.taskId },
+      { onError: e => window.alert(t('common.deleteError', { title: item.displayTitle, error: (e as Error).message })) },
+    )
   }
 
   const { setNodeRef: setDropRef } = useDroppable({ id: 'timeline-area' })
@@ -369,12 +415,22 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
 
   const clusters = buildClusters(items)
 
+  const itemsByBlock = useMemo(() => {
+    const map = new Map<string, DayItem[]>()
+    for (const item of blockItems) {
+      if (!item.blockId) continue
+      const list = map.get(item.blockId)
+      if (list) list.push(item); else map.set(item.blockId, [item])
+    }
+    return map
+  }, [blockItems])
+
   return (
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
         <span className={styles.headerDot} />
-        <span className={styles.headerTitle}>TIMELINE</span>
-        <span className={styles.headerSub}>· <span className={styles.headerSubFull}>ANCHORED · </span>FIXED TIME</span>
+        <span className={styles.headerTitle}>{t('day.timelineHeading')}</span>
+        <span className={styles.headerSub}>· <span className={styles.headerSubFull}>{t('day.anchoredLabel')} · </span>{t('day.fixedTimeLabel')}</span>
         <span className={styles.headerCount}>{items.length}</span>
       </div>
 
@@ -401,9 +457,13 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
           <div className={styles.rail}
             style={{ left: RAIL_X, top: TOPPAD - 8, height: (HOURS_END - HOURS_START + 1) * PXH + 16 } as CSSProperties} />
 
-          {/* Past overlay */}
-          <div className={styles.pastOverlay}
-            style={{ left: RAIL_X + 4, right: CARD_RIGHT, top: TOPPAD - 8, height: Math.max(0, nowY - (TOPPAD - 8)) } as CSSProperties} />
+          {/* Past overlay — "past" only has meaning relative to today's own
+              real-world now; would otherwise dim an arbitrary chunk of a
+              future or bygone day based on the current wall-clock time. */}
+          {isTodayDate && (
+            <div className={styles.pastOverlay}
+              style={{ left: RAIL_X + 4, right: CARD_RIGHT, top: TOPPAD - 8, height: Math.max(0, nowY - (TOPPAD - 8)) } as CSSProperties} />
+          )}
 
           {/* Drop time indicator */}
           {dropTime && (
@@ -414,6 +474,22 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
               <span className={styles.dropIndicatorLabel}>{dropTime}</span>
             </div>
           )}
+
+          {/* Lines — fixed-time markers, purely visual */}
+          {lines.map(line => (
+            <LineMarker key={line.id} line={line} onEdit={onEditLine} />
+          ))}
+
+          {/* Blocks — typed time-range containers, render their assigned items */}
+          {blocks.map(block => (
+            <BlockCard
+              key={block.id}
+              block={block}
+              items={itemsByBlock.get(block.id) ?? []}
+              onEditBlock={onEditBlock}
+              onEditItem={onEdit}
+            />
+          ))}
 
           {/* Anchored items — solo or clustered */}
           {clusters.map((group, gi) =>
@@ -441,13 +517,17 @@ export default function DayTimeline({ date: _date, items, scrollRef, onEdit, dro
             )
           )}
 
-          {/* NOW line */}
-          <div className={styles.nowLine} style={{ top: nowY } as CSSProperties} />
-          <div className={styles.nowDot} style={{ top: nowY - 6 } as CSSProperties} />
-          <div className={styles.nowLabel}
-            style={{ left: RAIL_X + 10, top: nowY - 26 } as CSSProperties}>
-            NOW · {nowLabel}
-          </div>
+          {/* NOW line — only meaningful when viewing today (SPEC §6.2) */}
+          {isTodayDate && (
+            <>
+              <div className={styles.nowLine} style={{ top: nowY } as CSSProperties} />
+              <div className={styles.nowDot} style={{ top: nowY - 6 } as CSSProperties} />
+              <div className={styles.nowLabel}
+                style={{ left: RAIL_X + 10, top: nowY - 26 } as CSSProperties}>
+                {t('day.nowLabel', { time: nowLabel })}
+              </div>
+            </>
+          )}
 
         </div>
       </div>

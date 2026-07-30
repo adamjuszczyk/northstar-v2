@@ -74,6 +74,15 @@
   color: var(--ns-gold);
 }
 
+/* ── "More" item (mobile only — a <button>, not a NavLink) ──── */
+.moreLink {
+  border: none;
+  background: transparent;
+  font: inherit;
+  width: 100%;
+  cursor: pointer;
+}
+
 /* ── Mobile offline dot ──────────────────────────────────────── */
 .mobileOfflineDot {
   position: absolute;

@@ -152,6 +152,51 @@
 .notesInput::placeholder { color: var(--ns-text-lo); }
 .notesInput:focus        { border-color: rgba(var(--ns-gold-rgb), .4); }
 
+/* ── Pending steps (create-mode task list composer) ───────────────────── */
+
+.pendingStepList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pendingStepRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ns-space-2);
+  padding: 6px 8px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-faint);
+  background: var(--ns-border-subtle);
+}
+
+.pendingStepText {
+  flex: 1;
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-sm);
+  color: var(--ns-text-hi);
+}
+
+.pendingStepRemove {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: var(--ns-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.pendingStepRemove:hover { color: var(--ns-danger); }
+
+.pendingStepAddRow {
+  display: flex;
+  gap: var(--ns-space-2);
+}
+.pendingStepAddRow .titleInput { flex: 1; }
+
 /* ── Status buttons ────────────────────────────────────────────────────── */
 
 .statusRow {
@@ -178,6 +223,15 @@
   color: var(--ns-ok);
 }
 
+/* ── Error ─────────────────────────────────────────────────────────────── */
+
+.error {
+  margin: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  color: var(--ns-danger);
+}
+
 /* ── Action row ────────────────────────────────────────────────────────── */
 
 .actions {
@@ -201,6 +255,21 @@
 }
 .moveBtn:hover:not(:disabled) { background: rgba(var(--ns-project-accent-rgb), .16); }
 .moveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sheetBtn {
+  padding: 7px 14px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-gold-rgb), .35);
+  background: rgba(var(--ns-gold-rgb), .08);
+  color: var(--ns-gold);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+.sheetBtn:hover:not(:disabled) { background: rgba(var(--ns-gold-rgb), .16); }
+.sheetBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .deleteBtn {
   padding: 7px 14px;

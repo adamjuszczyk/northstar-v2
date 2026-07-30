@@ -21,14 +21,43 @@ export interface CachedDayItem {
   counterTarget:  number | null
   originWeekFocusId:  string | null
   originMonthFocusId: string | null
+  blockId:     string | null
+  taskId:      string | null
   createdAt:   string
   updatedAt:   string
+}
+
+export interface CachedLine {
+  id:        string
+  userId:    string
+  date:      string
+  label:     string
+  time:      string
+  colour:    string | null
+  position:  number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CachedBlock {
+  id:        string
+  userId:    string
+  date:      string
+  name:      string
+  startTime: string
+  endTime:   string
+  colour:    string | null
+  notes:     string | null
+  position:  number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CachedInboxItem {
   id:             string
   userId:         string
   content:        string
+  kind:           string
   state:          string
   promotedNodeId: string | null
   carriedOver:    boolean
@@ -45,7 +74,18 @@ export interface CachedTreeNode {
   status:    string
   parentId:  string | null
   position:  number
+  sheetId:   string | null
   updatedAt: string
+}
+
+export interface CachedSheet {
+  id:           string
+  userId:       string
+  name:         string
+  anchorNodeId: string | null
+  position:     number
+  createdAt:    string
+  updatedAt:    string
 }
 
 export interface CachedWeekFocus {
@@ -57,6 +97,7 @@ export interface CachedWeekFocus {
   treeNodeId:  string | null
   inboxItemId: string | null
   habitId:     string | null
+  taskId:      string | null
   isComplete:  boolean
   position:    number
 }
@@ -70,8 +111,35 @@ export interface CachedMonthFocus {
   treeNodeId:  string | null
   inboxItemId: string | null
   habitId:     string | null
+  taskId:      string | null
   isComplete:  boolean
   position:    number
+}
+
+export interface CachedTask {
+  id:          string
+  userId:      string
+  source:      string
+  title:       string | null
+  treeNodeId:  string | null
+  inboxItemId: string | null
+  habitId:     string | null
+  notes:       string | null
+  isComplete:  boolean
+  createdAt:   string
+  updatedAt:   string
+}
+
+export interface CachedTaskStep {
+  id:        string
+  userId:    string
+  taskId:    string
+  content:   string
+  position:  number
+  isDone:    boolean
+  doneAt:    string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CachedJournalEntry {
@@ -103,6 +171,11 @@ class NorthstarDB extends Dexie {
   weekFocus!:   Table<CachedWeekFocus,  string>
   monthFocus!:  Table<CachedMonthFocus, string>
   journalEntries!: Table<CachedJournalEntry, string>
+  lines!:       Table<CachedLine,       string>
+  blocks!:      Table<CachedBlock,      string>
+  tasks!:       Table<CachedTask,       string>
+  taskSteps!:   Table<CachedTaskStep,   string>
+  sheets!:      Table<CachedSheet,      string>
   syncQueue!:   Table<SyncEntry,        number>
 
   constructor() {
@@ -139,6 +212,43 @@ class NorthstarDB extends Dexie {
       // indexes, just a schema version bump per project convention.
       dayItems: 'id, userId, date, [userId+date]',
     })
+    this.version(8).stores({
+      // kind added to CachedInboxItem (Notes vs Tasks split) — no new index,
+      // just a schema version bump per project convention.
+      inboxItems: 'id, userId, createdAt',
+    })
+    this.version(9).stores({
+      lines:  'id, userId, date, [userId+date]',
+      blocks: 'id, userId, date, [userId+date]',
+      // blockId added to CachedDayItem — no new index, just a schema version
+      // bump per project convention.
+      dayItems: 'id, userId, date, [userId+date]',
+    })
+    this.version(10).stores({
+      // CachedBlock.type/title replaced with a single required `name`
+      // (Blocks are freely named, not typed — SPEC §5.2 correction). No new
+      // index, just a schema version bump per project convention.
+      blocks: 'id, userId, date, [userId+date]',
+    })
+    this.version(11).stores({
+      // Task Lists & Split (v3 Phase 4) — new tasks/taskSteps stores.
+      // CachedDayItem.taskId added; CachedWeekFocus.taskId/CachedMonthFocus
+      // .taskId added too (this session's TaskSourceForm copy-not-link fix,
+      // beyond TASKS.md's original Phase 4 scope). No new indexes on the
+      // existing stores, just a schema version bump per project convention.
+      tasks:     'id, userId',
+      taskSteps: 'id, taskId, userId',
+      dayItems:   'id, userId, date, [userId+date]',
+      weekFocus:  'id, userId, weekStart',
+      monthFocus: 'id, userId, monthStart',
+    })
+    this.version(12).stores({
+      // Sheets (v3 Phase 7) — new sheets store. CachedTreeNode.sheetId
+      // added — no new index, just a schema version bump per project
+      // convention (sheet scoping is a render-layer filter, not a query).
+      sheets:    'id, userId',
+      treeNodes: 'id, userId',
+    })
   }
 }
 
@@ -154,6 +264,11 @@ export async function clearAllCaches(): Promise<void> {
       db.weekFocus.clear(),
       db.monthFocus.clear(),
       db.journalEntries.clear(),
+      db.lines.clear(),
+      db.blocks.clear(),
+      db.tasks.clear(),
+      db.taskSteps.clear(),
+      db.sheets.clear(),
       db.syncQueue.clear(),
     ])
   } catch (e) {

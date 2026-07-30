@@ -1,0 +1,99 @@
+.bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--ns-border-faint);
+  background: var(--ns-bg-surface);
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  min-height: 34px;
+  border-radius: var(--ns-radius-md);
+  border: none;
+  background: transparent;
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.tab:hover { color: var(--ns-text-hi); }
+
+.tabActive {
+  background: rgba(var(--ns-accent-rgb), .12);
+  color: var(--ns-accent);
+}
+
+.tabIcon {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* ── Sheet tab + its manage (gear) button, grouped so the active state
+   highlights both together ────────────────────────────────────────────── */
+
+.tabWrap {
+  display: flex;
+  align-items: center;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-faint);
+  background: rgba(255, 255, 255, .03);
+}
+.tabWrap .tab {
+  border-radius: calc(var(--ns-radius-md) - 1px) 0 0 calc(var(--ns-radius-md) - 1px);
+}
+.tabWrapActive {
+  border-color: rgba(var(--ns-gold-rgb), .5);
+  background: rgba(var(--ns-gold-rgb), .1);
+}
+.tabWrapActive .tab {
+  color: var(--ns-gold);
+}
+
+.manageBtn {
+  width: 30px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: none;
+  border-left: 1px solid var(--ns-border-faint);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.14s;
+}
+.manageBtn:hover { color: var(--ns-text-hi); }
+.tabWrapActive .manageBtn { border-color: rgba(var(--ns-gold-rgb), .3); }
+
+.newBtn {
+  flex-shrink: 0;
+  padding: 6px 13px;
+  min-height: 34px;
+  border-radius: var(--ns-radius-md);
+  border: 1px dashed rgba(var(--ns-accent-rgb), .4);
+  background: transparent;
+  color: rgba(var(--ns-accent-rgb), .85);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.newBtn:hover {
+  background: rgba(var(--ns-accent-rgb), .1);
+  border-color: rgba(var(--ns-accent-rgb), .7);
+}

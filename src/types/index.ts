@@ -12,22 +12,37 @@ export interface TreeNode {
   notes:     string | null
   status:    NodeStatus
   position:  number         // ordering among siblings sharing the same parentId
+  sheetId:   string | null  // null = lives in the main tree; else the Sheet it lives in
   createdAt: string
   updatedAt: string
+}
+
+// ─── Sheets ───────────────────────────────────────────────────────────────────
+
+export interface Sheet {
+  id:           string
+  userId:       string
+  name:         string
+  anchorNodeId: string | null   // null = detached (not yet attached to a node)
+  position:     number          // tab order
+  createdAt:    string
+  updatedAt:    string
 }
 
 // ─── Inbox ────────────────────────────────────────────────────────────────────
 
 export type InboxState = 'unassigned' | 'scheduled' | 'promoted'
+export type InboxKind  = 'task' | 'note'
 
 export interface InboxItem {
   id:              string
   userId:          string
   content:         string         // single free-text field — no required structure
-  state:           InboxState
-  promotedNodeId:  string | null  // set when state = 'promoted'
+  kind:            InboxKind      // 'task' schedules/promotes; 'note' is inert capture
+  state:           InboxState     // unused when kind = 'note'
+  promotedNodeId:  string | null  // set when state = 'promoted'; unused when kind = 'note'
   carriedOver:     boolean        // true if auto-moved here from an unfinished standalone day item
-  isCompleted:     boolean        // marked done directly from inbox — independent of state/tree
+  isCompleted:     boolean        // marked done directly from inbox; unused when kind = 'note'
   createdAt:       string
   updatedAt:       string
 }

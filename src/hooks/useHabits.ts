@@ -3,6 +3,7 @@ import { differenceInCalendarDays, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { weekStart } from '../lib/dates'
+import type { useT } from '../i18n'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -288,22 +289,26 @@ export function computeHabitStatus(habit: Habit, allEntries: HabitEntry[]): Habi
   return 'struggling'
 }
 
-/** "X this week" or "X times today" (build) / "X days since last time" (reduce). */
-export function computeCurrentMetric(habit: Habit, allEntries: HabitEntry[]): string {
+/** "X this week" or "X times today" (build) / "X days since last time" (reduce).
+ *  `t` is the caller's own `useT()` translator — this isn't a component/hook
+ *  itself, so it can't call useT() directly; callers pass theirs through. */
+export function computeCurrentMetric(habit: Habit, allEntries: HabitEntry[], t: ReturnType<typeof useT>): string {
   const entries = entriesForHabit(habit.id, allEntries)
 
   if (habit.mode === 'build') {
     if (habit.frequencyType === 'x_per_day') {
       const target = habit.frequencyValue ?? 1
       const count  = countToday(entries)
-      return target > 1 ? `${count} / ${target} times today` : `${count} time${count === 1 ? '' : 's'} today`
+      return target > 1
+        ? t('habits.metricTimesTodayFraction', { count, target })
+        : t('habits.metricTimesToday', { count })
     }
     const wStart = weekStart(new Date())
     const count = entries.filter(e => weekStart(e.loggedAt) === wStart).length
-    return `${count} this week`
+    return t('habits.metricThisWeek', { count })
   }
 
-  if (entries.length === 0) return 'Never logged'
+  if (entries.length === 0) return t('habits.metricNeverLogged')
   const gap = daysSince(entries[entries.length - 1].loggedAt)
-  return gap === 0 ? 'Today' : `${gap} day${gap === 1 ? '' : 's'} since last time`
+  return gap === 0 ? t('nav.today') : t('habits.metricDaysSinceLastTime', { gap, count: gap })
 }

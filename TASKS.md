@@ -194,21 +194,22 @@ export interface Line {
 
 Deliberately per-date rows, not a recurring rule — SPEC §5.4 makes applying a template "a one-time stamp, not a live link", and §10 defers auto-recurring templates. Editing a line affects only that day, for free.
 
-### 3.2 Blocks — `ns_blocks` (migration 12)
+### 3.2 Blocks — `ns_blocks` (migration 12, corrected by migration 13)
 
-A typed time-range container. Not itself completable.
+A freely-named time-range container. Not itself completable.
+
+**Corrected by `migration_13_block_free_naming.sql`**: migration 12 originally built this with a fixed `type` selector (`'focused_work' | 'meeting'`, CHECK-constrained) plus a separate optional `title` that fell back to the type's label — see A7 below, which this supersedes. SPEC §5.2 was corrected to say a Block's name is freely chosen, not picked from a fixed set, so the two concepts collapsed into one required `name` column (migration 13 renames `title` → `name`, backfills any existing `type`-only rows to a sensible starting name, then drops `type` and its CHECK constraint). The DDL and type below reflect the **current, corrected** shape:
 
 ```sql
 create table ns_blocks (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   date        date not null,
-  type        text not null check (type in ('focused_work', 'meeting')),
-  title       text,                                -- optional label; falls back to the type name
+  name        text not null,
   start_time  time not null,
   end_time    time not null,
   colour      text,                                -- BLOCK_COLOURS hex
-  notes       text,                                -- meeting agenda / plan
+  notes       text,                                -- freeform agenda / plan, available on every block
   position    integer not null default 0,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
@@ -220,14 +221,11 @@ create index on ns_blocks (user_id, date);
 ```
 
 ```typescript
-export type BlockType = 'focused_work' | 'meeting'
-
 export interface Block {
   id:        string
   userId:    string
   date:      string
-  type:      BlockType
-  title:     string | null
+  name:      string
   startTime: string        // 'HH:MM'
   endTime:   string        // 'HH:MM'
   colour:    string | null
@@ -377,17 +375,15 @@ create table ns_day_template_items (
   user_id     uuid not null references auth.users(id) on delete cascade,
   template_id uuid not null references ns_day_templates(id) on delete cascade,
   kind        text not null check (kind in ('line', 'block')),
-  label       text not null,                       -- line label or block title
+  label       text not null,                       -- line label or block name (blocks are freely named, not typed — SPEC §5.2)
   start_time  time not null,                       -- line: the marker time; block: range start
   end_time    time,                                -- block only
-  block_type  text check (block_type in ('focused_work', 'meeting')),
   colour      text,
   position    integer not null default 0,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
   constraint tmpl_block_needs_end   check (kind != 'block' or end_time is not null),
-  constraint tmpl_block_needs_type  check (kind != 'block' or block_type is not null),
   constraint tmpl_line_has_no_end   check (kind != 'line'  or end_time is null),
   constraint tmpl_block_range       check (end_time is null or end_time > start_time)
 );
@@ -415,7 +411,6 @@ export interface DayTemplateItem {
   label:      string
   startTime:  string             // 'HH:MM'
   endTime:    string | null      // block only
-  blockType:  BlockType | null   // block only
   colour:     string | null
   position:   number
   createdAt:  string
@@ -681,8 +676,8 @@ No hooks are orphaned by this one — `useWeekFocus` and `useMonthFocus` still s
 ### A6 — Applying a template merges by default (LOW)
 Applying to a day that already has lines or blocks appends rather than replacing, with a "replace existing" option offered in the confirm step when the day isn't empty. Merge is the non-destructive default; replace has to be chosen.
 
-### A7 — Block types use a CHECK constraint (LOW)
-§5.2 calls the type set "extensible". Modelled as `check (type in ('focused_work','meeting'))`, matching every other type/status/source column in this schema. Adding a type is a three-line migration. The alternative — unconstrained text — buys zero-migration extensibility at the cost of the safety every other table in the app has. Flag if you'd rather have free text.
+### A7 — SUPERSEDED: Block types use a CHECK constraint
+Originally modelled as `check (type in ('focused_work','meeting'))`, matching every other type/status/source column in this schema. **Overturned in session 7**: SPEC §5.2 was corrected — a Block's name was always meant to be freely chosen, not picked from a fixed set. `migration_13_block_free_naming.sql` replaces `type` (+ the separate optional `title`) with one required free-text `name` column. See §3.2's "corrected by migration 13" note for the full DDL change. Left here, marked superseded, so the reasoning that was overturned stays visible rather than silently disappearing.
 
 ### A8 — Deleting a block releases its tasks (LOW)
 `on delete set null` on `ns_day_items.block_id`: deleting a Focused Work block leaves its tasks on the day, unassigned. Cascade would silently delete work you'd scheduled, which no other delete path in this app does.
@@ -702,8 +697,16 @@ A `source = 'tree'` task whose steps are all done sets `ns_tree_nodes.status = '
 ### A11 — Split is same-day only (LOW)
 §5.3 defines split as "more than one time slot in **a day**". Cross-day continuation is out of scope; the existing carry-over sweep already handles unfinished work rolling forward.
 
-### A12 — Habits are not task-list-able (LOW)
-Habit-sourced day items keep their current behaviour, including `x_per_day` counters, and don't get steps. `ns_tasks` permits `source = 'habit'` so the door isn't closed structurally, but no habit UI changes in v3. §4.4 says nothing changes for Habits.
+### A12 — SUPERSEDED: Habits are not task-list-able
+Originally: habit-sourced day items keep their current behaviour, including `x_per_day` counters, and don't get steps — no habit UI changes in v3, per §4.4's original "nothing changes for Habits" wording.
+
+**Overturned in session 13**: SPEC §4.4 was corrected — habit-sourced day items get Task Lists & Split intentionally, same as tree/inbox/standalone, not excluded. This wasn't a clean line to hold in the first place: `ns_tasks` already permitted `source = 'habit'` structurally (A12 itself says so), and the "first step added" materialization trigger (`TaskStepList`, rendered unconditionally in `DayItemEditForm` regardless of source) was never actually gated by source — only *split*-detection in `DayItemForm.tsx` was tree-tab-only. So a habit-sourced item could already be materialized into a task via the step path before this reversal; A12 described an intended restriction that the implementation had already partially stopped enforcing. Session 13 closed the gap by extending split-detection to habit too (matching what steps already allowed) rather than retroactively locking steps back down to tree-only.
+
+Two bugs surfaced and fixed in the same session, once materialization became officially reachable for habit-sourced items rather than an accidental side door: `applyTaskCompletion` (`useTasks.ts`) had a tree-node-propagation branch but no habit-entry-logging one, so completing a materialized habit-sourced occurrence silently never logged a `ns_habit_entries` row; `useIncrementDayItemCounter` used `item.habitId` directly, which is null on a materialized row (identity resolves through the task, TASKS.md §3.3 rule 1), breaking the increment button for a materialized `x_per_day` counter habit entirely. Habit's own tracking data (mode, frequency, trend charts) lives in `useHabits.ts`, which has zero references to `ns_day_items` — confirmed structurally independent, not just by inspection of these two call sites.
+
+Left here, marked superseded, so the reasoning that was overturned (and why it didn't fully hold even before the reversal) stays visible rather than silently disappearing — see A7 for the same pattern.
+
+**Amended again in session 17**: SPEC §4.4 was revised once more — Split is gated off for habit-sourced items specifically, for now; Task Lists (steps) stay exactly as session 13 left them, unaffected. Not a full re-reversal of A12: session 13's reasoning above already establishes that the "no habit UI changes" restriction never cleanly applied to steps in the first place, only to split-detection — so this amendment narrows back to exactly the piece that changed, Split, not the whole of A12. `DayItemEditForm.tsx`'s explicit "⑂ Split" button is now hidden for `source === 'habit'` items, and `DayItemForm.tsx`'s habit tab makes an already-scheduled habit row unselectable (disabled, with an "· already added" hint) instead of offering the implicit re-add → Split prompt — the shared `partitionSelection`/`handleConfirmSplit`/`SplitPrompt` machinery itself is untouched and still fully live for tree. Steps, "add first step" materialization, `applyTaskCompletion`'s habit-entry branch, and the counter fix (all from session 13) were confirmed still working, unmodified — see the session 17 CONTEXT.md entry for what was live-verified.
 
 ### A13 — Notes reuse the existing `content` field (LOW)
 No separate title/body for Notes. Consistent with the Inbox's "no required fields" philosophy (§4.3), and `content` is already `text`.

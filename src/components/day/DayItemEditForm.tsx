@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useUpdateDayItem, useDeleteDayItem } from '../../hooks/useDayItems'
+import { useUpdateDayItem, useDeleteDayItem, useSplitDayItemToNewSlot } from '../../hooks/useDayItems'
 import type { DayItem, DayItemPriority } from '../../hooks/useDayItems'
-import { TimeSection, PriorityPicker, ColourPicker, validateTimeRange } from './DayItemForm'
+import { useBlocks } from '../../hooks/useBlocks'
+import { TimeSection, PriorityPicker, ColourPicker, BlockPicker, validateTimeRange } from './DayItemForm'
+import TaskStepList from './TaskStepList'
+import { useT } from '../../i18n'
 import styles from './DayItemForm.module.css'
 
 interface Props {
@@ -10,17 +13,21 @@ interface Props {
 }
 
 export default function DayItemEditForm({ item, onClose }: Props) {
+  const t = useT()
   const [title,     setTitle]     = useState(item.title ?? '')
   const [hasTime,   setHasTime]   = useState(item.startTime !== null)
   const [startTime, setStartTime] = useState(item.startTime ?? '')
   const [endTime,   setEndTime]   = useState(item.endTime   ?? '')
   const [priority,  setPriority]  = useState<DayItemPriority>(item.priority)
   const [colour,    setColour]    = useState<string | null>(item.colour)
+  const [blockId,   setBlockId]   = useState<string | null>(item.blockId)
   const [error,     setError]     = useState<string | null>(null)
 
   const { mutate: update, isPending: updating } = useUpdateDayItem()
   const { mutate: remove, isPending: removing  } = useDeleteDayItem()
-  const isPending = updating || removing
+  const { mutate: split,  isPending: splitting } = useSplitDayItemToNewSlot()
+  const { data: blocksForDay = [] } = useBlocks(item.date)
+  const isPending = updating || removing || splitting
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
@@ -30,25 +37,51 @@ export default function DayItemEditForm({ item, onClose }: Props) {
 
   function handleSave() {
     if (isPending) return
-    const timeError = validateTimeRange(hasTime, startTime, endTime)
+    const timeError = validateTimeRange(t, hasTime, startTime, endTime)
     if (timeError) { setError(timeError); return }
     setError(null)
     update({
       id:        item.id,
-      title:     item.source === 'standalone' ? (title.trim() || null) : undefined,
+      title:     showEditableTitle ? (title.trim() || null) : undefined,
       startTime: hasTime && startTime ? startTime : null,
       endTime:   hasTime && endTime   ? endTime   : null,
       priority,
       colour,
+      blockId,
     }, {
       onSuccess: onClose,
       onError:   e => setError((e as Error).message),
     })
   }
 
+  // Split (SPEC §5.3, simplified) — immediately adds another occurrence of
+  // this same task to today's floating pool: no time picker, no modal, no
+  // extra step. Same shared task_id as every other occurrence; drag it onto
+  // the timeline afterward for a specific time, same as any floating item.
+  function handleSplit() {
+    if (isPending) return
+    setError(null)
+    split(
+      {
+        date: item.date,
+        existingItem: {
+          id: item.id, taskId: item.taskId,
+          source: item.source, title: item.title,
+          treeNodeId: item.treeNodeId, inboxItemId: item.inboxItemId, habitId: item.habitId,
+          isComplete: item.isComplete,
+        },
+      },
+      { onSuccess: onClose, onError: e => setError((e as Error).message) },
+    )
+  }
+
   function handleDelete() {
-    if (!window.confirm(`Delete "${item.displayTitle}"?`)) return
-    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId }, { onSuccess: onClose })
+    if (!window.confirm(t('common.deleteConfirm', { title: item.displayTitle }))) return
+    setError(null)
+    remove(
+      { id: item.id, source: item.source, inboxItemId: item.inboxItemId, taskId: item.taskId },
+      { onSuccess: onClose, onError: e => setError((e as Error).message) },
+    )
   }
 
   function handleBackdrop(e: React.MouseEvent) {
@@ -56,27 +89,32 @@ export default function DayItemEditForm({ item, onClose }: Props) {
   }
 
   const sourceLabel =
-    item.source === 'tree'  ? '✦ GOAL TREE'   :
-    item.source === 'inbox' ? '⌵ FROM INBOX'  :
-    item.source === 'habit' ? '◆ HABIT'       :
-                              '• STANDALONE'
+    item.source === 'tree'  ? t('day.sourceBadgeTree')      :
+    item.source === 'inbox' ? t('day.sourceBadgeInboxFrom') :
+    item.source === 'habit' ? t('day.focusTagHabit')        :
+                              t('day.sourceBadgeStandalone')
 
+  // A task-linked standalone item's own title is null (identity resolves
+  // through the task) — show the resolved title read-only, same as a
+  // tree/inbox/habit link, rather than an editable-but-inert input.
   const linkedTitle = item.treeNodeTitle ?? item.inboxContent ?? item.habitName
+    ?? (item.taskId ? item.displayTitle : null)
+  const showEditableTitle = item.source === 'standalone' && !item.taskId
 
   return (
     <div className={styles.backdrop} onClick={handleBackdrop}>
       <div className={styles.modal} role="dialog" aria-modal="true">
 
         <div className={styles.header}>
-          <span className={styles.modeLabel}>✦ EDIT ITEM</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          <span className={styles.modeLabel}>{t('day.modeLabelEditItem')}</span>
+          <button className={styles.closeBtn} onClick={onClose} aria-label={t('common.close')}>✕</button>
         </div>
 
         <div className={styles.body}>
 
           {/* Source badge */}
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>SOURCE</span>
+            <span className={styles.fieldLabel}>{t('day.fieldLabelSource')}</span>
             <span className={styles.sourceBadge}>{sourceLabel}</span>
           </div>
 
@@ -84,16 +122,16 @@ export default function DayItemEditForm({ item, onClose }: Props) {
           {linkedTitle && (
             <div className={styles.field}>
               <span className={styles.fieldLabel}>
-                {item.source === 'tree' ? 'LINKED NODE' : item.source === 'habit' ? 'HABIT' : 'INBOX ITEM'}
+                {item.source === 'tree' ? t('day.fieldLabelLinkedNode') : item.source === 'habit' ? t('day.fieldLabelHabit') : t('day.fieldLabelInboxItem')}
               </span>
               <div className={styles.linkedTitle}>{linkedTitle}</div>
             </div>
           )}
 
-          {/* Editable title — standalone only */}
-          {item.source === 'standalone' && (
+          {/* Editable title — standalone, not-yet-task-linked items only */}
+          {showEditableTitle && (
             <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="edit-title">TITLE</label>
+              <label className={styles.fieldLabel} htmlFor="edit-title">{t('day.fieldLabelTitle')}</label>
               <input
                 id="edit-title"
                 className={styles.input}
@@ -105,6 +143,20 @@ export default function DayItemEditForm({ item, onClose }: Props) {
             </div>
           )}
 
+          {/* Task Lists & Split (SPEC §5.3) — turn this item into a step
+              list, or manage an already-materialized one. */}
+          <div className={styles.field}>
+            <TaskStepList
+              taskId={item.taskId}
+              item={{
+                id: item.id,
+                source: item.source, title: item.title,
+                treeNodeId: item.treeNodeId, inboxItemId: item.inboxItemId, habitId: item.habitId,
+                isComplete: item.isComplete,
+              }}
+            />
+          </div>
+
           {/* Time anchor */}
           <TimeSection
             hasTime={hasTime}   setHasTime={setHasTime}
@@ -114,15 +166,44 @@ export default function DayItemEditForm({ item, onClose }: Props) {
 
           {/* Priority */}
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>PRIORITY</span>
+            <span className={styles.fieldLabel}>{t('day.fieldLabelPriority')}</span>
             <PriorityPicker priority={priority} onChange={setPriority} />
           </div>
 
           {/* Colour */}
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>COLOUR <span className={styles.optionalLabel}>(optional)</span></span>
+            <span className={styles.fieldLabel}>{t('day.colourLabel')} <span className={styles.optionalLabel}>{t('common.optional')}</span></span>
             <ColourPicker colour={colour} onChange={setColour} />
           </div>
+
+          {/* Block assignment */}
+          {blocksForDay.length > 0 && (
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>{t('day.blockLabel')} <span className={styles.optionalLabel}>{t('common.optional')}</span></span>
+              <BlockPicker blocks={blocksForDay} blockId={blockId} onChange={setBlockId} />
+            </div>
+          )}
+
+          {/* Split (SPEC §5.3, simplified) — explicit, findable action, not
+              only the implicit re-add-detects-a-conflict prompt. Immediate:
+              no time picker, no modal. Pulled back for habits specifically
+              (SPEC §4.4, revised again) — Task Lists/steps stay available
+              for habits above, only Split is gated off here. */}
+          {item.source !== 'habit' && (
+            <div className={styles.field}>
+              <button
+                type="button"
+                className={styles.splitBtn}
+                onClick={handleSplit}
+                disabled={isPending}
+              >
+                {splitting ? t('common.pendingEllipsis') : t('day.explicitSplitButton')}
+              </button>
+              <p className={styles.splitHint}>
+                {t('day.splitHint')}
+              </p>
+            </div>
+          )}
 
         </div>
 
@@ -130,16 +211,16 @@ export default function DayItemEditForm({ item, onClose }: Props) {
 
         <div className={styles.actions}>
           <button className={styles.deleteItemBtn} onClick={handleDelete} disabled={isPending}>
-            Delete
+            {t('common.delete')}
           </button>
           <span className={styles.actionsSpacer} />
-          <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>Cancel</button>
+          <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>{t('common.cancel')}</button>
           <button
             className={styles.saveBtn}
             onClick={handleSave}
-            disabled={isPending || !!validateTimeRange(hasTime, startTime, endTime)}
+            disabled={isPending || !!validateTimeRange(t, hasTime, startTime, endTime)}
           >
-            {updating ? '…' : 'Save'}
+            {updating ? t('common.pendingEllipsis') : t('common.save')}
           </button>
         </div>
 

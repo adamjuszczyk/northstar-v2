@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { useTodayISO } from './useTodayISO'
+import { useT } from '../i18n'
 
 /**
  * Moves unfinished standalone day items from previous days into the inbox
@@ -15,6 +16,7 @@ export function useCarryOverSweep() {
   const { user } = useAuth()
   const today = useTodayISO()
   const qc = useQueryClient()
+  const t = useT()
   const sweptKey = useRef<string | null>(null)
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function useCarryOverSweep() {
           .from('ns_inbox_items')
           .insert({
             user_id:      user!.id,
-            content:      row.title ?? '(untitled task)',
+            content:      row.title ?? t('inbox.carriedOverUntitledTask'),
             state:        'unassigned',
             carried_over: true,
           })

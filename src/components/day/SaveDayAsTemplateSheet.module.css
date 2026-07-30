@@ -1,0 +1,167 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--ns-scrim);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ns-space-4);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  border-radius: var(--ns-radius-2xl);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-raised);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--ns-shadow-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: ns-rise 0.2s ease both;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ns-border-faint);
+}
+
+.modeLabel {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-caps);
+  color: var(--ns-gold);
+}
+
+.closeBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.closeBtn:hover { color: var(--ns-text-hi); }
+
+/* ── Body / fields ───────────────────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ns-space-4) 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-4);
+  min-height: 0;
+}
+
+.note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid rgba(var(--ns-gold-rgb), .3);
+  background: rgba(var(--ns-gold-rgb), .06);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-sm);
+  color: var(--ns-text-mid);
+  line-height: 1.6;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-2);
+}
+
+.fieldLabel {
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-caps);
+  color: var(--ns-text-lo);
+}
+
+.input {
+  padding: 10px 13px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-mid);
+  background: var(--ns-surface-input);
+  color: var(--ns-text-hi);
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-base);
+  outline: none;
+  transition: border-color 0.14s;
+}
+.input::placeholder { color: var(--ns-text-lo); }
+.input:focus { border-color: rgba(var(--ns-gold-rgb), .45); }
+
+/* ── Error ───────────────────────────────────────────────────────────────── */
+
+.error {
+  margin: 0 20px;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  color: var(--ns-danger);
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  gap: var(--ns-space-2);
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--ns-border-faint);
+}
+
+.actionsSpacer { flex: 1; }
+
+.cancelBtn {
+  padding: 8px 16px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.cancelBtn:hover { color: var(--ns-text-mid); }
+.cancelBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.saveBtn {
+  padding: 8px 18px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid rgba(var(--ns-gold-rgb), .4);
+  background: rgba(var(--ns-gold-rgb), .12);
+  color: var(--ns-gold);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.saveBtn:hover:not(:disabled) {
+  background: rgba(var(--ns-gold-rgb), .2);
+  border-color: rgba(var(--ns-gold-rgb), .65);
+}
+.saveBtn:disabled { opacity: 0.35; cursor: not-allowed; }

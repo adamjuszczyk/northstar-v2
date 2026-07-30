@@ -152,6 +152,14 @@
   background: rgba(var(--ns-gold-rgb), .08);
   border-color: rgba(var(--ns-gold-rgb), .3);
 }
+.listRowDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.listRowDisabled:hover {
+  background: transparent;
+  border-color: transparent;
+}
 
 .chevron {
   width: 18px;
@@ -273,6 +281,13 @@
 }
 .canvasCardDone {
   opacity: 0.55;
+}
+.canvasCardDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.canvasCardDisabled:hover {
+  border-color: rgba(var(--ns-node-accent-rgb), .3);
 }
 
 .canvasCardBody {

@@ -3,15 +3,18 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useToggleDayItem, useDeleteDayItem, useIncrementDayItemCounter } from '../../hooks/useDayItems'
 import type { DayItem } from '../../hooks/useDayItems'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { useT } from '../../i18n'
+import type { Key } from '../../i18n'
+import ListBadge from './ListBadge'
 import styles from './FloatingPool.module.css'
 
 // ── Source config ──────────────────────────────────────────────────────────────
 
 const SOURCE_CFG = {
-  tree:       { accentVar: '--ns-gold',           accentRgbVar: '--ns-gold-rgb',           tag: '✦ GOAL TREE',  dashed: false },
-  standalone: { accentVar: '--ns-task-accent',    accentRgbVar: '--ns-task-accent-rgb',    tag: '• STANDALONE', dashed: false },
-  inbox:      { accentVar: '--ns-project-accent', accentRgbVar: '--ns-project-accent-rgb', tag: '⌵ FROM INBOX', dashed: true  },
-  habit:      { accentVar: '--ns-ok',             accentRgbVar: '--ns-ok-rgb',             tag: '◆ HABIT',      dashed: false },
+  tree:       { accentVar: '--ns-gold',           accentRgbVar: '--ns-gold-rgb',           tagKey: 'day.sourceBadgeTree'        as Key, dashed: false },
+  standalone: { accentVar: '--ns-task-accent',    accentRgbVar: '--ns-task-accent-rgb',    tagKey: 'day.sourceBadgeStandalone'  as Key, dashed: false },
+  inbox:      { accentVar: '--ns-project-accent', accentRgbVar: '--ns-project-accent-rgb', tagKey: 'day.sourceBadgeInboxFrom'   as Key, dashed: true  },
+  habit:      { accentVar: '--ns-ok',             accentRgbVar: '--ns-ok-rgb',             tagKey: 'day.focusTagHabit'          as Key, dashed: false },
 } as const
 
 function sourceKey(item: DayItem): keyof typeof SOURCE_CFG {
@@ -40,10 +43,17 @@ interface CardProps {
 }
 
 function FloatingCard({ item, isPending, onEdit, onToggle, onIncrement, onDelete }: CardProps) {
+  const t = useT()
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
   const cfg = SOURCE_CFG[sourceKey(item)]
   const { accentVar, accentRgbVar } = accentVars(item)
   const isCounter = item.counterTarget !== null
+  // Completion gate (SPEC §5.3): a list (2+ steps) can't be checked off
+  // directly — it derives from steps instead. Doesn't apply to counter
+  // items independently completing via taps (SPEC §4.4's "two layers
+  // coexist"), but a task-linked counter that's also a list still shouldn't
+  // let the direct checkbox force-complete past its own steps.
+  const isListTask = item.stepsTotal >= 2
 
   const cardStyle: CSSProperties = {
     '--fp-accent':     `var(${accentVar})`,
@@ -69,9 +79,18 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onIncrement, onDelete
       <button
         className={`${styles.check}${item.isComplete ? ' ' + styles.checkDone : ''}`}
         onPointerDown={e => e.stopPropagation()}
-        onClick={e => { e.stopPropagation(); isCounter && !item.isComplete ? onIncrement() : onToggle() }}
-        disabled={isPending}
-        aria-label={item.isComplete ? 'Mark incomplete' : isCounter ? 'Log one' : 'Mark complete'}
+        onClick={e => {
+          e.stopPropagation()
+          if (isListTask) return
+          isCounter && !item.isComplete ? onIncrement() : onToggle()
+        }}
+        disabled={isPending || isListTask}
+        aria-label={
+          isListTask
+            ? (item.isComplete ? t('common.completeDerivedFromSteps') : t('common.completeEveryStepHint'))
+            : item.isComplete ? t('common.markIncomplete') : isCounter ? t('day.ariaLogOne') : t('common.markComplete')
+        }
+        title={isListTask ? (item.isComplete ? t('common.completeDerivedFromSteps') : t('common.completeEveryStepHint')) : undefined}
       >
         {item.isComplete ? '✓' : ''}
       </button>
@@ -82,24 +101,25 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onIncrement, onDelete
           <span className={`${styles.title}${item.isComplete ? ' ' + styles.titleDone : ''}`}>
             {item.displayTitle}
           </span>
+          {isListTask && <ListBadge done={item.stepsDone} total={item.stepsTotal} />}
           {isCounter && (
-            <span className={styles.counterBadge}>{item.counterCurrent} / {item.counterTarget}</span>
+            <span className={styles.counterBadge}>{t('day.counterBadgeProgress', { current: item.counterCurrent, target: item.counterTarget ?? 0 })}</span>
           )}
           {item.source === 'tree' && item.treeNodeId && !item.isComplete && (
             <span className={styles.inProgressBadge}>
               <span className={styles.inProgressDot} />
-              IN PROGRESS
+              {t('day.inProgressBadge')}
             </span>
           )}
-          {item.priority === 'high' && <span className={styles.priBadgeHigh}>★ HIGH</span>}
-          {item.priority === 'low'  && <span className={styles.priBadgeLow}>○ LOW</span>}
+          {item.priority === 'high' && <span className={styles.priBadgeHigh}>{t('day.priorityHigh')}</span>}
+          {item.priority === 'low'  && <span className={styles.priBadgeLow}>{t('day.priorityLow')}</span>}
           {/* Compact mobile-only priority indicator — replaces the text badges above */}
           <span className={styles.priorityDot} />
         </div>
         <div className={styles.metaRow}>
-          <span className={styles.tag}>{cfg.tag}</span>
+          <span className={styles.tag}>{t(cfg.tagKey)}</span>
           {(item.treeNodeTitle || item.inboxContent || item.habitName) && (
-            <span className={styles.origin}>↳ {item.treeNodeTitle ?? item.inboxContent ?? item.habitName}</span>
+            <span className={styles.origin}>{t('day.originLabel', { origin: item.treeNodeTitle ?? item.inboxContent ?? item.habitName ?? '' })}</span>
           )}
         </div>
       </div>
@@ -109,7 +129,7 @@ function FloatingCard({ item, isPending, onEdit, onToggle, onIncrement, onDelete
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onDelete() }}
         disabled={isPending}
-        aria-label="Remove from day"
+        aria-label={t('day.removeFromDayLabel')}
       >✕</button>
     </div>
   )
@@ -123,6 +143,7 @@ interface Props {
 }
 
 export default function FloatingPool({ items, onEdit }: Props) {
+  const t = useT()
   const { setNodeRef: setPoolRef, isOver: poolOver } = useDroppable({ id: 'pool-drop' })
   const isMobile = useIsMobile()
   // Mobile-only collapsible drawer — collapsed by default. Meaningless on
@@ -136,15 +157,24 @@ export default function FloatingPool({ items, onEdit }: Props) {
   const isPending = toggling || removing || incrementing
 
   function handleToggle(item: DayItem) {
-    toggle({ id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId })
+    toggle({
+      id: item.id, isComplete: !item.isComplete, treeNodeId: item.treeNodeId, habitId: item.habitId,
+      taskId: item.taskId,
+    })
   }
   function handleIncrement(item: DayItem) {
     if (!item.habitId || item.counterTarget === null) return
-    increment({ id: item.id, habitId: item.habitId, current: item.counterCurrent, target: item.counterTarget })
+    increment({
+      id: item.id, habitId: item.habitId, current: item.counterCurrent, target: item.counterTarget,
+      taskId: item.taskId,
+    })
   }
   function handleDelete(item: DayItem) {
-    if (!window.confirm(`Remove "${item.displayTitle}" from today?`)) return
-    remove({ id: item.id, source: item.source, inboxItemId: item.inboxItemId })
+    if (!window.confirm(t('common.removeFromTodayConfirm', { title: item.displayTitle }))) return
+    remove(
+      { id: item.id, source: item.source, inboxItemId: item.inboxItemId, taskId: item.taskId },
+      { onError: e => window.alert(t('common.removeError', { title: item.displayTitle, error: (e as Error).message })) },
+    )
   }
 
   const completedCount = items.filter(i => i.isComplete).length
@@ -159,29 +189,29 @@ export default function FloatingPool({ items, onEdit }: Props) {
           className={styles.headerTop}
           onClick={() => isMobile && setExpanded(e => !e)}
           aria-expanded={showList}
-          aria-label={isMobile ? (expanded ? 'Collapse floating pool' : 'Expand floating pool') : undefined}
+          aria-label={isMobile ? (expanded ? t('day.collapsePoolLabel') : t('day.expandPoolLabel')) : undefined}
         >
           <span className={styles.headerDot} />
-          <span className={styles.headerTitle}>FLOATING POOL</span>
+          <span className={styles.headerTitle}>{t('day.floatingPoolTitle')}</span>
           <span className={styles.headerCount}>
-            <span className={styles.headerCountDesktop}>· {items.length}</span>
-            <span className={styles.headerCountMobile}>{completedCount}/{items.length} done</span>
+            <span className={styles.headerCountDesktop}>{t('day.poolCountBadge', { n: items.length })}</span>
+            <span className={styles.headerCountMobile}>{t('day.progressDone', { done: completedCount, total: items.length })}</span>
           </span>
           <span className={styles.headerSpacer} />
           {isMobile && (
             <span className={`${styles.headerChevron}${expanded ? ' ' + styles.headerChevronOpen : ''}`}>⌄</span>
           )}
         </button>
-        <p className={styles.headerHint}>No fixed time — check off as the day goes.</p>
+        <p className={styles.headerHint}>{t('day.floatingPoolHint')}</p>
 
         <div className={styles.legend}>
           {[
-            { label: 'GOAL TREE',  accentVar: '--ns-gold',           dashed: false },
-            { label: 'STANDALONE', accentVar: '--ns-task-accent',    dashed: false },
-            { label: 'FROM INBOX', accentVar: '--ns-project-accent', dashed: true  },
-            { label: 'HABIT',      accentVar: '--ns-ok',             dashed: false },
-          ].map(({ label, accentVar, dashed }) => (
-            <span key={label} className={styles.legendChip}>
+            { labelKey: 'day.legendGoalTree'   as Key, accentVar: '--ns-gold',           dashed: false },
+            { labelKey: 'day.legendStandalone' as Key, accentVar: '--ns-task-accent',    dashed: false },
+            { labelKey: 'day.legendFromInbox'  as Key, accentVar: '--ns-project-accent', dashed: true  },
+            { labelKey: 'day.fieldLabelHabit'  as Key, accentVar: '--ns-ok',             dashed: false },
+          ].map(({ labelKey, accentVar, dashed }) => (
+            <span key={labelKey} className={styles.legendChip}>
               <span
                 className={styles.legendDot}
                 style={{
@@ -191,7 +221,7 @@ export default function FloatingPool({ items, onEdit }: Props) {
                   borderColor: dashed ? `var(${accentVar})` : 'transparent',
                 } as CSSProperties}
               />
-              {label}
+              {t(labelKey)}
             </span>
           ))}
         </div>
@@ -202,8 +232,8 @@ export default function FloatingPool({ items, onEdit }: Props) {
           {items.length === 0 && (
             <p className={styles.empty}>
               {poolOver
-                ? 'Drop here to unanchor'
-                : 'Nothing floating yet — add tasks or pull from your tree.'}
+                ? t('day.poolDropHint')
+                : t('day.poolEmptyState')}
             </p>
           )}
           {items.map(item => (

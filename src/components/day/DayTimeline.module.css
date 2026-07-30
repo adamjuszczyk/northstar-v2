@@ -1,6 +1,19 @@
 .panel {
   flex: 1 1 460px;
   min-width: 280px;
+  /* Without this, `.scheduleCanvas`'s `align-items: flex-start` (desktop)
+     lets this panel grow to its own content height (1600px+, the full
+     24-hour grid) instead of being clipped to the row's available height —
+     `.scrollArea` below then never has real internal overflow, so it can
+     never actually scroll (the auto-scroll-to-now-on-mount effect becomes
+     a no-op, and the whole `.scheduleCanvas` scrolls as one block instead).
+     `align-self: stretch` opts this one flex item back into filling the
+     row's cross-size; `min-height: 0` is required alongside it or the
+     panel's own content-based minimum height wins anyway. Mobile's column
+     layout already gets the equivalent behaviour for free from
+     `.scheduleCanvas`'s own `align-items: stretch` override below. */
+  align-self: stretch;
+  min-height: 0;
   border-radius: var(--ns-radius-3xl);
   border: 1px solid var(--ns-border-faint);
   background: var(--ns-surface-timeline);
@@ -327,6 +340,208 @@
   white-space: nowrap;
 }
 
+/* ── Line marker (SPEC §5.1) ───────────────────────────────────────────────── */
+
+.lineRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  z-index: 1;
+}
+
+.lineDash {
+  position: absolute;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(var(--ns-accent-rgb), .5) 0, rgba(var(--ns-accent-rgb), .5) 6px,
+    transparent 6px, transparent 11px
+  );
+}
+
+.lineLabel {
+  position: absolute;
+  top: -9px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--ns-accent-rgb), .35);
+  background: var(--ns-surface-raised);
+  color: var(--ns-text-mid);
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.14s, color 0.14s;
+}
+.lineLabel:hover {
+  border-color: rgba(var(--ns-accent-rgb), .65);
+  color: var(--ns-text-hi);
+}
+
+.lineTime {
+  color: rgba(var(--ns-accent-rgb), .9);
+}
+
+/* ── Block card (SPEC §5.2) ───────────────────────────────────────────────── */
+
+.blockCard {
+  position: absolute;
+  border-radius: 12px;
+  background: var(--ns-task-bg);
+  border: 1.5px dashed rgba(var(--ns-block-accent-rgb), .4);
+  z-index: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: border-color 0.14s;
+}
+.blockCard:hover {
+  border-color: rgba(var(--ns-block-accent-rgb), .65);
+}
+.blockCardOver {
+  border-style: solid;
+  background: rgba(var(--ns-block-accent-rgb), .1);
+}
+
+.blockHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+
+.blockTitle {
+  font-family: var(--ns-font-ui);
+  font-weight: var(--ns-fw-semibold);
+  font-size: 13px;
+  color: var(--ns-text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.blockTime {
+  font-family: var(--ns-font-mono);
+  font-size: 10px;
+  letter-spacing: var(--ns-ls-label);
+  color: var(--ns-text-lo);
+  flex-shrink: 0;
+}
+
+.blockEditBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-size: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+.blockCard:hover .blockEditBtn { opacity: 1; }
+.blockEditBtn:hover { color: var(--ns-text-hi); }
+
+.blockNotes {
+  margin: 0 12px 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--ns-border-subtle);
+  font-family: var(--ns-font-ui);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ns-text-mid);
+  white-space: pre-wrap;
+  flex-shrink: 0;
+}
+
+.blockEmpty {
+  margin: 0 12px 10px;
+  font-family: var(--ns-font-mono);
+  font-size: 10.5px;
+  color: var(--ns-text-lo);
+  flex-shrink: 0;
+}
+
+.blockItemList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.blockItemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.blockItemRow:hover { background: var(--ns-border-subtle); }
+
+.blockItemTime {
+  font-family: var(--ns-font-mono);
+  font-size: 9.5px;
+  letter-spacing: var(--ns-ls-mono);
+  color: rgba(var(--ns-accent-rgb), .8);
+  flex-shrink: 0;
+  min-width: 30px;
+}
+
+.blockItemTitle {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--ns-font-ui);
+  font-size: 12.5px;
+  font-weight: var(--ns-fw-medium);
+  color: var(--ns-text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.blockItemTitleDone {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.blockItemCompleteBtn,
+.blockItemDeleteBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-size: 9.5px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+.blockItemRow:hover .blockItemCompleteBtn,
+.blockItemRow:hover .blockItemDeleteBtn { opacity: 1; }
+.blockItemCompleteBtn { color: var(--ns-ok); border-color: rgba(var(--ns-ok-rgb), .4); }
+.blockItemCompleteBtn:hover { background: rgba(var(--ns-ok-rgb), .15); }
+.blockItemDeleteBtn:hover { color: var(--ns-danger); }
+
 /* ── Cluster block ─────────────────────────────────────────────────────────── */
 
 .clusterBlock {
@@ -593,10 +808,10 @@
 @media (max-width: 767px) {
   /* flex-basis:0 (not auto) so this panel's naturally-tall internal content
      (24hr grid, independently scrollable) doesn't balloon its own flex basis
-     and starve the floating pool panel below it of shrink-space. */
+     and starve the floating pool panel below it of shrink-space.
+     min-height: 0 now lives on the base rule above (desktop needs it too). */
   .panel {
     flex: 1 1 0;
-    min-height: 0;
     background: transparent;
     border: none;
     box-shadow: none;

@@ -1,10 +1,12 @@
 import { mutedRgba } from './colour'
+import type { Lang } from '../i18n/types'
 
 export interface Settings {
   accent:       string    // hex e.g. '#F6C87A'
   accentRgb:    string    // 'R, G, B' e.g. '246, 200, 122'
   theme:        'dark' | 'light'
   weekStartsOn: 0 | 1    // 0=Sunday, 1=Monday
+  lang:         Lang
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -12,6 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   accentRgb:    '246, 200, 122',
   theme:        'dark',
   weekStartsOn: 1,
+  lang:         'en',
 }
 
 const LS_KEY = 'ns_settings'
@@ -35,8 +38,11 @@ function sanitize(raw: unknown): Settings {
   const weekStartsOn = r.weekStartsOn === 0 || r.weekStartsOn === 1
     ? r.weekStartsOn
     : DEFAULT_SETTINGS.weekStartsOn
+  const lang = r.lang === 'en' || r.lang === 'pl'
+    ? r.lang
+    : DEFAULT_SETTINGS.lang
 
-  return { accent, accentRgb, theme, weekStartsOn }
+  return { accent, accentRgb, theme, weekStartsOn, lang }
 }
 
 export function loadSettings(): Settings {

@@ -55,7 +55,11 @@ Forward planning (any date, past/present/future) and pulling flagged items from 
 The capture layer — flat, unstructured, no required fields, a holding area rather than a to-do list. Each item can be Scheduled, Promoted to the tree, or Left alone. v3 splits this into Notes and Tasks (§6) but the underlying "catch everything, no discipline required" philosophy is unchanged — only Tasks promote to the tree; Notes don't.
 
 ### 4.4 Habits
-Deferred in the original v2 spec ("revisit in v3"), but actually pulled forward and fully built during v2 — build modes (daily/weekly/x_per_week/x_per_day), a minimal reduce mode, trend charts, tree node linking, auto-add to day/week/month. Nothing changes for Habits in this v3 pass; noted here only so the "revisit in v3" line in the old spec doesn't look unresolved.
+Deferred in the original v2 spec ("revisit in v3"), but actually pulled forward and fully built during v2 — build modes (daily/weekly/x_per_week/x_per_day), a minimal reduce mode, trend charts, tree node linking, auto-add to day/week/month. Habits' own tracking (counters, build/reduce mode, trend charts) is unchanged by v3.
+
+**One deliberate extension, decided during Phase 4:** habit-sourced day items get Task Lists (steps) too, same as tree/inbox/standalone items — a habit's day item can optionally carry a checklist, entirely independent of its own counter/build-reduce tracking; the two layers coexist without either one replacing the other. This part works and stays.
+
+**Split, however, is explicitly out of scope for habits.** Real use surfaced it behaving oddly, and there's a genuine conceptual mismatch worth naming rather than treating as a bug to chase: Split's whole point is shared step-progress across occurrences of the *same* ongoing task, while a habit's `x_per_day`/`x_per_week` target is about repeating a *discrete* action N independent times — sharing one checklist's progress across those repetitions doesn't match what a habit target actually means. Deprioritized, not solved; revisit only if it's ever worth the design work, not on the current v3 timeline.
 
 **Recurring targets** (the v1 concept: quantity + time window + promotes to a habit) never came back after v2 dropped it — habits absorbed a similar idea via the `x_per_week`/`x_per_day` frequency modes, but the specific target→habit promotion mechanic is gone. Not part of this v3 list either; flagging as a deliberate non-revival rather than an oversight.
 
@@ -65,23 +69,41 @@ Deferred in the original v2 spec ("revisit in v3"), but actually pulled forward 
 A **Line** is a named marker at a fixed time on the day timeline — e.g. "Wake up" at 07:00, "Work starts" at 09:00, "Sleep" at 23:00. Purely a visual anchor: no content, no completion state, not a container. A day's lines can come from an applied Day Template or be added/edited by hand; editing them only affects that day (applying a template is a one-time stamp, not a live link back to the template).
 
 ### 5.2 Blocks
-A **Block** is a scheduled time-range container, typed (starting set: *Focused Work*, *Meeting* — extensible). Rendered on the timeline like an anchored item, but can optionally hold content:
-- **Focused Work block** — 0+ tasks assigned inside it (from Tree, Inbox, or a Task List).
-- **Meeting block** — freeform notes (agenda/plan) and/or assigned tasks.
+A **Block** is a scheduled time-range container, **freely named by you** — "Focused Work," "Meeting," "Gym," anything that fits. Not a type picked from a fixed list; a plain label, same as naming anything else in the app. Rendered on the timeline like an anchored item. Every block, regardless of name, can optionally hold:
+- 0+ assigned tasks (from Tree, Inbox, or a Task List)
+- freeform notes (agenda, plan, whatever)
 
-A block is a time reservation, not itself a completable unit — completion lives on whatever tasks are assigned inside it, if any. This formalizes and replaces the existing "custom block colours" behaviour in Day view.
+There's no behavioral split by name — a block called "Meeting" and one called "Gym" both get the same optional notes + optional tasks capability. The name is a label, not a mode.
+
+A block is a time reservation, not itself a completable unit — completion lives on whatever tasks are assigned inside it, if any. It coexists with the existing "custom block colours" behaviour in Day view (kept as a separate, lighter-weight option per TASKS.md's A4) rather than replacing it — worth revisiting if the two feel redundant once you're actually using both, but not consolidated for now.
 
 ### 5.3 Task Lists & Split
 Every task is modeled as an **ordered list of one or more steps**. A plain task is a list with one (hidden) step; a "task list" is a list with 2+ steps shown as a checklist. Progress — which steps are done — lives on the task/list itself, not on any particular time it's scheduled.
 
-**Split** = scheduling the *same* task/list into more than one time slot in a day, as separate lightweight occurrences that reference the one shared entity — never a duplicate copy. Once a task is already scheduled that day, adding it again offers **Split** instead of creating a second independent task.
+**Creatable everywhere a task can be created** — Tree, Inbox, and Day. Choosing "list" as the kind of task happens at creation time in any of these three places, not only retroactively after something's already been scheduled to a day. Steps can still be added or edited later from Day view too, but that's not the only entry point.
 
-**Progress carries over automatically** (confirmed): each occurrence shows the next not-done step onward, live. Marking a step done in a morning session immediately updates what an afternoon session shows — no manual re-assignment of which steps belong to which session.
+**Step management:** within a list, steps can be renamed, deleted, and reordered — as easily as managing items anywhere else in the app (Inbox, Tree). Not a buried or awkward flow.
+
+**Display:** every step stays visible, always — done and not-done alike. Checking a step off marks it (checkmark, strikethrough, whatever reads clearly) but never removes it from view. "Automatic resume" (below) governs which step gets emphasis as next, not what gets rendered — steps disappearing from view the moment they're checked is exactly the behavior this section rules out.
+
+**Completion is derived, not directly settable, for list tasks:** a task with 2+ steps can't be checked off directly through the ordinary single completion checkbox — that control is disabled for list tasks. It becomes complete automatically, and only, once every step is done. A plain (1-step) task keeps the ordinary direct checkbox.
+
+**Visual distinction:** wherever a day item renders (timeline, pool, list mode, week/month grids), a list task needs a clear, glanceable indicator that it's a list rather than a plain task — e.g. a small checklist icon plus a step count ("1/3") — discoverable at a glance, not only after opening it.
+
+**Split** = adding another occurrence of the *same* task/list to today, immediately, as a floating (unscheduled) item in the pool — no time-picker step, no modal asking for a slot. It's still the same shared task entity, never an independent duplicate; drag it onto the timeline afterward if you want it at a specific time, same as any floating item. Triggered via the explicit Split action on an already-scheduled task — this is the only way the same task should ever appear twice in a day; trying to add it any other way should redirect into Split rather than create a genuine second copy.
+
+**Progress carries over automatically** (confirmed): opening a later occurrence surfaces/focuses the next not-done step, live — this is about which step gets emphasis for picking up where you left off, not about which steps are visible (see Display, above). Marking a step done in a morning session immediately updates what an afternoon session shows — no manual re-assignment of which steps belong to which session.
 - *Edge case:* if a later occurrence is opened after everything's already done, it shows an "all done" state rather than an empty screen.
 - Applies to plain single-step tasks too — a second occurrence of a plain task just shows "already done" once the first is completed.
 
 ### 5.4 Day Templates
-A named, reusable layout of Lines + Blocks at fixed times (e.g. Wake 7:00 / Focused Work 8–12 / Gym 12–15 / Focused Work 16–20 / Sleep 21:00). Applying a template to a day creates real Line/Block entries for that specific day — a stamp, not an ongoing rule. Managed from Settings or a lightweight "Templates" library; applied via an action in Day view.
+A named, reusable layout of Lines + Blocks at fixed times (e.g. Wake 7:00 / Focused Work 8–12 / Gym 12–15 / Focused Work 16–20 / Sleep 21:00). Applying a template to a day creates real Line/Block entries for that specific day — a stamp, not an ongoing rule, and always merges alongside whatever's already on the day rather than replacing it.
+
+Managed from Settings, applied via an action in Day view. **Creating a new template must also be reachable directly from that same Day/Planner entry point** — not only from Settings. Someone applying a template and realizing they don't have the right one yet shouldn't have to back out and navigate elsewhere.
+
+**Save a day as a template:** alongside building one from scratch, an existing day's actual Lines/Blocks should be saveable directly as a new template — a reverse/copy flow, not only forward creation. A one-time copy, same as applying a template is a one-time stamp — editing the day afterward doesn't change the template it was saved from.
+
+**Future direction, not this pass:** template creation today is a form (set times, add items to a list) rather than visual. A mockup-timeline creator — reusing the existing Day timeline's rendering (LineMarker/BlockCard) so you see what you're building as you build it — is worth doing, but it's a real UI project on its own, not a quick add. Deferred; recorded here and in §11 so it isn't lost.
 
 ### 5.5 Sheets
 A **Sheet** is a separate tree structure — its own nodes — created either:
@@ -107,9 +129,10 @@ The standalone Tasks sections (added in v2) gain:
 - Week/Month Focus → **Goals**; Tasks sections gain tree/inbox add (and week gains "from month") per §5.6.
 
 ### 6.2 Today
-- **Timeline focus** — the visible window on Today's timeline becomes configurable (e.g. work hours, or a rolling ±N hours around now) rather than always showing the full day.
+- **Timeline** — always fully scrollable across all 24 hours; nothing is ever cut or hidden. Opening Day view on **today specifically** auto-scrolls so the current time sits centered in the viewport — a starting scroll position, not a restriction on what's viewable. No Settings toggle for this; it's the only behavior, not a configurable option. Viewing any other date doesn't auto-center on "now" (there's no coherent "current time" for a day that isn't today) — opens at a sensible default position instead.
+- **Current-time indicator** — the line marking "now" on the timeline renders only when viewing today. It must not appear when forward-planning a future day or reviewing a past one; showing "now" on a day that isn't today is confusing, not informative.
 - **Today's Reflection section removed.**
-- **Week/Month focus section removed entirely** — no pull-into-today mechanic at all. This retires the `WeekPoolPanel` built in the July 20 session. Scheduling only happens by adding items directly to a day; to make Week/Month items reachable from there, the existing Day "add item" flow (which already has Tree/Inbox/Habit tabs) gains a **Week/Month tab** so you can pull a Goal/Task from the current week or month while adding something to a specific day — same mechanism as pulling from Tree or Inbox, just a different source.
+- **Week/Month focus section removed entirely from Today** — no pull-into-today mechanic sits passively on the Today screen itself; that's what retires the `WeekPoolPanel` built in the July 20 session. Scheduling still primarily happens by adding items directly to a day: the Day "add item" flow (Tree/Inbox/Habit tabs) gained a **Week/Month tab** so you can pull a Goal/Task from the current week or month while adding something to a specific day — same mechanism as pulling from Tree or Inbox, just a different source. **Separately, WeekView/MonthView keep their own direct "Pull to today" button** — a quick shortcut for the common case, deliberately coexisting with the Week/Month tab rather than being replaced by it. Two paths to the same result, both intentional.
 
 ### 6.3 Inbox
 - **Notes** and **Tasks** become separate sections/tabs, each with its own capture flow. The existing filter bar (All/Unassigned/Scheduled/Promoted/Completed) applies only to Tasks — Notes has no states to filter.
@@ -175,6 +198,7 @@ Carried forward from v2, and still the bar for everything new in v3, not just th
 - Auto-apply Day Templates by day-of-week rule
 - Relative-time templates (offsets instead of fixed clock times)
 - Lightweight rollups per sheet (e.g. "N open under this branch")
+- Visual (mockup-timeline) Day Template creator, reusing LineMarker/BlockCard rendering so a template is built by seeing it, not just filling in times — real scope on its own, deliberately deferred out of Phase 5
 - Calendar sync, notifications, Claude API-assisted planning (carried from v2's future list, still unscheduled)
 - Recurring targets, as originally conceived in v1 (quantity + time window + optional promote-to-habit) — Habits' `x_per_week`/`x_per_day` modes cover part of this today, but the dedicated bridge concept between a goal and a habit is still an open idea worth its own pass
 
@@ -187,7 +211,7 @@ Still true from v2, unchanged by this pass:
 New for v3:
 - A day can be built from Lines + Blocks + Task Lists, a Day Template can populate one in one action, and week/month calendars show accurate done/not-done counts.
 - A multi-step task split across 2+ blocks in a day resumes automatically at the next open step in every session.
-- Today shows only today — no reflection, no week/month section — and the only way anything reaches a day is through the "add to day" flow (Tree/Inbox/Habit/Week-Month tabs).
+- Today shows only today — no reflection, no week/month section — and reaching a day happens either through the "add to day" flow (Tree/Inbox/Habit/Week-Month tabs) or the direct "Pull to today" shortcut kept in Week/Month views.
 - Inbox cleanly separates Notes and Tasks; finished tasks are hidden by default.
 - Tree supports creating, naming, and switching Sheets, built either from scratch or from an existing node, without breaking existing descendant-count indicators elsewhere in the app.
 - Full UI works in Polish and English via a Settings toggle.

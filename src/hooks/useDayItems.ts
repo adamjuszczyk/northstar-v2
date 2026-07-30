@@ -4,6 +4,11 @@ import { db } from '../lib/db'
 import { enqueue } from '../lib/syncQueue'
 import { useAuth } from './useAuth'
 import { maybeRevertInboxItemState } from './useInboxItems'
+import {
+  applyTaskCompletion, materializeTaskFromDayItem, maybeRevertTaskInboxState,
+  invalidateTaskLinkedQueries,
+} from './useTasks'
+import type { MaterializableItem } from './useTasks'
 import type { NodeType } from '../types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -33,6 +38,15 @@ export interface RawDayItem {
    *  — links back to the exact ns_week_focus / ns_month_focus row it came from. */
   originWeekFocusId:  string | null
   originMonthFocusId: string | null
+  /** Non-null = assigned inside this ns_blocks row. A day item inside a block
+   *  keeps its own startTime — null means "somewhere inside this block",
+   *  non-null means it also has its own slot within the block's range. */
+  blockId:      string | null
+  /** Non-null = this row is one occurrence of a shared ns_tasks entity
+   *  (Task Lists & Split, SPEC §5.3). When set, title/treeNodeId/inboxItemId/
+   *  habitId above are left null and ignored — resolve display/source
+   *  through the task instead (TASKS.md §3.3 rule 1). */
+  taskId:       string | null
   createdAt:    string
   updatedAt:    string
 }
@@ -44,6 +58,11 @@ export interface DayItem extends RawDayItem {
   treeNodeType:   NodeType | null
   inboxContent:   string | null
   habitName:      string | null
+  /** Batched from ns_task_steps for this item's task (0/0 when not task-
+   *  linked, or task-linked with no steps yet). SPEC §5.3: a list is 2+
+   *  steps — callers gate on stepsTotal >= 2, not on stepsTotal > 0. */
+  stepsDone:      number
+  stepsTotal:     number
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,6 +98,8 @@ function row2raw(r: Record<string, unknown>): RawDayItem {
     counterTarget:  (r.counter_target as number | null) ?? null,
     originWeekFocusId:  (r.origin_week_focus_id as string | null) ?? null,
     originMonthFocusId: (r.origin_month_focus_id as string | null) ?? null,
+    blockId:     (r.block_id as string | null) ?? null,
+    taskId:      (r.task_id  as string | null) ?? null,
     createdAt:   r.created_at    as string,
     updatedAt:   r.updated_at    as string,
   }
@@ -119,6 +140,8 @@ export function useDayItems(date: string) {
           counterTarget:  r.counterTarget ?? null,
           originWeekFocusId:  r.originWeekFocusId  ?? null,
           originMonthFocusId: r.originMonthFocusId ?? null,
+          blockId:     r.blockId ?? null,
+          taskId:      r.taskId  ?? null,
           createdAt:   r.createdAt,
           updatedAt:   r.updatedAt,
         }))
@@ -154,6 +177,7 @@ export interface CreateDayItemInput {
   endTime?:     string | null
   priority?:    DayItemPriority
   colour?:      string | null
+  blockId?:     string | null
 }
 
 export function useCreateDayItem() {
@@ -176,6 +200,7 @@ export function useCreateDayItem() {
           end_time:      input.endTime       ?? null,
           priority:      input.priority      ?? 'medium',
           colour:        input.colour        ?? null,
+          block_id:      input.blockId       ?? null,
           is_complete:   false,
           position:      0,
         })
@@ -213,6 +238,7 @@ export function useCreateDayItems() {
           end_time:      input.endTime       ?? null,
           priority:      input.priority      ?? 'medium',
           colour:        input.colour        ?? null,
+          block_id:      input.blockId       ?? null,
           is_complete:   false,
           position:      0,
         })))
@@ -226,11 +252,12 @@ export function useAddInboxToDay() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ inboxItemId, date, priority, colour }: {
+    mutationFn: async ({ inboxItemId, date, priority, colour, blockId }: {
       inboxItemId: string
       date: string
       priority?: DayItemPriority
       colour?:   string | null
+      blockId?:  string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       const { error: e1 } = await supabase
@@ -241,6 +268,7 @@ export function useAddInboxToDay() {
           is_complete: false, position: 0,
           priority: priority ?? 'medium',
           colour: colour ?? null,
+          block_id: blockId ?? null,
         })
       if (e1) throw e1
       const { error: e2 } = await supabase
@@ -262,11 +290,12 @@ export function useAddInboxItemsToDay() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ inboxItemIds, date, priority, colour }: {
+    mutationFn: async ({ inboxItemIds, date, priority, colour, blockId }: {
       inboxItemIds: string[]
       date: string
       priority?: DayItemPriority
       colour?:   string | null
+      blockId?:  string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       if (inboxItemIds.length === 0) return
@@ -278,6 +307,7 @@ export function useAddInboxItemsToDay() {
           is_complete: false, position: 0,
           priority: priority ?? 'medium',
           colour: colour ?? null,
+          block_id: blockId ?? null,
         })))
       if (e1) throw e1
       const { error: e2 } = await supabase
@@ -304,6 +334,29 @@ export interface PullWeekFocusInput {
   treeNodeId?:  string | null
   inboxItemId?: string | null
   habitId?:     string | null
+  /** Non-null = the focus item is task-linked (this session's TaskSourceForm
+   *  fix) — the pulled day item references the same task_id instead of
+   *  copying its (null, for a linked row) identity fields, so it's the same
+   *  shared task appearing on both the week list and today, not a
+   *  disconnected copy. */
+  taskId?:      string | null
+  /** The focus item's own isComplete — for a task-linked row this already
+   *  mirrors the task's true completion (the invariant applyTaskCompletion
+   *  maintains), so the pulled occurrence must carry it over rather than
+   *  hardcoding false, or a pull of an already-complete task would start
+   *  "not done" until its next explicit toggle. Ignored when taskId is
+   *  unset — a plain pull always creates a fresh, unstarted occurrence. */
+  isComplete?:  boolean
+  /** Optional fields for parity with the other "add to day" tabs (Phase 6's
+   *  Week/Month tab, DayItemForm.tsx) — all default to the same values this
+   *  mutation always used before (floating, medium priority, no colour, no
+   *  block), so WeekView/MonthView's existing "Pull to today" callers are
+   *  unaffected by omitting them. */
+  startTime?: string | null
+  endTime?:   string | null
+  priority?:  DayItemPriority
+  colour?:    string | null
+  blockId?:   string | null
 }
 
 /** Pulls a ns_week_focus item into a specific day — creates a ns_day_items
@@ -320,17 +373,22 @@ export function usePullWeekFocusToDay() {
         user_id:       user.id,
         date:          input.date,
         source:        input.source,
-        title:         input.title         ?? null,
-        tree_node_id:  input.treeNodeId    ?? null,
-        inbox_item_id: input.inboxItemId   ?? null,
-        habit_id:      input.habitId       ?? null,
+        title:         input.taskId ? null : (input.title         ?? null),
+        tree_node_id:  input.taskId ? null : (input.treeNodeId    ?? null),
+        inbox_item_id: input.taskId ? null : (input.inboxItemId   ?? null),
+        habit_id:      input.taskId ? null : (input.habitId       ?? null),
+        task_id:       input.taskId ?? null,
         origin_week_focus_id: input.weekFocusId,
-        is_complete:   false,
+        is_complete:   input.taskId ? (input.isComplete ?? false) : false,
         position:      0,
-        priority:      'medium',
+        start_time:    input.startTime ?? null,
+        end_time:      input.endTime   ?? null,
+        priority:      input.priority  ?? 'medium',
+        colour:        input.colour    ?? null,
+        block_id:      input.blockId   ?? null,
       })
       if (e1) throw e1
-      if (input.source === 'inbox' && input.inboxItemId) {
+      if (!input.taskId && input.source === 'inbox' && input.inboxItemId) {
         const { error: e2 } = await supabase
           .from('ns_inbox_items')
           .update({ state: 'scheduled', updated_at: new Date().toISOString() })
@@ -354,6 +412,16 @@ export interface PullMonthFocusInput {
   treeNodeId?:  string | null
   inboxItemId?: string | null
   habitId?:     string | null
+  /** Non-null = task-linked — see PullWeekFocusInput.taskId. */
+  taskId?:      string | null
+  /** See PullWeekFocusInput.isComplete. */
+  isComplete?:  boolean
+  /** See PullWeekFocusInput's identical optional fields. */
+  startTime?: string | null
+  endTime?:   string | null
+  priority?:  DayItemPriority
+  colour?:    string | null
+  blockId?:   string | null
 }
 
 /** Month equivalent of usePullWeekFocusToDay — used by the "Tasks this
@@ -368,17 +436,22 @@ export function usePullMonthFocusToDay() {
         user_id:       user.id,
         date:          input.date,
         source:        input.source,
-        title:         input.title         ?? null,
-        tree_node_id:  input.treeNodeId    ?? null,
-        inbox_item_id: input.inboxItemId   ?? null,
-        habit_id:      input.habitId       ?? null,
+        title:         input.taskId ? null : (input.title         ?? null),
+        tree_node_id:  input.taskId ? null : (input.treeNodeId    ?? null),
+        inbox_item_id: input.taskId ? null : (input.inboxItemId   ?? null),
+        habit_id:      input.taskId ? null : (input.habitId       ?? null),
+        task_id:       input.taskId ?? null,
         origin_month_focus_id: input.monthFocusId,
-        is_complete:   false,
+        is_complete:   input.taskId ? (input.isComplete ?? false) : false,
         position:      0,
-        priority:      'medium',
+        start_time:    input.startTime ?? null,
+        end_time:      input.endTime   ?? null,
+        priority:      input.priority  ?? 'medium',
+        colour:        input.colour    ?? null,
+        block_id:      input.blockId   ?? null,
       })
       if (e1) throw e1
-      if (input.source === 'inbox' && input.inboxItemId) {
+      if (!input.taskId && input.source === 'inbox' && input.inboxItemId) {
         const { error: e2 } = await supabase
           .from('ns_inbox_items')
           .update({ state: 'scheduled', updated_at: new Date().toISOString() })
@@ -398,14 +471,27 @@ export function useToggleDayItem() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, isComplete, treeNodeId, habitId }: {
+    mutationFn: async ({ id, isComplete, treeNodeId, habitId, taskId }: {
       id:          string
       isComplete:  boolean
       treeNodeId:  string | null
       habitId?:    string | null
+      /** Non-null = this occurrence is task-linked. Routes through the
+       *  task-completion mirror (applyTaskCompletion) instead of the plain
+       *  per-row update, so every other occurrence of the same task updates
+       *  together. Online-only — task writes aren't part of the offline
+       *  sync-queue surface (TASKS.md §3.9), so offline toggles of a
+       *  task-linked item still fall through to the plain per-row path
+       *  below and pick up the cross-table mirror next time it syncs. */
+      taskId?:     string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       const now = new Date().toISOString()
+
+      if (navigator.onLine && taskId) {
+        await applyTaskCompletion(user.id, taskId, isComplete)
+        return
+      }
 
       if (!navigator.onLine) {
         // Offline path: update Dexie + enqueue
@@ -453,10 +539,11 @@ export function useToggleDayItem() {
       }
     },
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (_d, { taskId }) => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_tree_nodes'] })
       qc.invalidateQueries({ queryKey: ['ns_habit_entries'] })
+      if (taskId) invalidateTaskLinkedQueries(qc)
     },
   })
 }
@@ -467,19 +554,32 @@ export function useIncrementDayItemCounter() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, habitId, current, target }: {
+    mutationFn: async ({ id, habitId, current, target, taskId }: {
       id:       string
       habitId:  string
       current:  number
       target:   number
+      /** Non-null = this counter item is task-linked (materialized via a
+       *  step add, or split — habits are no longer excluded from either,
+       *  SPEC §4.4). Reaching target still has to complete the occurrence,
+       *  but through applyTaskCompletion rather than a direct is_complete
+       *  write here — otherwise this row could disagree with its task and
+       *  every other occurrence the moment it completes (TASKS.md §3.3
+       *  rule 5's invariant). */
+      taskId?:  string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       const now  = new Date().toISOString()
       const next = current + 1
+      const reachedTarget = next >= target
 
       const { error: e1 } = await supabase
         .from('ns_day_items')
-        .update({ counter_current: next, is_complete: next >= target, updated_at: now })
+        .update({
+          counter_current: next,
+          updated_at: now,
+          ...(taskId ? {} : { is_complete: reachedTarget }),
+        })
         .eq('id', id).eq('user_id', user.id)
       if (e1) throw e1
 
@@ -487,11 +587,18 @@ export function useIncrementDayItemCounter() {
         .from('ns_habit_entries')
         .insert({ user_id: user.id, habit_id: habitId, logged_at: now, source: 'day_view' })
       if (e2) throw e2
+
+      if (taskId && reachedTarget) {
+        // This tap already logged its own entry above — applyTaskCompletion's
+        // own habit-logging would otherwise double it for this transition.
+        await applyTaskCompletion(user.id, taskId, true, { skipHabitLog: true })
+      }
     },
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (_d, { taskId }) => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_habit_entries'] })
+      if (taskId) invalidateTaskLinkedQueries(qc)
     },
   })
 }
@@ -503,6 +610,7 @@ export interface UpdateDayItemInput {
   endTime?:   string | null
   priority?:  DayItemPriority
   colour?:    string | null
+  blockId?:   string | null
 }
 
 export function useUpdateDayItem() {
@@ -517,6 +625,7 @@ export function useUpdateDayItem() {
       if (input.endTime   !== undefined) patch.end_time   = input.endTime
       if (input.priority  !== undefined) patch.priority   = input.priority
       if (input.colour    !== undefined) patch.colour     = input.colour
+      if (input.blockId   !== undefined) patch.block_id   = input.blockId
       const { error } = await supabase
         .from('ns_day_items')
         .update(patch)
@@ -532,10 +641,15 @@ export function useDeleteDayItem() {
   const { user } = useAuth()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, source, inboxItemId }: {
+    mutationFn: async ({ id, source, inboxItemId, taskId }: {
       id:           string
       source?:      DayItemSource
       inboxItemId?: string | null
+      /** Non-null = this occurrence was task-linked. A materialized
+       *  occurrence's own inboxItemId is null (identity resolves through
+       *  the task), so the plain inboxItemId revert below can't fire for
+       *  it — this is the task-scoped equivalent. */
+      taskId?:      string | null
     }) => {
       if (!user) throw new Error('Not authenticated')
       const { error } = await supabase
@@ -545,11 +659,67 @@ export function useDeleteDayItem() {
       if (error) throw error
       if (source === 'inbox' && inboxItemId) {
         await maybeRevertInboxItemState(user.id, inboxItemId)
+      } else if (taskId) {
+        await maybeRevertTaskInboxState(user.id, taskId)
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ns_day_items'] })
       qc.invalidateQueries({ queryKey: ['ns_inbox'] })
+    },
+  })
+}
+
+// ── Task Lists & Split (SPEC §5.3) ──────────────────────────────────────────
+
+export interface SplitDayItemInput {
+  date:         string
+  existingItem: MaterializableItem & { id: string; taskId: string | null }
+  startTime?:   string | null
+  endTime?:     string | null
+  priority?:    DayItemPriority
+  colour?:      string | null
+  blockId?:     string | null
+}
+
+/** Schedules the same task/list into another time slot the same day — a new
+ *  lightweight occurrence referencing the shared task id, never a duplicate
+ *  (SPEC §5.3). Materializes the source item into a task first if it isn't
+ *  one already (the "first split" trigger, TASKS.md §3.3 rule 1/2). */
+export function useSplitDayItemToNewSlot() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: SplitDayItemInput) => {
+      if (!user) throw new Error('Not authenticated')
+      const taskId = input.existingItem.taskId
+        ?? await materializeTaskFromDayItem(user.id, input.existingItem)
+
+      const { error } = await supabase.from('ns_day_items').insert({
+        user_id:      user.id,
+        date:         input.date,
+        source:       input.existingItem.source,
+        task_id:      taskId,
+        title: null, tree_node_id: null, inbox_item_id: null, habit_id: null,
+        start_time:   input.startTime ?? null,
+        end_time:     input.endTime   ?? null,
+        priority:     input.priority  ?? 'medium',
+        colour:       input.colour    ?? null,
+        block_id:     input.blockId   ?? null,
+        // Mirrors the task's current completion (TASKS.md §3.3 rule 5's
+        // invariant) rather than hardcoding false — existingItem.isComplete
+        // already equals the task's true is_complete, whether this is the
+        // first split (materializeTaskFromDayItem just carried it over) or
+        // a later one (the invariant already held on the source occurrence).
+        is_complete:  input.existingItem.isComplete,
+        position:     0,
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ns_day_items'] })
+      qc.invalidateQueries({ queryKey: ['ns_day_items_range'] })
+      qc.invalidateQueries({ queryKey: ['ns_tasks'] })
     },
   })
 }

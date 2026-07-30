@@ -75,6 +75,35 @@
 }
 .habitBadge:hover { transform: scale(1.2); }
 
+/* ── Open-sheet badge — always visible (no hover-gating) so it works on touch;
+   anchor nodes show this instead of rendering their (sheet-scoped) subtree. */
+
+.sheetBadge {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--ns-gold);
+  font-size: 11px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: color 0.15s, transform 0.15s;
+}
+.sheetBadge::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+}
+.sheetBadge:hover { transform: scale(1.2); }
+
 /* ── Note badge — always visible (no hover-gating) so it works on touch ─────── */
 
 .noteBadge {

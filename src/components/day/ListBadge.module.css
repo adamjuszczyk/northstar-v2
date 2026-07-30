@@ -1,0 +1,15 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--ns-font-mono);
+  font-size: 8.5px;
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-label);
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(var(--ns-gold-rgb), .14);
+  border: 1px solid rgba(var(--ns-gold-rgb), .4);
+  color: var(--ns-gold);
+  white-space: nowrap;
+}

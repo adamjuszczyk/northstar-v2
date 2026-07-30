@@ -1,187 +1,69 @@
-import { useState, useRef, useCallback } from 'react'
-import { useInboxItems, useCreateInboxItem, useUpdateInboxItem } from '../../hooks/useInboxItems'
-import type { InboxItem } from '../../types'
-import InboxItemComponent from './InboxItem'
-import NodeEditor, { type EditorState } from '../tree/NodeEditor'
+import { useState } from 'react'
+import { useInboxItems } from '../../hooks/useInboxItems'
+import InboxTasksSection from './InboxTasksSection'
+import InboxNotesSection from './InboxNotesSection'
+import { useT } from '../../i18n'
 import styles from './InboxView.module.css'
 
-type InboxFilter = 'all' | 'unassigned' | 'scheduled' | 'promoted' | 'completed'
+type Tab = 'tasks' | 'notes'
 
-const FILTERS: { key: InboxFilter; label: string }[] = [
-  { key: 'all',        label: 'All' },
-  { key: 'unassigned', label: 'Unassigned' },
-  { key: 'scheduled',  label: 'Scheduled · not done' },
-  { key: 'promoted',   label: 'Promoted' },
-  { key: 'completed',  label: 'Completed' },
-]
-
-function matchesFilter(item: InboxItem, filter: InboxFilter): boolean {
-  switch (filter) {
-    case 'all':        return true
-    case 'unassigned': return item.state === 'unassigned' && !item.isCompleted
-    case 'scheduled':  return item.state === 'scheduled' && !item.isCompleted
-    case 'promoted':   return item.promotedNodeId !== null
-    case 'completed':  return item.isCompleted
-  }
-}
-
+/**
+ * Thin shell — header + Tasks/Notes tab switcher (SPEC §6.3). Fetches once
+ * here and splits by `kind` so both sections share one query rather than
+ * each re-fetching. The Tasks badge always reflects the *full* unassigned
+ * count regardless of which sub-filter is active inside InboxTasksSection —
+ * a tab-level badge should say what needs attention across the whole
+ * section, not go silently to zero because of an internal filter choice.
+ */
 export default function InboxView() {
+  const t = useT()
+  const [tab, setTab] = useState<Tab>('tasks')
   const { data: items = [], isLoading, error } = useInboxItems()
-  const { mutate: createItem, isPending: creating } = useCreateInboxItem()
-  const { mutate: updateItem } = useUpdateInboxItem()
 
-  const [draft,        setDraft]        = useState('')
-  const [promoteItem,  setPromoteItem]  = useState<InboxItem | null>(null)
-  const [filter,       setFilter]       = useState<InboxFilter>('all')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const tasks = items.filter(i => i.kind === 'task')
+  const notes = items.filter(i => i.kind === 'note')
+  const unassignedTaskCount = tasks.filter(i => i.state === 'unassigned' && !i.isCompleted).length
 
-  const filteredItems = items.filter(i => matchesFilter(i, filter))
-  const carriedOver = filteredItems.filter(i => i.state === 'unassigned' && !i.isCompleted && i.carriedOver)
-  const unassigned  = filteredItems.filter(i => i.state === 'unassigned' && !i.isCompleted && !i.carriedOver)
-  const processed   = filteredItems.filter(i => i.state !== 'unassigned' || i.isCompleted)
-  const unassignedCount = carriedOver.length + unassigned.length
-
-  function handleCapture() {
-    const trimmed = draft.trim()
-    if (!trimmed || creating) return
-    createItem(trimmed, {
-      onSuccess: () => {
-        setDraft('')
-        textareaRef.current?.focus()
-      },
-    })
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleCapture()
-    }
-  }
-
-  const handlePromote = useCallback((item: InboxItem) => {
-    setPromoteItem(item)
-  }, [])
-
-  function handlePromoteCreated(nodeId: string) {
-    if (!promoteItem) return
-    updateItem(
-      { id: promoteItem.id, state: 'promoted', promotedNodeId: nodeId },
-      { onSuccess: () => setPromoteItem(null) }
-    )
-  }
-
-  const errorMsg = error ? ((error as { message?: string }).message ?? 'Unknown error') : null
-
-  const promoteEditorState: EditorState | null = promoteItem
-    ? { mode: 'create', parentId: null, prefillTitle: promoteItem.content }
-    : null
+  const errorMsg = error ? ((error as { message?: string }).message ?? t("common.unknownError")) : null
 
   return (
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
         <span className={styles.star}>✦</span>
-        <span className={styles.title}>Inbox</span>
-        {!isLoading && unassignedCount > 0 && (
-          <span className={styles.badge}>{unassignedCount}</span>
-        )}
+        <span className={styles.title}>{t("nav.inbox")}</span>
       </div>
 
-      {/* Capture bar */}
-      <div className={styles.capture}>
-        <textarea
-          ref={textareaRef}
-          className={styles.captureInput}
-          placeholder="Capture a thought, task, or idea… (Enter to save)"
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={2}
-          disabled={creating}
-        />
+      {/* Tasks / Notes tab switcher */}
+      <div className={styles.tabBar} role="tablist" aria-label={t("inbox.sectionAriaLabel")}>
         <button
-          className={styles.captureBtn}
-          onClick={handleCapture}
-          disabled={!draft.trim() || creating}
-          aria-label="Capture"
+          role="tab"
+          aria-selected={tab === 'tasks'}
+          className={`${styles.tab}${tab === 'tasks' ? ' ' + styles.tabActive : ''}`}
+          onClick={() => setTab('tasks')}
         >
-          {creating ? '…' : '+'}
+          {t("inbox.tasksTabLabel")}
+          {!isLoading && unassignedTaskCount > 0 && (
+            <span className={styles.badge}>{unassignedTaskCount}</span>
+          )}
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'notes'}
+          className={`${styles.tab}${tab === 'notes' ? ' ' + styles.tabActive : ''}`}
+          onClick={() => setTab('notes')}
+        >
+          {t("inbox.notesTabLabel")}
         </button>
       </div>
 
-      {/* Filter bar */}
-      <div className={styles.filterBar} role="tablist" aria-label="Filter inbox items">
-        {FILTERS.map(f => (
-          <button
-            key={f.key}
-            role="tab"
-            aria-selected={filter === f.key}
-            className={`${styles.filterChip}${filter === f.key ? ' ' + styles.filterChipActive : ''}`}
-            onClick={() => setFilter(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Error */}
-      {errorMsg && (
+      {/* Active section */}
+      {errorMsg ? (
         <p className={styles.error}>{errorMsg}</p>
-      )}
-
-      {/* Items */}
-      <div className={styles.list}>
-        {isLoading && (
-          <p className={styles.hint}>Loading…</p>
-        )}
-        {!isLoading && items.length === 0 && (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>Nothing captured yet</p>
-            <p className={styles.hint}>Use the field above to capture anything on your mind.</p>
-          </div>
-        )}
-        {!isLoading && items.length > 0 && filteredItems.length === 0 && (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>Nothing here</p>
-            <p className={styles.hint}>No items match this filter.</p>
-          </div>
-        )}
-
-        {carriedOver.length > 0 && (
-          <section className={styles.section}>
-            <span className={`${styles.sectionLabel} ${styles.sectionLabelCarried}`}>↻ CARRIED OVER</span>
-            {carriedOver.map(item => (
-              <InboxItemComponent key={item.id} item={item} onPromote={handlePromote} />
-            ))}
-          </section>
-        )}
-
-        {unassigned.length > 0 && (
-          <section className={styles.section}>
-            {unassigned.map(item => (
-              <InboxItemComponent key={item.id} item={item} onPromote={handlePromote} />
-            ))}
-          </section>
-        )}
-
-        {processed.length > 0 && (
-          <section className={styles.section}>
-            <span className={styles.sectionLabel}>PROCESSED</span>
-            {processed.map(item => (
-              <InboxItemComponent key={item.id} item={item} onPromote={handlePromote} />
-            ))}
-          </section>
-        )}
-      </div>
-
-      {/* NodeEditor for promote flow */}
-      {promoteEditorState && (
-        <NodeEditor
-          state={promoteEditorState}
-          onClose={() => setPromoteItem(null)}
-          onCreated={handlePromoteCreated}
-        />
+      ) : tab === 'tasks' ? (
+        <InboxTasksSection items={tasks} isLoading={isLoading} />
+      ) : (
+        <InboxNotesSection items={notes} isLoading={isLoading} />
       )}
     </div>
   )

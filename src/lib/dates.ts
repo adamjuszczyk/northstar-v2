@@ -1,3 +1,4 @@
+import type { Locale } from 'date-fns'
 import {
   format,
   startOfWeek,
@@ -43,19 +44,19 @@ export function monthStart(d: Date | string): string {
   return toISODate(startOfMonth(date))
 }
 
-export function formatDayHeading(iso: string): string {
-  return format(parseISO(iso), 'EEEE d MMMM yyyy')
+export function formatDayHeading(iso: string, locale?: Locale): string {
+  return format(parseISO(iso), 'EEEE d MMMM yyyy', { locale })
 }
 
-export function formatMonthYear(iso: string): string {
-  return format(parseISO(iso), 'MMMM yyyy')
+export function formatMonthYear(iso: string, locale?: Locale): string {
+  return format(parseISO(iso), 'MMMM yyyy', { locale })
 }
 
-export function formatWeekRange(weekStartISO: string): string {
+export function formatWeekRange(weekStartISO: string, locale?: Locale): string {
   const start = parseISO(weekStartISO)
   const end   = new Date(start)
   end.setDate(end.getDate() + 6)
-  return `${format(start, 'd MMM')} – ${format(end, 'd MMM yyyy')}`
+  return `${format(start, 'd MMM', { locale })} – ${format(end, 'd MMM yyyy', { locale })}`
 }
 
 export { isToday, isSameDay, parseISO }

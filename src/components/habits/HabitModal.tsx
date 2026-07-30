@@ -4,21 +4,11 @@ import {
   type Habit, type HabitMode, type HabitFrequencyType, type HabitAutoAddTo,
 } from '../../hooks/useHabits'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
+import { useT } from '../../i18n'
 import type { NodeType } from '../../types'
 import styles from './HabitModal.module.css'
 
 const NODE_TYPE_ORDER: NodeType[] = ['vision', 'goal', 'project', 'task']
-const FREQUENCIES: { value: HabitFrequencyType; label: string }[] = [
-  { value: 'daily',      label: 'Daily' },
-  { value: 'weekly',     label: 'Weekly' },
-  { value: 'x_per_week', label: 'X / week' },
-  { value: 'x_per_day',  label: 'X / day' },
-]
-const AUTO_ADD_TARGETS: { value: HabitAutoAddTo; label: string }[] = [
-  { value: 'day',   label: 'Day' },
-  { value: 'week',  label: 'Week' },
-  { value: 'month', label: 'Month' },
-]
 
 export type HabitModalState =
   | { mode: 'create' }
@@ -30,6 +20,7 @@ interface Props {
 }
 
 export default function HabitModal({ state, onClose }: Props) {
+  const t = useT()
   const isCreate = state.mode === 'create'
   const existing = state.mode === 'edit' ? state.habit : null
 
@@ -48,6 +39,18 @@ export default function HabitModal({ state, onClose }: Props) {
   const { mutate: updateHabit, isPending: updating } = useUpdateHabit()
   const { mutate: deleteHabit, isPending: deleting } = useDeleteHabit()
   const isPending = creating || updating || deleting
+
+  const FREQUENCIES: { value: HabitFrequencyType; label: string }[] = [
+    { value: 'daily',      label: t('habits.frequencyDaily') },
+    { value: 'weekly',     label: t('habits.frequencyWeekly') },
+    { value: 'x_per_week', label: t('habits.frequencyXPerWeek') },
+    { value: 'x_per_day',  label: t('habits.frequencyXPerDay') },
+  ]
+  const AUTO_ADD_TARGETS: { value: HabitAutoAddTo; label: string }[] = [
+    { value: 'day',   label: t('nav.day') },
+    { value: 'week',  label: t('nav.week') },
+    { value: 'month', label: t('nav.month') },
+  ]
 
   const linkedNode = treeNodeId ? treeNodes.find(n => n.id === treeNodeId) : null
   const filteredNodes = treeNodes
@@ -103,7 +106,7 @@ export default function HabitModal({ state, onClose }: Props) {
 
   function handleDelete() {
     if (!existing) return
-    if (!window.confirm(`Delete "${existing.name}"? Its logged history will be removed too.`)) return
+    if (!window.confirm(t('habits.deleteConfirm', { title: existing.name }))) return
     deleteHabit(existing.id, { onSuccess: onClose })
   }
 
@@ -115,16 +118,16 @@ export default function HabitModal({ state, onClose }: Props) {
     <div className={styles.backdrop} onClick={handleBackdrop}>
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.header}>
-          <span className={styles.modeLabel}>{isCreate ? '◆ NEW HABIT' : '◆ EDIT HABIT'}</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          <span className={styles.modeLabel}>{isCreate ? t('habits.newHabitHeader') : t('habits.editHabitHeader')}</span>
+          <button className={styles.closeBtn} onClick={onClose} aria-label={t('common.close')}>✕</button>
         </div>
 
         <div className={styles.field}>
-          <label className={styles.fieldLabel} htmlFor="habit-name">NAME</label>
+          <label className={styles.fieldLabel} htmlFor="habit-name">{t('common.nameLabel')}</label>
           <input
             id="habit-name"
             className={styles.input}
-            placeholder="What are you tracking?"
+            placeholder={t('habits.namePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
@@ -133,22 +136,22 @@ export default function HabitModal({ state, onClose }: Props) {
         </div>
 
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>MODE</span>
+          <span className={styles.fieldLabel}>{t('day.modeLabel')}</span>
           <div className={styles.pillRow}>
             <button
               className={`${styles.pillBtn}${mode === 'build' ? ' ' + styles.pillBtnBuild : ''}`}
               onClick={() => setMode('build')}
-            >BUILD</button>
+            >{t('habits.modeBuild')}</button>
             <button
               className={`${styles.pillBtn}${mode === 'reduce' ? ' ' + styles.pillBtnReduce : ''}`}
               onClick={() => setMode('reduce')}
-            >REDUCE</button>
+            >{t('habits.modeReduce')}</button>
           </div>
         </div>
 
         {!isReduce && (
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>FREQUENCY</span>
+            <span className={styles.fieldLabel}>{t('habits.frequencyLabel')}</span>
             <div className={styles.pillRow}>
               {FREQUENCIES.map(f => (
                 <button
@@ -169,7 +172,7 @@ export default function HabitModal({ state, onClose }: Props) {
                   onChange={e => setFrequencyValue(e.target.value)}
                 />
                 {frequencyType === 'x_per_day' && (
-                  <span className={styles.optional}>e.g. 2 = twice daily</span>
+                  <span className={styles.optional}>{t('habits.xPerDayHint')}</span>
                 )}
               </>
             )}
@@ -178,16 +181,16 @@ export default function HabitModal({ state, onClose }: Props) {
 
         {!isReduce && (
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>LINK TO TREE NODE <span className={styles.optional}>(optional)</span></span>
+            <span className={styles.fieldLabel}>{t('habits.linkToTreeNodeLabel')} <span className={styles.optional}>{t('common.optional')}</span></span>
             {!treePickerOpen ? (
               <button className={styles.linkBtn} onClick={() => setTreePickerOpen(true)}>
-                {linkedNode ? `✦ ${linkedNode.title}` : '+ Link a node…'}
+                {linkedNode ? t('habits.treeNodeLink', { title: linkedNode.title }) : t('habits.linkNodeButton')}
               </button>
             ) : (
               <div className={styles.treePicker}>
                 <input
                   className={styles.input}
-                  placeholder="Search nodes…"
+                  placeholder={t('habits.searchNodesPlaceholder')}
                   value={treeSearch}
                   onChange={e => setTreeSearch(e.target.value)}
                   autoFocus
@@ -196,7 +199,7 @@ export default function HabitModal({ state, onClose }: Props) {
                   <button
                     className={styles.treeRow}
                     onClick={() => { setTreeNodeId(null); setTreePickerOpen(false) }}
-                  >— No linked node —</button>
+                  >{t('habits.noLinkedNodeOption')}</button>
                   {filteredNodes.map(n => (
                     <button
                       key={n.id}
@@ -205,7 +208,12 @@ export default function HabitModal({ state, onClose }: Props) {
                     >
                       <span className={styles.nodeTypeDot} style={{ background: `var(--ns-${n.type}-accent)` }} />
                       <span className={styles.nodeTitle}>{n.title}</span>
-                      <span className={styles.nodeType}>{n.type}</span>
+                      <span className={styles.nodeType}>{
+                        n.type === 'vision' ? t('tree.typeVision')
+                          : n.type === 'goal' ? t('tree.typeGoal')
+                          : n.type === 'project' ? t('tree.typeProject')
+                          : t('tree.typeTask')
+                      }</span>
                     </button>
                   ))}
                 </div>
@@ -223,7 +231,7 @@ export default function HabitModal({ state, onClose }: Props) {
                 checked={autoAdd}
                 onChange={e => setAutoAdd(e.target.checked)}
               />
-              <span className={styles.toggleLabel}>Auto-add on app open</span>
+              <span className={styles.toggleLabel}>{t('habits.autoAddToggleLabel')}</span>
             </label>
             {autoAdd && (
               <div className={styles.pillRow}>
@@ -241,12 +249,12 @@ export default function HabitModal({ state, onClose }: Props) {
 
         <div className={styles.actions}>
           {!isCreate && (
-            <button className={styles.deleteBtn} onClick={handleDelete} disabled={isPending}>Delete</button>
+            <button className={styles.deleteBtn} onClick={handleDelete} disabled={isPending}>{t('common.delete')}</button>
           )}
           <span style={{ flex: 1 }} />
-          <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>Cancel</button>
+          <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>{t('common.cancel')}</button>
           <button className={styles.saveBtn} onClick={handleSave} disabled={!isValid() || isPending}>
-            {isPending ? '…' : isCreate ? 'Add habit' : 'Save'}
+            {isPending ? '…' : isCreate ? t('habits.addHabitSubmit') : t('common.save')}
           </button>
         </div>
       </div>

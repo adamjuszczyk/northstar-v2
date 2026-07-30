@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useUpdateInboxItem } from '../../hooks/useInboxItems'
+import { useTaskForRef } from '../../hooks/useTasks'
+import TaskStepList from '../day/TaskStepList'
 import type { InboxItem } from '../../types'
+import { useT } from '../../i18n'
 import styles from './InboxItemEditor.module.css'
 
 interface Props {
@@ -9,8 +12,15 @@ interface Props {
 }
 
 export default function InboxItemEditor({ item, onClose }: Props) {
+  const t = useT()
   const [content, setContent] = useState(item.content)
   const { mutate: updateItem, isPending } = useUpdateInboxItem()
+  // Task Lists & Split (SPEC §5.3) — "creatable everywhere," not only
+  // retroactively from Day view. Notes have no completable-action concept,
+  // so this is task-only.
+  const { data: existingTask } = useTaskForRef(
+    item.kind === 'task' ? { source: 'inbox', inboxItemId: item.id } : null
+  )
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -34,13 +44,13 @@ export default function InboxItemEditor({ item, onClose }: Props) {
     <div className={styles.backdrop} onClick={handleBackdrop}>
       <div className={styles.modal} role="dialog" aria-modal="true">
         <div className={styles.header}>
-          <span className={styles.modeLabel}>✦ EDIT ITEM</span>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+          <span className={styles.modeLabel}>{t("day.modeLabelEditItem")}</span>
+          <button className={styles.closeBtn} onClick={onClose} aria-label={t("common.close")}>✕</button>
         </div>
 
         <textarea
           className={styles.contentInput}
-          placeholder="Capture a thought, task, or idea…"
+          placeholder={t("inbox.editContentPlaceholder")}
           value={content}
           onChange={e => setContent(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSave() }}
@@ -49,17 +59,24 @@ export default function InboxItemEditor({ item, onClose }: Props) {
           disabled={isPending}
         />
 
+        {item.kind === 'task' && (
+          <TaskStepList
+            taskId={existingTask?.id ?? null}
+            taskRef={{ source: 'inbox', inboxItemId: item.id }}
+          />
+        )}
+
         <div className={styles.actions}>
           <span style={{ flex: 1 }} />
           <button className={styles.cancelBtn} onClick={onClose} disabled={isPending}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className={styles.saveBtn}
             onClick={handleSave}
             disabled={!content.trim() || isPending}
           >
-            {isPending ? '…' : 'Save'}
+            {isPending ? '…' : t("common.save")}
           </button>
         </div>
       </div>

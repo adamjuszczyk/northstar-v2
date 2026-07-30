@@ -1,0 +1,92 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ns-space-3);
+}
+
+.hint {
+  margin: 0;
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  letter-spacing: var(--ns-ls-sm);
+  color: var(--ns-text-lo);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid var(--ns-border-faint);
+  background: var(--ns-border-subtle);
+}
+
+.name {
+  font-family: var(--ns-font-ui);
+  font-size: var(--ns-text-sm);
+  color: var(--ns-text-hi);
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--ns-space-2);
+  flex-shrink: 0;
+}
+
+.editBtn {
+  padding: 6px 12px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid var(--ns-border-mid);
+  background: transparent;
+  color: var(--ns-text-lo);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.editBtn:hover { color: var(--ns-text-hi); border-color: var(--ns-border-soft); }
+
+.deleteBtn {
+  padding: 6px 12px;
+  border-radius: var(--ns-radius-sm);
+  border: 1px solid rgba(var(--ns-danger-rgb), .3);
+  background: transparent;
+  color: var(--ns-danger);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-2xs);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.deleteBtn:hover {
+  background: rgba(var(--ns-danger-rgb), .1);
+  border-color: rgba(var(--ns-danger-rgb), .55);
+}
+
+.newBtn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: var(--ns-radius-md);
+  border: 1px solid rgba(var(--ns-gold-rgb), .4);
+  background: rgba(var(--ns-gold-rgb), .12);
+  color: var(--ns-gold);
+  font-family: var(--ns-font-mono);
+  font-size: var(--ns-text-xs);
+  font-weight: var(--ns-fw-semibold);
+  letter-spacing: var(--ns-ls-sm);
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.newBtn:hover {
+  background: rgba(var(--ns-gold-rgb), .2);
+  border-color: rgba(var(--ns-gold-rgb), .65);
+}

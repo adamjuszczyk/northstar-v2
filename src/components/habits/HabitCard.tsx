@@ -4,14 +4,9 @@ import {
   useLogHabitEntry, computeHabitStatus, computeCurrentMetric,
   type Habit, type HabitEntry, type HabitStatus,
 } from '../../hooks/useHabits'
+import { useT } from '../../i18n'
 import TrendChart from './TrendChart'
 import styles from './HabitCard.module.css'
-
-const STATUS_LABEL: Record<HabitStatus, string> = {
-  early:      'EARLY',
-  good:       'GOOD',
-  struggling: 'STRUGGLING',
-}
 
 interface Props {
   habit:         Habit
@@ -22,14 +17,21 @@ interface Props {
 }
 
 export default function HabitCard({ habit, allEntries, treeNodeTitle, onEdit, highlighted }: Props) {
+  const t = useT()
   const navigate = useNavigate()
   const { mutate: logEntry, isPending } = useLogHabitEntry()
   const [noteOpen, setNoteOpen] = useState(false)
   const [note,     setNote]     = useState('')
 
+  const STATUS_LABEL: Record<HabitStatus, string> = {
+    early:      t('habits.statusEarly'),
+    good:       t('habits.statusGood'),
+    struggling: t('habits.statusStruggling'),
+  }
+
   const entries = allEntries.filter(e => e.habitId === habit.id)
   const status  = computeHabitStatus(habit, allEntries)
-  const metric  = computeCurrentMetric(habit, allEntries)
+  const metric  = computeCurrentMetric(habit, allEntries, t)
 
   function handleLog() {
     if (isPending) return
@@ -55,7 +57,9 @@ export default function HabitCard({ habit, allEntries, treeNodeTitle, onEdit, hi
         {/* Reduce habits carry no schedule — ignore any stale auto-add data
             left over from before this mode existed. */}
         {habit.mode === 'build' && habit.autoAdd && habit.autoAddTo && (
-          <span className={styles.autoBadge}>AUTO · {habit.autoAddTo.toUpperCase()}</span>
+          <span className={styles.autoBadge}>{t('habits.autoBadge', { target: t(
+            habit.autoAddTo === 'day' ? 'nav.day' : habit.autoAddTo === 'week' ? 'nav.week' : 'nav.month'
+          ).toUpperCase() })}</span>
         )}
       </div>
 
@@ -64,29 +68,29 @@ export default function HabitCard({ habit, allEntries, treeNodeTitle, onEdit, hi
           className={styles.treeLink}
           onClick={() => navigate(`/tree?focus=${habit.treeNodeId}`)}
         >
-          ✦ {treeNodeTitle}
+          {t('habits.treeNodeLink', { title: treeNodeTitle })}
         </button>
       )}
 
       <div className={styles.logRow}>
         <button className={styles.logBtn} onClick={handleLog} disabled={isPending}>
-          {isPending ? '…' : '+ Log'}
+          {isPending ? '…' : t('habits.logButton')}
         </button>
         <button
           className={styles.noteToggle}
           onClick={() => setNoteOpen(o => !o)}
-          aria-label={noteOpen ? 'Hide note' : 'Add note'}
+          aria-label={noteOpen ? t('habits.hideNoteLabel') : t('habits.addNoteLabel')}
           aria-expanded={noteOpen}
         >
-          {noteOpen ? '−' : '+'} note
+          {t('habits.noteToggleButton', { symbol: noteOpen ? '−' : '+' })}
         </button>
-        <button className={styles.editBtn} onClick={onEdit}>Edit</button>
+        <button className={styles.editBtn} onClick={onEdit}>{t('common.edit')}</button>
       </div>
 
       {noteOpen && (
         <input
           className={styles.noteInput}
-          placeholder="Optional note for the next log…"
+          placeholder={t('habits.notePlaceholder')}
           value={note}
           onChange={e => setNote(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleLog() }}

@@ -6,15 +6,20 @@ import {
   type DragStartEvent, type DragOverEvent, type DragEndEvent, type CollisionDetection,
 } from '@dnd-kit/core'
 import {
-  useTreeNodes, useMoveNode, buildTree, wouldCreateCycle, siblingCount,
+  useTreeNodes, useMoveNode, buildTree, indexById, wouldCreateCycle, siblingCount,
   type TreeNodeWithChildren,
 } from '../../hooks/useTreeNodes'
+import { useSheets } from '../../hooks/useSheets'
 import { useHabits } from '../../hooks/useHabits'
 import type { NodeType } from '../../types'
+import type { Sheet } from '../../types'
 import TreeNode from './TreeNode'
 import NodeConnector from './NodeConnector'
 import NodeEditor, { type EditorState } from './NodeEditor'
 import MoveToPicker from './MoveToPicker'
+import SheetTabs from './SheetTabs'
+import SheetForm, { type SheetFormState } from './SheetForm'
+import { useT, type Key } from '../../i18n'
 import styles from './TreeView.module.css'
 
 const CANVAS_ROOT_DROP_ID = 'tree-canvas-root'
@@ -44,41 +49,42 @@ function clampZoom(z: number): number {
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
-const TYPE_ENTRIES: { type: NodeType; label: string }[] = [
-  { type: 'vision',  label: 'Vision' },
-  { type: 'goal',    label: 'Goal' },
-  { type: 'project', label: 'Project' },
-  { type: 'task',    label: 'Task' },
+const TYPE_ENTRIES: { type: NodeType; labelKey: Key }[] = [
+  { type: 'vision',  labelKey: 'tree.legendTypeVision' },
+  { type: 'goal',    labelKey: 'tree.legendTypeGoal' },
+  { type: 'project', labelKey: 'tree.legendTypeProject' },
+  { type: 'task',    labelKey: 'tree.legendTypeTask' },
 ]
 
 function Legend() {
+  const t = useT()
   return (
     <div className={styles.legend}>
       <div className={styles.legendSection}>
-        <span className={styles.legendHeading}>TYPE</span>
-        {TYPE_ENTRIES.map(({ type, label }) => (
+        <span className={styles.legendHeading}>{t('tree.legendHeadingType')}</span>
+        {TYPE_ENTRIES.map(({ type, labelKey }) => (
           <div key={type} className={styles.legendRow}>
             <span
               className={styles.legendDot}
               style={{ '--leg-accent': `var(--ns-${type}-accent)` } as CSSProperties}
             />
-            <span className={styles.legendLabel}>{label}</span>
+            <span className={styles.legendLabel}>{t(labelKey)}</span>
           </div>
         ))}
       </div>
       <div className={styles.legendSection}>
-        <span className={styles.legendHeading}>STATE</span>
+        <span className={styles.legendHeading}>{t('tree.legendHeadingState')}</span>
         <div className={styles.legendRow}>
           <span className={styles.legendStateIdle} />
-          <span className={styles.legendLabel}>Not started</span>
+          <span className={styles.legendLabel}>{t('tree.legendStateNotStarted')}</span>
         </div>
         <div className={styles.legendRow}>
           <span className={styles.legendStateActive} />
-          <span className={styles.legendLabel}>In progress</span>
+          <span className={styles.legendLabel}>{t('tree.legendStateInProgress')}</span>
         </div>
         <div className={styles.legendRow}>
           <span className={styles.legendStateDone}>✓</span>
-          <span className={styles.legendLabel}>Complete</span>
+          <span className={styles.legendLabel}>{t('tree.legendStateComplete')}</span>
         </div>
       </div>
     </div>
@@ -87,12 +93,19 @@ function Legend() {
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({ onAdd, sheetName }: { onAdd: () => void; sheetName: string | null }) {
+  const t = useT()
   return (
     <div className={styles.empty}>
-      <p className={styles.emptyTitle}>No visions yet</p>
-      <p className={styles.emptyHint}>Start by adding a top-level vision to anchor your goal tree.</p>
-      <button className={styles.emptyBtn} onClick={onAdd}>+ Add vision</button>
+      <p className={styles.emptyTitle}>{sheetName ? t('tree.emptyStateSheetTitle', { sheetName }) : t('tree.emptyStateNoVisionsTitle')}</p>
+      <p className={styles.emptyHint}>
+        {sheetName
+          ? t('tree.emptyStateSheetHint')
+          : t('tree.emptyStateVisionHint')}
+      </p>
+      <button className={styles.emptyBtn} onClick={onAdd}>
+        {sheetName ? t('tree.addNodeBtn') : t('tree.emptyStateAddVisionBtn')}
+      </button>
     </div>
   )
 }
@@ -136,17 +149,47 @@ function CanvasStage({ stageRef, className, style, isDragActive, children }: Can
 // ── TreeView ───────────────────────────────────────────────────────────────────
 
 export default function TreeView() {
+  const t = useT()
   const { data, isLoading, error } = useTreeNodes()
   const { data: habits = [] } = useHabits()
+  const { data: sheets = [], isLoading: sheetsLoading } = useSheets()
   const { mutate: moveNode } = useMoveNode()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const focusNodeId = searchParams.get('focus')
+  const activeSheetId = searchParams.get('sheet')
 
   const habitByNodeId = useMemo(() => {
     const m = new Map<string, string>()
     for (const h of habits) if (h.treeNodeId) m.set(h.treeNodeId, h.id)
     return m
   }, [habits])
+
+  // nodeId → the Sheet anchored to it — drives the "open sheet" indicator
+  // (TreeNode) in place of that node's (now sheet-scoped, invisible-here)
+  // subtree. Built from the full sheets list, so it's correct regardless of
+  // which canvas is currently being viewed.
+  const sheetByAnchorNodeId = useMemo(() => {
+    const m = new Map<string, Sheet>()
+    for (const s of sheets) if (s.anchorNodeId) m.set(s.anchorNodeId, s)
+    return m
+  }, [sheets])
+
+  function handleSelectSheet(id: string | null) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (id) next.set('sheet', id); else next.delete('sheet')
+      return next
+    })
+  }
+
+  // A bookmarked/stale ?sheet= id (dissolved elsewhere, or just a bad link)
+  // falls back to Main Tree once the sheets list has actually loaded —
+  // never before, or a real sheet would flash away during the initial fetch.
+  useEffect(() => {
+    if (!activeSheetId || sheetsLoading) return
+    if (!sheets.some(s => s.id === activeSheetId)) handleSelectSheet(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSheetId, sheets, sheetsLoading])
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -158,6 +201,7 @@ export default function TreeView() {
 
   const [editorState, setEditorState] = useState<EditorState | null>(null)
   const [movingNode,  setMovingNode]  = useState<TreeNodeWithChildren | null>(null)
+  const [sheetFormState, setSheetFormState] = useState<SheetFormState | null>(null)
   const [legendOpen,  setLegendOpen]  = useState(false)
   const [structureVersion, setStructureVersion] = useState(0)
   const bumpStructureVersion = useCallback(() => setStructureVersion(v => v + 1), [])
@@ -217,9 +261,26 @@ export default function TreeView() {
     }
   }, [viewMode, treeZoom])
 
-  const roots      = useMemo(() => buildTree(data ?? []), [data])
-  const totalNodes = data?.length ?? 0
-  const visionCount = data?.filter(n => n.type === 'vision' && !n.parentId).length ?? 0
+  // Canvas render tree — filtered to the currently viewed sheet (null =
+  // main tree). This is the ONLY place sheet_id filters anything; every
+  // count/indicator below reads the UNFILTERED tree instead (TASKS.md §3.5
+  // audit rule) so a node moved into a Sheet never silently vanishes from
+  // its ancestors' rollups.
+  const scopedNodes = useMemo(
+    () => (data ?? []).filter(n => n.sheetId === activeSheetId),
+    [data, activeSheetId],
+  )
+  const roots = useMemo(() => buildTree(scopedNodes), [scopedNodes])
+
+  // Unfiltered — spans every sheet plus the main tree — indexed by id so
+  // TreeNode can look up each rendered (possibly sheet-scoped) node's TRUE
+  // descendant/completion counts for its progress bar and collapse message.
+  const unfilteredRoots = useMemo(() => buildTree(data ?? []), [data])
+  const unfilteredById  = useMemo(() => indexById(unfilteredRoots), [unfilteredRoots])
+
+  const totalNodes  = scopedNodes.length
+  const visionCount = scopedNodes.filter(n => n.type === 'vision' && !n.parentId).length
+  const activeSheet = activeSheetId ? sheets.find(s => s.id === activeSheetId) ?? null : null
 
   // Scroll to + briefly highlight a node linked from a habit card.
   useEffect(() => {
@@ -232,9 +293,24 @@ export default function TreeView() {
     setEditorState({ mode: 'edit', node })
   }, [])
 
+  /**
+   * A new child inherits its parent's sheetId — except a parent that's
+   * itself an anchor: its true children all live inside its sheet (that's
+   * the whole mechanism), so a child added to an anchor node (reachable
+   * even from the main tree, since the anchor still renders there) must
+   * land in that sheet too, not alongside the anchor with sheet_id = null.
+   */
   const handleAddChild = useCallback((parentId: string, parentType: NodeType) => {
-    setEditorState({ mode: 'create', parentId, parentType })
-  }, [])
+    const anchorSheet = sheetByAnchorNodeId.get(parentId)
+    const sheetId = anchorSheet
+      ? anchorSheet.id
+      : ((data ?? []).find(n => n.id === parentId)?.sheetId ?? activeSheetId)
+    setEditorState({ mode: 'create', parentId, parentType, sheetId })
+  }, [data, sheetByAnchorNodeId, activeSheetId])
+
+  const handleAddRoot = useCallback(() => {
+    setEditorState({ mode: 'create', parentId: null, sheetId: activeSheetId })
+  }, [activeSheetId])
 
   const overInvalid = useMemo(() => {
     if (!activeId || !overId || overId === CANVAS_ROOT_DROP_ID) return false
@@ -254,6 +330,11 @@ export default function TreeView() {
    * exact same reparent write. Circular drops are rejected outright; a drop
    * on the node's current parent (or onto the canvas while already a root)
    * is a no-op, matching the "moving to current parent does nothing" rule.
+   *
+   * No sheetId is passed to moveNode here — every draggable/droppable node
+   * rendered by this one TreeView instance already comes from the same
+   * sheet-scoped `scopedNodes` list, so an in-canvas drag can never actually
+   * cross a sheet boundary; sheet_id is correctly left untouched.
    */
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveId(null)
@@ -280,43 +361,52 @@ export default function TreeView() {
   }, [data, moveNode])
 
   const errorMsg = error
-    ? ((error as { message?: string }).message ?? 'Unknown error')
+    ? ((error as { message?: string }).message ?? t('common.unknownError'))
     : null
 
   return (
     <div className={styles.page}>
+      {/* Sheet tabs — Main Tree + every Sheet, switchable per SPEC §5.5 */}
+      <SheetTabs
+        sheets={sheets}
+        activeSheetId={activeSheetId}
+        onSelect={handleSelectSheet}
+        onManage={sheet => setSheetFormState({ mode: 'manage', sheet })}
+        onCreateNew={() => setSheetFormState({ mode: 'create' })}
+      />
+
       {/* Stats bar */}
       <div className={styles.statsBar}>
         <span className={styles.statsStar}>✦</span>
         <span className={styles.statsText}>
           {isLoading
-            ? 'Loading…'
-            : `${visionCount} vision${visionCount !== 1 ? 's' : ''} · ${totalNodes} node${totalNodes !== 1 ? 's' : ''}`}
+            ? t('common.loading')
+            : `${t('tree.visionCount', { n: visionCount, count: visionCount })} · ${t('tree.nodeCount', { n: totalNodes, count: totalNodes })}`}
         </span>
         <span className={styles.statsSpacer} />
-        <div className={styles.modeToggle} role="group" aria-label="Tree display mode">
+        <div className={styles.modeToggle} role="group" aria-label={t('tree.displayModeAriaLabel')}>
           <button
             className={`${styles.modeBtn}${viewMode === 'tree' ? ' ' + styles.modeBtnActive : ''}`}
             onClick={() => setViewMode('tree')}
             aria-pressed={viewMode === 'tree'}
           >
-            TREE
+            {t('pickers.viewTree')}
           </button>
           <button
             className={`${styles.modeBtn}${viewMode === 'list' ? ' ' + styles.modeBtnActive : ''}`}
             onClick={() => setViewMode('list')}
             aria-pressed={viewMode === 'list'}
           >
-            LIST
+            {t('pickers.viewList')}
           </button>
         </div>
         {viewMode === 'tree' && (
-          <div className={styles.zoomControls} role="group" aria-label="Tree zoom">
+          <div className={styles.zoomControls} role="group" aria-label={t('tree.zoomGroupAriaLabel')}>
             <button
               className={styles.zoomBtn}
               onClick={() => setTreeZoom(z => clampZoom(z - ZOOM_STEP))}
               disabled={treeZoom <= ZOOM_MIN}
-              aria-label="Zoom out"
+              aria-label={t('tree.zoomOutAriaLabel')}
             >
               −
             </button>
@@ -325,17 +415,14 @@ export default function TreeView() {
               className={styles.zoomBtn}
               onClick={() => setTreeZoom(z => clampZoom(z + ZOOM_STEP))}
               disabled={treeZoom >= ZOOM_MAX}
-              aria-label="Zoom in"
+              aria-label={t('tree.zoomInAriaLabel')}
             >
               +
             </button>
           </div>
         )}
-        <button
-          className={styles.addRootBtn}
-          onClick={() => setEditorState({ mode: 'create', parentId: null })}
-        >
-          + Vision
+        <button className={styles.addRootBtn} onClick={handleAddRoot}>
+          {activeSheetId ? t('tree.addNodeBtn') : t('tree.addVisionBtn')}
         </button>
       </div>
 
@@ -343,11 +430,11 @@ export default function TreeView() {
       <div className={styles.canvas}>
         {errorMsg ? (
           <div className={styles.errorState}>
-            <p className={styles.errorText}>Failed to load tree</p>
+            <p className={styles.errorText}>{t('tree.loadError')}</p>
             <p className={styles.errorHint}>{errorMsg}</p>
           </div>
         ) : !isLoading && roots.length === 0 ? (
-          <EmptyState onAdd={() => setEditorState({ mode: 'create', parentId: null })} />
+          <EmptyState onAdd={handleAddRoot} sheetName={activeSheet?.name ?? null} />
         ) : (
           <DndContext
             sensors={sensors}
@@ -385,6 +472,8 @@ export default function TreeView() {
                     dropInvalid={overInvalid}
                     habitByNodeId={habitByNodeId}
                     focusNodeId={focusNodeId}
+                    unfilteredById={unfilteredById}
+                    sheetByAnchorNodeId={sheetByAnchorNodeId}
                   />
                 ))}
               </div>
@@ -398,14 +487,14 @@ export default function TreeView() {
       <button
         className={styles.legendToggle}
         onClick={() => setLegendOpen(o => !o)}
-        aria-label={legendOpen ? 'Hide legend' : 'Show legend'}
+        aria-label={legendOpen ? t('tree.hideLegendAriaLabel') : t('tree.showLegendAriaLabel')}
       >
         ?
       </button>
 
       {/* Scroll hint */}
       {viewMode === 'tree' && roots.length > 1 && (
-        <div className={styles.scrollHint}>SCROLL TO EXPLORE THE TREE →</div>
+        <div className={styles.scrollHint}>{t('tree.scrollHint')}</div>
       )}
 
       {/* Node editor modal */}
@@ -423,6 +512,21 @@ export default function TreeView() {
           node={movingNode}
           allNodes={data ?? []}
           onClose={() => setMovingNode(null)}
+        />
+      )}
+
+      {/* Sheet create / manage modal */}
+      {sheetFormState && (
+        <SheetForm
+          state={sheetFormState}
+          allNodes={data ?? []}
+          sheets={sheets}
+          onClose={() => setSheetFormState(null)}
+          onCreated={sheetId => { setSheetFormState(null); handleSelectSheet(sheetId) }}
+          onDissolved={sheetId => {
+            setSheetFormState(null)
+            if (sheetId === activeSheetId) handleSelectSheet(null)
+          }}
         />
       )}
     </div>

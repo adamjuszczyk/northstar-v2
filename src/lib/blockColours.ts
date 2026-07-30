@@ -21,3 +21,12 @@ export function blockColourName(hex: string | null): string | null {
   if (!hex) return null
   return BLOCK_COLOURS.find(c => c.hex.toLowerCase() === hex.toLowerCase())?.name ?? null
 }
+
+/** '#RRGGBB' → 'R, G, B', for feeding rgba(var(--x-rgb), alpha) custom properties. */
+export function hexToRgbTriple(hex: string): string {
+  const clean = hex.replace('#', '')
+  const r = parseInt(clean.slice(0, 2), 16)
+  const g = parseInt(clean.slice(2, 4), 16)
+  const b = parseInt(clean.slice(4, 6), 16)
+  return `${r}, ${g}, ${b}`
+}

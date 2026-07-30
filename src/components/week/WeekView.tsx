@@ -1,19 +1,36 @@
 import { useState, type CSSProperties } from 'react'
 import { format, parseISO, addDays, isToday } from 'date-fns'
-import { useWeekFocus, useCreateWeekFocus, useCreateWeekFocusMany, useToggleWeekFocus, useDeleteWeekFocus } from '../../hooks/useWeekFocus'
-import type { WeekFocusItem } from '../../hooks/useWeekFocus'
+import {
+  useWeekFocus, useCreateWeekFocus, useCreateWeekFocusMany, useAddWeekTasksLinked,
+  useToggleWeekFocus, useDeleteWeekFocus,
+} from '../../hooks/useWeekFocus'
+import type { WeekFocusItem, WeekTaskLinkItem } from '../../hooks/useWeekFocus'
 import { usePullWeekFocusToDay } from '../../hooks/useDayItems'
 import { useRangeDayItems, groupByDate, maxPriority } from '../../hooks/useDayItemsSummary'
 import type { DayItemSummaryRow } from '../../hooks/useDayItemsSummary'
 import { useTreeNodes } from '../../hooks/useTreeNodes'
 import { useInboxItems } from '../../hooks/useInboxItems'
 import { useHabits } from '../../hooks/useHabits'
+import { useTasksByIds, resolveTaskTitle, type Task, type TaskSource } from '../../hooks/useTasks'
+import { useTaskStepCounts, type StepCount } from '../../hooks/useTaskSteps'
 import { useSettings } from '../../hooks/useSettings'
-import { weekDisplayStart, weekStart as computeWeekStart, todayISO } from '../../lib/dates'
+import { weekDisplayStart, weekStart as computeWeekStart, monthStart as computeMonthStart, todayISO } from '../../lib/dates'
 import FocusItemForm from '../planner/FocusItemForm'
+import TaskSourceForm from '../planner/TaskSourceForm'
+import type { MonthTaskPick } from '../planner/TaskSourceForm'
+import ListBadge from '../day/ListBadge'
+import { useT, useDateFnsLocale, type Key } from '../../i18n'
 import styles from './WeekView.module.css'
 
-const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+const DAY_LABELS: { labelKey: Key }[] = [
+  { labelKey: 'common.weekdayMon' },
+  { labelKey: 'common.weekdayTue' },
+  { labelKey: 'common.weekdayWed' },
+  { labelKey: 'common.weekdayThu' },
+  { labelKey: 'common.weekdayFri' },
+  { labelKey: 'common.weekdaySat' },
+  { labelKey: 'common.weekdaySun' },
+]
 const MAX_SHOWN  = 3   // max anchored items before "+N more"
 
 // ── Priority accent helpers ────────────────────────────────────────────────────
@@ -27,18 +44,27 @@ function priorityBorderVar(p: 'high' | 'medium' | 'low' | null): string {
 
 // ── Title resolution ─────────────────────────────────────────────────────────
 
-/** Never falls back to a bare source glyph — resolves the real title. */
+/** Never falls back to a bare source glyph — resolves the real title.
+ *  Task-linked items (taskId set) resolve through the task instead of their
+ *  own now-null title/treeNodeId/inboxItemId/habitId — otherwise every
+ *  split task renders "Untitled" here (TASKS.md §3.3's flagged trap). */
 function resolveEventTitle(
   item:     DayItemSummaryRow,
   nodeMap:  Map<string, { title: string }>,
   inboxMap: Map<string, { content: string }>,
   habitMap: Map<string, { name: string }>,
+  taskMap:  Map<string, Task>,
+  t:        ReturnType<typeof useT>,
 ): string {
+  if (item.taskId) {
+    const task = taskMap.get(item.taskId)
+    if (task) return resolveTaskTitle(task, nodeMap, inboxMap, habitMap, t)
+  }
   if (item.title) return item.title
-  if (item.treeNodeId)  return nodeMap.get(item.treeNodeId)?.title ?? 'Untitled'
-  if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? 'Untitled'
-  if (item.habitId)     return habitMap.get(item.habitId)?.name ?? 'Untitled'
-  return 'Untitled'
+  if (item.treeNodeId)  return nodeMap.get(item.treeNodeId)?.title ?? t('common.untitled')
+  if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? t('common.untitled')
+  if (item.habitId)     return habitMap.get(item.habitId)?.name ?? t('common.untitled')
+  return t('common.untitled')
 }
 
 // ── Day column ─────────────────────────────────────────────────────────────────
@@ -49,10 +75,13 @@ interface DayColProps {
   nodeMap:  Map<string, { title: string }>
   inboxMap: Map<string, { content: string }>
   habitMap: Map<string, { name: string }>
+  taskMap:  Map<string, Task>
   onSelect: () => void
 }
 
-function DayCol({ date, items, nodeMap, inboxMap, habitMap, onSelect }: DayColProps) {
+function DayCol({ date, items, nodeMap, inboxMap, habitMap, taskMap, onSelect }: DayColProps) {
+  const t = useT()
+  const dateLocale = useDateFnsLocale()
   const dateStr  = format(date, 'yyyy-MM-dd')
   const dayNum   = format(date, 'd')
   const isNow    = isToday(date)
@@ -69,10 +98,10 @@ function DayCol({ date, items, nodeMap, inboxMap, habitMap, onSelect }: DayColPr
       className={`${styles.dayCol}${isNow ? ' ' + styles.dayColToday : ''}`}
       style={{ '--day-accent-rgb': `var(${accentRgb})` } as CSSProperties}
       onClick={onSelect}
-      aria-label={`Open ${format(date, 'd MMMM')}`}
+      aria-label={t('month.openDayAriaLabel', { date: format(date, 'd MMMM', { locale: dateLocale }) })}
     >
       <div className={styles.dayHead}>
-        <span className={styles.dayName}>{DAY_LABELS[date.getDay() === 0 ? 6 : date.getDay() - 1]}</span>
+        <span className={styles.dayName}>{t(DAY_LABELS[date.getDay() === 0 ? 6 : date.getDay() - 1].labelKey)}</span>
         <span className={`${styles.dayNum}${isNow ? ' ' + styles.dayNumToday : ''}`}>{dayNum}</span>
       </div>
 
@@ -81,16 +110,16 @@ function DayCol({ date, items, nodeMap, inboxMap, habitMap, onSelect }: DayColPr
           <div key={item.id} className={styles.dayEvent}>
             <span className={styles.dayEventTime}>{item.startTime!.slice(0, 5)}</span>
             <span className={styles.dayEventTitle}>
-              {resolveEventTitle(item, nodeMap, inboxMap, habitMap)}
+              {resolveEventTitle(item, nodeMap, inboxMap, habitMap, taskMap, t)}
             </span>
           </div>
         ))}
         {extra > 0 && (
-          <span className={styles.dayMore}>+{extra} more</span>
+          <span className={styles.dayMore}>{t('week.moreCount', { n: extra })}</span>
         )}
         {floating.length > 0 && (
           <span className={styles.dayFloating}>
-            {floating.length} task{floating.length > 1 ? 's' : ''}
+            {t('common.taskCount', { n: floating.length, count: floating.length })}
           </span>
         )}
         {items.length === 0 && (
@@ -118,30 +147,48 @@ interface FocusRowProps {
   pulledDates?: string[]
   onPull?:      () => void
   canPull?:     boolean
+  /** The linked task's real source (tree/inbox), when item.taskId is set —
+   *  overrides the badge, since item.source stays 'standalone' on a
+   *  task-linked row deliberately (that's what keeps it in the Tasks
+   *  section rather than Goals). Without this a live-linked task would
+   *  misleadingly show "STANDALONE". */
+  sourceOverride?: TaskSource
+  /** Batched step count for item.taskId (SPEC §5.3 list badge + completion
+   *  gate) — undefined/total<2 means "not a list", same rule as day items. */
+  stepCount?: StepCount
 }
 
 function FocusRow({
-  item, displayTitle, onToggle, onDelete, isPending, pulledDates, onPull, canPull,
+  item, displayTitle, onToggle, onDelete, isPending, pulledDates, onPull, canPull, sourceOverride, stepCount,
 }: FocusRowProps) {
+  const t = useT()
+  const dateLocale = useDateFnsLocale()
+  const effectiveSource = sourceOverride ?? item.source
   const sourceLabel =
-    item.source === 'tree'       ? '✦ GOAL TREE'  :
-    item.source === 'inbox'      ? '⌵ FROM INBOX' :
-    item.source === 'habit'      ? '◆ HABIT'      :
-                                    '• STANDALONE'
+    effectiveSource === 'tree'       ? t('day.sourceBadgeTree')       :
+    effectiveSource === 'inbox'      ? t('day.sourceBadgeInboxFrom')  :
+    effectiveSource === 'habit'      ? t('day.focusTagHabit')         :
+                                        t('day.sourceBadgeStandalone')
 
   const showPullControls = pulledDates !== undefined
   const isPulled = (pulledDates?.length ?? 0) > 0
   const dayLabels = (pulledDates ?? [])
-    .map(d => format(parseISO(d), 'EEE').toUpperCase())
+    .map(d => format(parseISO(d), 'EEE', { locale: dateLocale }).toUpperCase())
     .join(', ')
+  const isListTask = (stepCount?.total ?? 0) >= 2
 
   return (
     <div className={`${styles.focusRow}${item.isComplete ? ' ' + styles.focusRowDone : ''}`}>
       <button
         className={`${styles.check}${item.isComplete ? ' ' + styles.checkDone : ''}`}
-        onClick={onToggle}
-        disabled={isPending}
-        aria-label={item.isComplete ? 'Mark incomplete' : 'Mark complete'}
+        onClick={() => { if (!isListTask) onToggle() }}
+        disabled={isPending || isListTask}
+        aria-label={
+          isListTask
+            ? (item.isComplete ? t('common.completeDerivedFromSteps') : t('common.completeEveryStepHint'))
+            : item.isComplete ? t('common.markIncomplete') : t('common.markComplete')
+        }
+        title={isListTask ? (item.isComplete ? t('common.completeDerivedFromSteps') : t('common.completeEveryStepHint')) : undefined}
       >
         {item.isComplete ? '✓' : ''}
       </button>
@@ -150,18 +197,19 @@ function FocusRow({
           {displayTitle}
         </span>
         <span className={styles.focusSource}>{sourceLabel}</span>
+        {isListTask && <ListBadge done={stepCount!.done} total={stepCount!.total} />}
       </div>
       {showPullControls && (
         isPulled ? (
-          <span className={styles.pulledTag}>→ {dayLabels}</span>
+          <span className={styles.pulledTag}>{t('week.pulledToDaysLabel', { days: dayLabels })}</span>
         ) : (
           <button
             className={styles.pullBtn}
             onClick={onPull}
             disabled={isPending || !canPull}
-            title={canPull ? undefined : "Today isn't in this week"}
+            title={canPull ? undefined : t('week.todayNotInWeek')}
           >
-            + Pull to today
+            {t('month.pullToToday')}
           </button>
         )
       )}
@@ -169,7 +217,7 @@ function FocusRow({
         className={styles.deleteBtn}
         onClick={onDelete}
         disabled={isPending}
-        aria-label="Remove"
+        aria-label={t('common.remove')}
       >✕</button>
     </div>
   )
@@ -185,6 +233,7 @@ interface QuickAddProps {
 
 function TaskQuickAdd({ placeholder, onAdd, isPending }: QuickAddProps) {
   const [value, setValue] = useState('')
+  const t = useT()
 
   function submit() {
     const trimmed = value.trim()
@@ -207,7 +256,7 @@ function TaskQuickAdd({ placeholder, onAdd, isPending }: QuickAddProps) {
         className={styles.quickAddBtn}
         onClick={submit}
         disabled={isPending || !value.trim()}
-      >+ Add</button>
+      >{t('common.addButtonShort')}</button>
     </div>
   )
 }
@@ -220,8 +269,10 @@ interface Props {
 }
 
 export default function WeekView({ weekStart, onDaySelect }: Props) {
-  const [formOpen, setFormOpen] = useState(false)
+  const [formOpen,     setFormOpen]     = useState(false)
+  const [taskFormOpen, setTaskFormOpen] = useState(false)
 
+  const t = useT()
   const { settings } = useSettings()
   // weekStart is the canonical Monday key (used for focus queries/mutations).
   // displayStart shifts it back a day for Sunday-first display only — the
@@ -234,17 +285,22 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
   const { data: treeNodes  = [] } = useTreeNodes()
   const { data: inboxItems = [] } = useInboxItems()
   const { data: habits     = [] } = useHabits()
+  const taskIds = [...rawItems.map(i => i.taskId), ...focusItems.map(i => i.taskId)]
+  const { data: tasks = [] } = useTasksByIds(taskIds)
+  const { data: stepCounts = new Map() } = useTaskStepCounts(focusItems.map(i => i.taskId))
 
   const { mutate: createFocus,     isPending: creating     } = useCreateWeekFocus()
   const { mutate: createFocusMany, isPending: creatingMany } = useCreateWeekFocusMany()
+  const { mutate: addTasksLinked,  isPending: creatingTasks } = useAddWeekTasksLinked()
   const { mutate: toggleFocus, isPending: toggling  } = useToggleWeekFocus()
   const { mutate: deleteFocus, isPending: deleting  } = useDeleteWeekFocus()
   const { mutate: pullToDay,   isPending: pulling    } = usePullWeekFocusToDay()
-  const isPending = creating || creatingMany || toggling || deleting || pulling
+  const isPending = creating || creatingMany || creatingTasks || toggling || deleting || pulling
 
   const nodeMap   = new Map(treeNodes.map(n => [n.id, n]))
   const inboxMap  = new Map(inboxItems.map(i => [i.id, i]))
   const habitMap  = new Map(habits.map(h => [h.id, h]))
+  const taskMap   = new Map(tasks.map(t => [t.id, t]))
   const byDate    = groupByDate(rawItems)
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(parseISO(displayStart), i))
@@ -265,11 +321,21 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
   const todayInThisWeek = computeWeekStart(todayISO()) === weekStart
 
   function displayTitle(item: WeekFocusItem): string {
+    if (item.taskId) {
+      const task = taskMap.get(item.taskId)
+      if (task) return resolveTaskTitle(task, nodeMap, inboxMap, habitMap, t)
+    }
     if (item.title) return item.title
-    if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? '(untitled)'
-    if (item.habitId) return habitMap.get(item.habitId)?.name ?? '(untitled)'
-    if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? '(untitled)'
-    return '(untitled)'
+    if (item.treeNodeId) return nodeMap.get(item.treeNodeId)?.title ?? t('goals.untitled')
+    if (item.habitId) return habitMap.get(item.habitId)?.name ?? t('goals.untitled')
+    if (item.inboxItemId) return inboxMap.get(item.inboxItemId)?.content ?? t('goals.untitled')
+    return t('goals.untitled')
+  }
+
+  /** The linked task's real source, for FocusRow's badge — see
+   *  FocusRowProps.sourceOverride. */
+  function effectiveSource(item: WeekFocusItem): TaskSource | undefined {
+    return item.taskId ? taskMap.get(item.taskId)?.source : undefined
   }
 
   function handleSaveStandalone(title: string) {
@@ -290,15 +356,35 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
     createFocus({ weekStart, source: 'standalone', title })
   }
 
+  function handleAddTasksFromTree(treeNodeIds: string[]) {
+    const items: WeekTaskLinkItem[] = treeNodeIds.map(treeNodeId => ({ source: 'tree', treeNodeId }))
+    addTasksLinked({ weekStart, items }, { onSuccess: () => setTaskFormOpen(false) })
+  }
+
+  function handleAddTasksFromInbox(inboxItemIds: string[]) {
+    const items: WeekTaskLinkItem[] = inboxItemIds.map(inboxItemId => ({ source: 'inbox', inboxItemId }))
+    addTasksLinked({ weekStart, items }, { onSuccess: () => setTaskFormOpen(false) })
+  }
+
+  function handleAddTasksFromMonth(picks: MonthTaskPick[]) {
+    const items: WeekTaskLinkItem[] = picks.map(p => ({
+      taskId: p.taskId ?? undefined,
+      title:  p.taskId ? undefined : (p.title ?? undefined),
+    }))
+    addTasksLinked({ weekStart, items }, { onSuccess: () => setTaskFormOpen(false) })
+  }
+
   function handlePullTask(item: WeekFocusItem) {
     pullToDay({
       weekFocusId: item.id,
       date:        todayISO(),
-      source:      item.source,
+      source:      effectiveSource(item) ?? item.source,
       title:       item.title,
       treeNodeId:  item.treeNodeId,
       inboxItemId: item.inboxItemId,
       habitId:     item.habitId,
+      taskId:      item.taskId,
+      isComplete:  item.isComplete,
     })
   }
 
@@ -327,6 +413,7 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
                   nodeMap={nodeMap}
                   inboxMap={inboxMap}
                   habitMap={habitMap}
+                  taskMap={taskMap}
                   onSelect={() => onDaySelect(dateStr)}
                 />
               )
@@ -335,18 +422,18 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
         )}
       </div>
 
-      {/* Weekly focus list — tree/inbox/habit items pulled into the week */}
+      {/* Weekly goals — tree/inbox/habit items pulled into the week */}
       <div className={styles.focusSection}>
         <div className={styles.focusHeader}>
           <span className={styles.focusDot} />
-          <span className={styles.focusTitle}>WEEKLY FOCUS</span>
+          <span className={styles.focusTitle}>{t('week.weeklyGoalsHeading')}</span>
           <span className={styles.focusCount}>· {treeFocusItems.length}</span>
-          <button className={styles.addBtn} onClick={() => setFormOpen(true)}>+ Add</button>
+          <button className={styles.addBtn} onClick={() => setFormOpen(true)}>{t('common.addButtonShort')}</button>
         </div>
 
         {treeFocusItems.length === 0 && !isLoading && (
           <p className={styles.emptyHint}>
-            Nothing flagged for this week — pull from your tree.
+            {t('week.emptyGoalsHint')}
           </p>
         )}
 
@@ -357,12 +444,13 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
               item={item}
               displayTitle={displayTitle(item)}
               isPending={isPending}
+              stepCount={item.taskId ? stepCounts.get(item.taskId) : undefined}
               onToggle={() => toggleFocus({
                 id: item.id, weekStart, source: item.source,
                 treeNodeId: item.treeNodeId, isComplete: !item.isComplete,
               })}
               onDelete={() => {
-                if (!window.confirm(`Remove "${displayTitle(item)}" from this week?`)) return
+                if (!window.confirm(t('common.removeFromWeekConfirm', { title: displayTitle(item) }))) return
                 deleteFocus({ id: item.id, weekStart, source: item.source, inboxItemId: item.inboxItemId })
               }}
             />
@@ -374,18 +462,19 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
       <div className={styles.focusSection}>
         <div className={styles.focusHeader}>
           <span className={styles.focusDot} />
-          <span className={styles.focusTitle}>TASKS THIS WEEK</span>
+          <span className={styles.focusTitle}>{t('week.tasksThisWeekHeading')}</span>
           <span className={styles.focusCount}>· {taskItems.length}</span>
+          <button className={styles.addBtn} onClick={() => setTaskFormOpen(true)}>{t('month.addFromTreeInboxButton')}</button>
         </div>
 
         <TaskQuickAdd
-          placeholder="Add a task for this week…"
+          placeholder={t('week.addTaskPlaceholder')}
           onAdd={handleAddTask}
           isPending={creating}
         />
 
         {taskItems.length === 0 && !isLoading && (
-          <p className={styles.emptyHint}>No standalone tasks yet.</p>
+          <p className={styles.emptyHint}>{t('month.noStandaloneTasksHint')}</p>
         )}
 
         <div className={styles.focusList}>
@@ -398,13 +487,19 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
               pulledDates={pulledMap.get(item.id) ?? []}
               canPull={todayInThisWeek}
               onPull={() => handlePullTask(item)}
+              sourceOverride={effectiveSource(item)}
+              stepCount={item.taskId ? stepCounts.get(item.taskId) : undefined}
               onToggle={() => toggleFocus({
                 id: item.id, weekStart, source: item.source,
                 treeNodeId: item.treeNodeId, isComplete: !item.isComplete,
+                taskId: item.taskId,
               })}
               onDelete={() => {
-                if (!window.confirm(`Remove "${displayTitle(item)}" from this week?`)) return
-                deleteFocus({ id: item.id, weekStart, source: item.source, inboxItemId: item.inboxItemId })
+                if (!window.confirm(t('common.removeFromWeekConfirm', { title: displayTitle(item) }))) return
+                deleteFocus({
+                  id: item.id, weekStart, source: item.source, inboxItemId: item.inboxItemId,
+                  taskId: item.taskId,
+                })
               }}
             />
           ))}
@@ -413,13 +508,25 @@ export default function WeekView({ weekStart, onDaySelect }: Props) {
 
       {formOpen && (
         <FocusItemForm
-          label="ADD WEEKLY FOCUS"
+          label={t('week.addWeeklyGoalLabel')}
           onClose={() => setFormOpen(false)}
           onSaveStandalone={handleSaveStandalone}
           onSaveTree={handleSaveTree}
           isSaving={creating || creatingMany}
           focusedNodeIds={focusedNodeIds}
-          focusLabel="this week"
+          focusLabel={t('week.thisWeekLabel')}
+        />
+      )}
+
+      {taskFormOpen && (
+        <TaskSourceForm
+          label={t('week.addTaskWeekLabel')}
+          onClose={() => setTaskFormOpen(false)}
+          onAddFromTree={handleAddTasksFromTree}
+          onAddFromInbox={handleAddTasksFromInbox}
+          monthStart={computeMonthStart(weekStart)}
+          onAddFromMonth={handleAddTasksFromMonth}
+          isSaving={creatingTasks}
         />
       )}
     </div>

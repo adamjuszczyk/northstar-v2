@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { differenceInCalendarDays, parseISO, format, subDays } from 'date-fns'
 import type { HabitEntry, HabitMode } from '../../hooks/useHabits'
+import { useT, useDateFnsLocale } from '../../i18n'
 import styles from './TrendChart.module.css'
 
 interface Props {
@@ -25,12 +26,15 @@ interface Bar {
  * the habit is happening less often, which is the goal.
  */
 export default function TrendChart({ mode, entries }: Props) {
+  const t = useT()
+  const dateLocale = useDateFnsLocale()
+
   const bars = useMemo((): Bar[] => {
     if (mode === 'build') {
       const days: Bar[] = []
       for (let i = BUILD_WINDOW_DAYS - 1; i >= 0; i--) {
         const d = subDays(new Date(), i)
-        days.push({ key: format(d, 'yyyy-MM-dd'), label: format(d, 'EEE d'), value: 0 })
+        days.push({ key: format(d, 'yyyy-MM-dd'), label: format(d, 'EEE d', { locale: dateLocale }), value: 0 })
       }
       const byDay = new Map(days.map(d => [d.key, d]))
       for (const e of entries) {
@@ -44,10 +48,10 @@ export default function TrendChart({ mode, entries }: Props) {
     const gaps: Bar[] = []
     for (let i = 1; i < entries.length; i++) {
       const gap = Math.max(0, differenceInCalendarDays(parseISO(entries[i].loggedAt), parseISO(entries[i - 1].loggedAt)))
-      gaps.push({ key: String(i), label: `${gap}d gap`, value: gap })
+      gaps.push({ key: String(i), label: t('habits.trendGapLabel', { n: gap }), value: gap })
     }
     return gaps.slice(-REDUCE_MAX_GAPS)
-  }, [mode, entries])
+  }, [mode, entries, dateLocale, t])
 
   const hasData = bars.some(b => b.value > 0)
   const max = Math.max(1, ...bars.map(b => b.value))
@@ -55,7 +59,7 @@ export default function TrendChart({ mode, entries }: Props) {
   if (!hasData) {
     return (
       <div className={styles.empty}>
-        {mode === 'build' ? 'No entries yet — log one to start the trend.' : 'No occurrences logged yet.'}
+        {mode === 'build' ? t('habits.trendEmptyBuild') : t('habits.trendEmptyReduce')}
       </div>
     )
   }
